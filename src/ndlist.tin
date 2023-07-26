@@ -892,6 +892,7 @@ proc ::ndlist::Replace {list sublist iType iList} {
         }
         # Get temporary object
         if {[llength $args] == $(ndims) + 1} {
+            set indices [lrange $args 0 end-1]
             if {[lindex $args end] eq "&"} {
                 # Anonymous object creation
                 set results [::ndlist::NGet $(value) {*}$indices]
@@ -1553,7 +1554,7 @@ proc ::ndlist::nop {args} {
 #
 # Recursive handler for nop
 
-proc ::ndlist::RecScalarOp {ndims ndlist op args} {
+proc ::ndlist::RecOp {ndims ndlist op args} {
     # Base case
     if {$ndims == 1} {
         return [Op $ndlist $op {*}$args]
