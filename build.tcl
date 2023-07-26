@@ -164,11 +164,16 @@ assert {[$a] eq {{{0 0} {0 0}} {{0 0} {0 foo}}}}
 
 matrix a [nrepeat 2 2 1]
 set b $a
-nexpr {@a*2.0} --> a
+[nexpr {@a*2.0} &] --> a
 assert {![info object isa object $b]}
 assert {[$a] eq {{2.0 2.0} {2.0 2.0}}}
 
-nexpr {@a + 2} --> a
+[nexpr {@a + 2} &] --> a
+
+tin import flytrap
+pause
+
+exit
 
 $ndobj += 5
 $ndobj := {@ndobj + 5}

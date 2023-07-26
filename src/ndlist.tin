@@ -10,7 +10,7 @@
 ################################################################################
 
 # Required packages
-package require vutil 0.5.2
+package require vutil 0.6
 
 # Define namespace
 namespace eval ::ndlist {
@@ -30,6 +30,7 @@ namespace eval ::ndlist {
     namespace export nexpr; # Expression mapping over ndlists    
     namespace export nmap; # Functional map over ndlists
     namespace export i j k; # Index access commands
+    namespace export nop; # Math operations over ndlists
 }
 
 # NDLIST INITIALIZATION
@@ -857,41 +858,19 @@ proc ::ndlist::Replace {list sublist iType iList} {
         my = [uplevel 1 [list ::ndlist::nexpr $expr]]
     }
     
-    # Basic operators
-    
-    
-    method += {value} {
-        set (value) [expr {$(value) + $value}]
-        return [self]
+    # Basic operators, same as for vutil float type (calls nop)
+    method += {expr} {
+        my = [::ndlist::nop [self] + [uplevel 1 [list expr $expr]]]
     }
-    method -= {value} {
-        set (value) [expr {$(value) - $value]}]
-        return [self]
+    method -= {expr} {
+        my = [::ndlist::nop [self] - [uplevel 1 [list expr $expr]]]
     }
-    method *= {value} {
-        set (value) [expr {$(value) * $value]}]
-        return [self]
+    method *= {expr} {
+        my = [::ndlist::nop [self] * [uplevel 1 [list expr $expr]]]
     }
-    method /= {value} {
-        set (value) [expr {$(value) / $value]}]
-        return [self]
+    method /= {expr} {
+        my = [::ndlist::nop [self] / [uplevel 1 [list expr $expr]]]
     }
-    
-    method SelfOp {op value} {
-        # Scalar case
-        if {$(ndims) == 0} {
-            return [::tcl::mathop::$op $(value) $value]
-        }
-        return [RecScalarOp $ndims $ndlist $op $value]
-    }
-    
-    # Scalar operation
-            lassign $args ndlist op scalar
-            # Scalar case
-            if {$ndims == 0} {
-                return [::tcl::mathop::$op $ndlist $scalar]
-            }
-            return [RecScalarOp $ndims $ndlist $op $scalar]
     
     # @ --
     #
@@ -903,6 +882,7 @@ proc ::ndlist::Replace {list sublist iType iList} {
     # $ndobj @ $i $j $k --> $refName; # nget, creates new object
     # $ndobj @ $i $j $k = $value; # nset, by value
     # $ndobj @ $i $j $k := $expr; # nset, by expression
+    # $ndobj @ $i $j $k *= $expr; # nset, by 
     # $ndobj1 @ $i $j $k <- $ndobj2; # nset, by object (must match dimension)
     
     method @ {args} {
@@ -910,7 +890,17 @@ proc ::ndlist::Replace {list sublist iType iList} {
         if {[llength $args] == $(ndims)} {
             return [::ndlist::nget $(value) {*}$args]
         }
-        # Manipulate objects
+        # Get temporary object
+        if {[llength $args] == $(ndims) + 1} {
+            if {[lindex $args end] eq "&"} {
+                # Anonymous object creation
+                set results [::ndlist::NGet $(value) {*}$indices]
+                set subdims [lassign $results sublist]
+                set ndtype "[llength $subdims]D"
+                return [::vutil::new ndlist $ndtype ::ndlist::temp $sublist]
+            }
+        }
+        # Object manipulation
         if {[llength $args] == $(ndims) + 2} {
             set indices [lrange $args 0 end-2]
             set op [lindex $args end-1]; # Assigment operator
@@ -920,15 +910,39 @@ proc ::ndlist::Replace {list sublist iType iList} {
                     ::ndlist::nset (value) {*}$indices $sublist
                     return [self]
                 }
-                & { # Anonymous object creation
-                    set results [::ndlist::NGet $(value) {*}$indices]
-                    set subdims [lassign $results sublist]
-                    set ndtype "[llength $subdims]D"
-                    return [::vutil::new ndlist $ndtype ::ndlist::temp $sublist]
+                & { 
                 }
                 := { # nexpr assigment (returns self)
                     set expr [lindex $args end]
                     set sublist [uplevel 1 [list ::ndlist::nexpr $expr]]
+                    ::ndlist::nset (value) {*}$indices $sublist
+                    return [self]
+                }
+                += { # nop addition (returns self)
+                    set expr [lindex $args end]
+                    set sublist [::ndlist::nop [my @ {*}$indices &] + \
+                            [uplevel 1 [list expr $expr]]]
+                    ::ndlist::nset (value) {*}$indices $sublist
+                    return [self]
+                }
+                -= { # nop subtraction (returns self)
+                    set expr [lindex $args end]
+                    set sublist [::ndlist::nop [my @ {*}$indices &] - \
+                            [uplevel 1 [list expr $expr]]]
+                    ::ndlist::nset (value) {*}$indices $sublist
+                    return [self]
+                }
+                *= { # nop multiplication (returns self)
+                    set expr [lindex $args end]
+                    set sublist [::ndlist::nop [my @ {*}$indices &] * \
+                            [uplevel 1 [list expr $expr]]]
+                    ::ndlist::nset (value) {*}$indices $sublist
+                    return [self]
+                }
+                /= { # nop division (returns self)
+                    set expr [lindex $args end]
+                    set sublist [::ndlist::nop [my @ {*}$indices &] / \
+                            [uplevel 1 [list expr $expr]]]
                     ::ndlist::nset (value) {*}$indices $sublist
                     return [self]
                 }
@@ -1080,6 +1094,15 @@ proc ::ndlist::scalar {refName args} {
     ::vutil::new ndlist 0D refVar {*}$args
 }
 
+# TempObj --
+#
+# Returns a temporary object (overwritten every time a new temp object is made)
+
+proc ::ndlist::TempObj {ndims ndlist} {
+    variable temp
+    ::vutil::new ndlist ${ndims}D temp $ndlist
+} 
+
 # NDLIST FUNCTIONAL MAPPING COMMANDS
 ################################################################################
 
@@ -1092,35 +1115,43 @@ proc ::ndlist::scalar {refName args} {
 # nexpr $ndtype $varName $ndlist ... $expr <&>; # lmap style
 # 
 # Arguments:
-# expr:         Expression to evaluate
+# expr:         Expression to evaluate (using @ to reference ndobjs)
 # refName:      Reference variable to tie new ndobj to.
 # ndtype:       Type of ndlist (e.g. 1D, 2D, etc.)
 # varName:      Variable name to use in expression
 # ndlist:       ndlist to iterate over
 
 proc ::ndlist::nexpr {args} {
-    # Handle the @ndobj reference case
+    # Switch for @ref body style
     if {[llength $args] < 4} {
-        # Check arity
-        if {[llength $args] % 2 == 0 || 
-            ([llength $args] == 3 && [lindex $args 1] ne "-->")
+        # nexpr $expr <&>
+        if {[llength $args] == 0 || [llength $args] == 3 ||
+            ([llength $args] == 2 && [lindex $args end] ne "&")
         } then {
-            return -code error \
-                    "wrong # args: should be \"nexpr expr ?--> refName?\""
+            return -code error "wrong # args: should be \"nexpr expr ?&?\""
         }
         set args [lassign $args expr]
         tailcall nmap [list expr $expr] {*}$args
     } 
     # Normal case (in the style of lmap)
+    set ndtype [lindex $args 0]
     # Check arity
     if {[llength $args] % 2} {
-        return -code error "wrong # args: should be\
-                \"nexpr ndtype varName ndlist ?varName ndlist ...? expr\""
+        # nexpr $ndtype $varName $ndlist <$varName $ndlist ...> $expr &
+        if {[lindex $args end] eq "&"} {
+            set varMap [lrange $args 1 end-2]
+            set expr [lindex $args end-1]
+            tailcall nmap $ndtype {*}$varMap [list expr $expr] &
+        } else {
+            return -code error "wrong # args: should be \"nexpr ndtype varName\
+                    ndlist ?varName ndlist ...? expr ?&?\""
+        }
+    } else {
+        # nexpr $ndtype $varName $ndlist <$varName $ndlist ...> $expr
+        set varMap [lrange $args 1 end-1]
+        set expr [lindex $args end]
+        tailcall nmap $ndtype {*}$varMap [list expr $expr]
     }
-    set ndtype [lindex $args 0]
-    set varMap [lrange $args 1 end-1]
-    set expr [lindex $args end]
-    tailcall nmap $ndtype {*}$varMap [list expr $expr]
 }
 
 # nmap --
@@ -1517,15 +1548,6 @@ proc ::ndlist::nop {args} {
         }
     }
 }
-
-# TempObj --
-#
-# Returns a temporary object (overwritten every time a new temp object is made)
-
-proc ::ndlist::TempObj {ndims ndlist} {
-    variable temp
-    ::vutil::new ndlist ${ndims}D temp $ndlist
-} 
 
 # RecOp --
 #
