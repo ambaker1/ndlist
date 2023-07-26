@@ -821,9 +821,26 @@ proc ::ndlist::Replace {list sublist iType iList} {
         set (shape) [my shape]
         next {*}$args
     }
-    method ndims {} {
+    
+    # $ndobj ndims <$ndims>
+    #
+    # Query or set the dimensionality.
+    
+    method ndims {{ndims ""}} {
+        if {$ndims ne ""} {
+            # Check if ndims is valid, then assign it
+            if {[catch {::ndlist::GetDims $ndims $(value)} result]} {
+                return -code error $result
+            }
+            set (ndims) $ndims
+        }
         return $(ndims)
     }
+    
+    # $ndobj shape <$dim>
+    #
+    # Query the shape of the ndobj, for all dimensions or a specified dim.
+    
     method shape {{dim ""}} {
         # Switch for type
         if {$dim == ""} {
