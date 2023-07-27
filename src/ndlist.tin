@@ -24,6 +24,7 @@ namespace eval ::ndlist {
     # N-dimensional list access and mapping
     namespace export ndlist matrix vector scalar; # Create ndlist objects
     namespace export nrepeat; # Create ndlist with one value
+    namespace export nreshape; # Create ndlist from a vector
     namespace export nstack; # Combine ndlists
     namespace export nget; # Get values in ndlist
     namespace export nset; # Set values in ndlist
@@ -95,6 +96,42 @@ namespace eval ::ndlist {
             return -code error \
                     "axis must be between 0 and [expr {$(ndims) - 1}]"
         }
+    }
+    
+    # $ndobj reshape $n ...
+    #
+    # Reshape an ndobj (must be 1D or higher), and return self.
+    #
+    # Arguments:
+    # $n ...        New dimensions (and dimensionality)
+    
+    method reshape {n args} {
+        # Flatten the ndlist to a vector (1D)
+        set vector $(value)
+        for {set i 1} {$i < $(ndims)} {incr i} {
+            set vector [concat {*}$list]
+        }
+        # Reshape the ndlist (throws error if dimensions do not match)
+        if {[llength $args] == 0} {
+            set (value) $vector
+        } else {
+            set (value) [::ndlist::nreshape $vector $n {*}$args]
+        }
+        # Assign new dimensionality and return self
+        set (ndims) [expr {[llength $args] + 1}]
+        return [self]
+    }
+    
+    # $ndobj size
+    #
+    # Get total size of array (number of elements)
+    
+    method size {} {
+        set size 1
+        foreach dim [my shape] {
+            set size [expr {$size * $dim}]
+        }
+        return $size
     }
     
     # Modify left assigment to verify dimensionality
@@ -237,23 +274,23 @@ namespace eval ::ndlist {
         # Error cases
         switch $(ndims) {
             0 { # Scalar
-                return -code error "wrong # args: want\
+                return -code error "wrong # args: should be\
                         \"ndobj @ ?= value | <- obj | --> refName?"
             }
             1 { # Vector
-                return -code error "wrong # args: want\
+                return -code error "wrong # args: should be\
                         \"ndobj @ i ?= value | <- obj | --> refName?"
             }
             2 { # Matrix
-                return -code error "wrong # args: want\
+                return -code error "wrong # args: should be\
                         \"ndobj @ i j ?= value | <- obj | --> refName?"
             }
             3 { # 3D tensor
-                return -code error "wrong # args: want\
+                return -code error "wrong # args: should be\
                         \"ndobj @ i j k ?= value | <- obj | --> refName?"
             }
             default { # Higher order tensor
-                return -code error "wrong # args: want \"ndobj @\
+                return -code error "wrong # args: should be \"ndobj @\
                         i1 ... i$(ndims) ?= value | <- obj | --> refName?"
             }
         }
@@ -383,6 +420,42 @@ proc ::ndlist::nrepeat {args} {
     foreach n [lassign [lreverse $args] ndlist] {
         set ndlist [lrepeat $n $ndlist]
     }
+    return $ndlist
+}
+
+# nreshape --
+#
+# Reshape a vector to an ndlist, given dimensions.
+#
+# Syntax:
+# nreshape $vector $n $m ...
+#
+# Arguments:
+# vector:       Vector to reshape into ndlist
+# n m ...:      New dimensions (must have at least two)
+
+proc ::ndlist::nreshape {vector n m args} {
+    # Get size of each "row"
+    set M $m
+    foreach arg $args {
+        set M [expr {$M * $arg}]
+    }
+    # Get total size and compare with vector length
+    set size [expr {$n*$M}]
+    if {[llength $vector] != $size} {
+        return -code error "incompatible dimensions"
+    }
+    # Create matrix
+    set i -$m
+    set j -1
+    set matrix [lmap x [lrepeat $n {}] {
+        lrange $list [incr i $m] [incr j $m]
+    }]
+    # If more dimensions are provided, enter recursion.
+    if {[llength $args] > 0} {
+        return [lmap row $ndlist {nreshape $row $m {*}$args}]
+    }
+    # Return the reshaped ndlist
     return $ndlist
 }
 
