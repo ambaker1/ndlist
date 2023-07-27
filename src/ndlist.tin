@@ -22,16 +22,16 @@ namespace eval ::ndlist {
     variable temp; # Temporary ndlist object
     
     # N-dimensional list access and mapping
-    namespace export ndlist matrix vector scalar; # Create ndlist objects  
+    namespace export ndlist matrix vector scalar; # Create ndlist objects
     namespace export nrepeat; # Create ndlist with one value
+    namespace export nstack; # Combine ndlists
     namespace export nget; # Get values in ndlist
     namespace export nset; # Set values in ndlist
-    namespace export nreplace; # Replace values in-place  
+    namespace export nreplace; # Replace values in-place
+    namespace export nop; # Math operations over ndlists
     namespace export nexpr; # Expression mapping over ndlists
     namespace export nmap; # Functional map over ndlists
     namespace export i j k; # Index access commands
-    namespace export nop; # Math operations over ndlists
-    namespace export nstack; # Combine ndlists
 }
 
 # NDLIST OBJECT VARIABLES
@@ -384,6 +384,116 @@ proc ::ndlist::nrepeat {args} {
         set ndlist [lrepeat $n $ndlist]
     }
     return $ndlist
+}
+
+# NDLIST COMBINATION
+################################################################################
+
+# nstack --
+#
+# Stack ndlists along a dimension
+#
+# Syntax:
+# nstack $ndobj1 $ndobj2 $axis <&>
+# nstack $ndtype $ndlist1 $ndlist2 $axis <&>
+#
+# Arguments:
+# ndobj1 ndobj2:    Ndlist objects to stack
+# axis:             Axis to stack along
+# &:                Option to return temporary ndobj
+# ndtype:           Number of dimensions (e.g. 1D, 2D, etc.)
+# ndlist1 ndlist2:  Ndlists to stack
+
+proc ::ndlist::nstack {args} {
+    # Interpret input
+    if {[IsNDType [lindex $args 0]]} {
+        # nstack $ndtype $ndlist1 $ndlist2 $axis <&>
+        # Check arity
+        if {[llength $args] == 4} {
+            set mode value
+        } elseif {[llength $args] == 5 && [lindex $args end] eq "&"} {
+            set mode ndobj
+        } else {
+            return -code error "wrong # args: should be\
+                    \"nstack ndtype ndlist1 ndlist2 axis ?&?\"" 
+        }
+        lassign $args ndtype ndlist1 ndlist2 axis
+        set ndims [GetNDims $ndtype]
+    } else {
+        # nstack $ndobj1 $ndobj2 $axis <&>
+        # Check arity
+        if {[llength $args] == 3} {
+            set mode value
+        } elseif {[llength $args] == 4 && [lindex $args end] eq "&"} {
+            set mode ndobj
+        } else {
+            return -code error "wrong # args: should be\
+                    \"nstack ndobj1 ndobj2 axis ?&?\"" 
+        }
+        lassign $args ndobj1 ndobj2 axis
+        # Check if ndlist objects
+        if {![::vutil::type isa ndlist $ndobj1]} {
+            return -code error "\"$ndobj1\" is not an ndlist object"
+        }
+        if {![::vutil::type isa ndlist $ndobj2]} {
+            return -code error "\"$ndobj2\" is not an ndlist object"
+        }
+        # Check that they have the same dimensions
+        set ndims [$ndobj1 ndims]
+        if {[$ndobj2 ndims] != $ndims} {
+            return -code error "incompatible dimensionality"
+        }
+        set ndlist1 [$ndobj1]
+        set ndlist2 [$ndobj2]
+    }
+    # Check validity of ndims/axis
+    if {![string is integer -strict $axis]} {
+        return -code error "axis must be integer"
+    }
+    if {$axis >= $ndims} {
+        return -code error "axis out of range"
+    }
+    # Check dimensions
+    set dims1 [GetShape $ndims $ndlist1]
+    set dims2 [GetShape $ndims $ndlist2]
+    set i 0
+    foreach dim1 $dims1 dim2 $dims2 {
+        if {$dim1 ne $dim2 && $i != $axis} {
+            return -code error "incompatible dimensions along axis $i"
+        }
+        incr i
+    }
+    # Perform stack
+    set result [RecStack $ndlist1 $ndlist2 $axis]
+    # Return either value or temporary ndobj
+    switch $mode {
+        value {
+            return $result
+        }
+        ndobj {
+            return [TempObj $ndims $result]
+        }
+    }
+}
+
+# RecStack --
+# 
+# Recursive handler for nstack (after dimensions were checked)
+#
+# Arguments:
+# ndlist1 ndlist2:      ndlists to stack
+# axis:                 Axis to stack along
+
+proc ::ndlist::RecStack {ndlist1 ndlist2 axis} {
+    # Base case
+    if {$axis == 0} {
+        return [concat $ndlist1 $ndlist2]
+    }
+    # Recursion
+    incr axis -1
+    lmap ndrow1 $ndlist1 ndrow2 $ndlist2 {
+        RecStack $ndrow1 $ndrow2 $axis
+    }
 }
 
 # NDLIST ACCESS
@@ -1126,6 +1236,94 @@ proc ::ndlist::Replace {list sublist iType iList} {
 # NDLIST FUNCTIONAL MAPPING COMMANDS
 ################################################################################
 
+# nop --
+#
+# Simple math operations on ndlists.
+#
+# Syntax:
+# nop $ndobj $op $opargs <&>
+# nop $ndtype $ndlist $op $opargs <&>
+#
+# Arguments:
+# ndobj:        ndlist object
+# ndtype:       Number of dimensions (e.g. 1D, 2D, etc.)
+# ndlist:       ndlist to iterate over
+# op:           Valid mathop
+# opargs:       Values to perform mathop with (see tcl::mathop documentation)
+# &:            Option to return temporary ndobj
+
+# Matrix examples:
+# nop 2D $matrix / {}; # Performs reciprocal
+# nop 2D $matrix - {}; # Negates values
+# nop 2D $matrix ! {}; # Boolean negation
+# nop 2D $matrix + {5 1}; # Adds 5 and 1 to each matrix element
+# nop 2D $matrix ** 2; # Squares entire matrix
+# nop 2D $matrix in {1 2 3}; # Returns boolean matrix, if values are in a list
+
+proc ::ndlist::nop {args} {
+    # Interpret input
+    if {[IsNDType [lindex $args 0]]} {
+        # nop $ndtype $ndlist $op $values <&>
+        if {[llength $args] == 4} {
+            set mode value
+        } elseif {[llength $args] == 5 && [lindex $args end] eq "&"} {
+            set mode ndobj
+        } else {
+            return -code error "wrong # args: should be\
+                    \"nop ndtype ndlist op opargs ?&?\"" 
+        }
+        lassign $args ndtype ndlist op opargs
+        set ndims [GetNDims $ndtype]
+    } else {
+        # nop $ndobj $op $values <&>
+        if {[llength $args] == 3} {
+            set mode value
+        } elseif {[llength $args] == 4 && [lindex $args end] eq "&"} {
+            set mode ndobj
+        } else {
+            return -code error "wrong # args: should be\
+                    \"nop ndobj op opargs ?&?\"" 
+        }
+        lassign $args ndobj op opargs
+        if {![::vutil::type isa ndlist $ndobj]} {
+            return -code error "\"$ndobj\" is not an ndlist object"
+        }
+        set ndlist [$ndobj]
+        set ndims [$ndobj ndims]
+    }
+    # Adjust for list operators
+    if {$op in {in ni}} {
+        set opargs [list $opargs]
+    }
+    # Perform operation
+    set result [RecOp $ndims $ndlist $op {*}$opargs]
+    # Return either value or temporary ndobj
+    switch $mode {
+        value {
+            return $result
+        }
+        ndobj {
+            return [TempObj $ndims $result]
+        }
+    }
+}
+
+# RecOp --
+#
+# Recursive handler for nop
+
+proc ::ndlist::RecOp {ndims ndlist op args} {
+    # Base case
+    if {$ndims == 0} {
+        return [::tcl::mathop::$op $ndlist {*}$args]
+    }
+    # Recursion
+    incr ndims -1
+    lmap ndrow $ndlist {
+        RecOp $ndims $ndrow $op {*}$args
+    }
+}
+
 # nexpr --
 # 
 # Create a new ndlist based on element-wise operations (calls nmap)
@@ -1486,204 +1684,6 @@ proc ::ndlist::j {} {
 
 proc ::ndlist::k {} {
     return [i 2]
-}
-
-# nop --
-#
-# Simple math operations on ndlists. Faster than nexpr for simple stuff.
-#
-# Syntax:
-# nop $ndobj $op $opargs <&>
-# nop $ndtype $ndlist $op $opargs <&>
-#
-# Arguments:
-# ndobj:        ndlist object
-# op:           Valid mathop
-# opargs:       Values to perform mathop with (see tcl::mathop documentation)
-# ndtype:       Number of dimensions (e.g. 1D, 2D, etc.)
-# ndlist:       ndlist to iterate over
-# &:            Option to return temporary ndobj
-
-# Matrix examples:
-# nop 2D $matrix / {}; # Performs reciprocal
-# nop 2D $matrix - {}; # Negates values
-# nop 2D $matrix ! {}; # Boolean negation
-# nop 2D $matrix + {5 1}; # Adds 5 and 1 to each matrix element
-# nop 2D $matrix ** 2; # Squares entire matrix
-# nop 2D $matrix in {1 2 3}; # Returns boolean matrix, if values are in a list
-
-proc ::ndlist::nop {args} {
-    # Interpret input
-    if {[IsNDType [lindex $args 0]]} {
-        # nop $ndtype $ndlist $op $values <&>
-        if {[llength $args] == 4} {
-            set mode value
-        } elseif {[llength $args] == 5 && [lindex $args end] eq "&"} {
-            set mode ndobj
-        } else {
-            return -code error "wrong # args: should be\
-                    \"nop ndtype ndlist op opargs ?&?\"" 
-        }
-        lassign $args ndtype ndlist op opargs
-        set ndims [GetNDims $ndtype]
-    } else {
-        # nop $ndobj $op $values <&>
-        if {[llength $args] == 3} {
-            set mode value
-        } elseif {[llength $args] == 4 && [lindex $args end] eq "&"} {
-            set mode ndobj
-        } else {
-            return -code error "wrong # args: should be\
-                    \"nop ndobj op opargs ?&?\"" 
-        }
-        lassign $args ndobj op opargs
-        if {![::vutil::type isa ndlist $ndobj]} {
-            return -code error "\"$ndobj\" is not an ndlist object"
-        }
-        set ndlist [$ndobj]
-        set ndims [$ndobj ndims]
-    }
-    # Adjust for list operators
-    if {$op in {in ni}} {
-        set opargs [list $opargs]
-    }
-    # Perform operation
-    set result [RecOp $ndims $ndlist $op {*}$opargs]
-    # Return either value or temporary ndobj
-    switch $mode {
-        value {
-            return $result
-        }
-        ndobj {
-            return [TempObj $ndims $result]
-        }
-    }
-}
-
-# RecOp --
-#
-# Recursive handler for nop
-
-proc ::ndlist::RecOp {ndims ndlist op args} {
-    # Base case
-    if {$ndims == 0} {
-        return [::tcl::mathop::$op $ndlist {*}$args]
-    }
-    # Recursion
-    incr ndims -1
-    lmap ndrow $ndlist {
-        RecOp $ndims $ndrow $op {*}$args
-    }
-}
-
-# NDLIST COMBINATION
-################################################################################
-
-# nstack --
-#
-# Stack ndlists along a dimension
-#
-# Syntax:
-# nstack $ndobj1 $ndobj2 $axis <&>
-# nstack $ndtype $ndlist1 $ndlist2 $axis <&>
-#
-# Arguments:
-# ndobj1 ndobj2:    Ndlist objects to stack
-# axis:             Axis to stack along
-# &:                Option to return temporary ndobj
-# ndtype:           Number of dimensions (e.g. 1D, 2D, etc.)
-# ndlist1 ndlist2:  Ndlists to stack
-
-proc ::ndlist::nstack {args} {
-    # Interpret input
-    if {[IsNDType [lindex $args 0]]} {
-        # nstack $ndtype $ndlist1 $ndlist2 $axis <&>
-        # Check arity
-        if {[llength $args] == 4} {
-            set mode value
-        } elseif {[llength $args] == 5 && [lindex $args end] eq "&"} {
-            set mode ndobj
-        } else {
-            return -code error "wrong # args: should be\
-                    \"nstack ndtype ndlist1 ndlist2 axis ?&?\"" 
-        }
-        lassign $args ndtype ndlist1 ndlist2 axis
-        set ndims [GetNDims $ndtype]
-    } else {
-        # nstack $ndobj1 $ndobj2 $axis <&>
-        # Check arity
-        if {[llength $args] == 3} {
-            set mode value
-        } elseif {[llength $args] == 4 && [lindex $args end] eq "&"} {
-            set mode ndobj
-        } else {
-            return -code error "wrong # args: should be\
-                    \"nstack ndobj1 ndobj2 axis ?&?\"" 
-        }
-        lassign $args ndobj1 ndobj2 axis
-        # Check if ndlist objects
-        if {![::vutil::type isa ndlist $ndobj1]} {
-            return -code error "\"$ndobj1\" is not an ndlist object"
-        }
-        if {![::vutil::type isa ndlist $ndobj2]} {
-            return -code error "\"$ndobj2\" is not an ndlist object"
-        }
-        # Check that they have the same dimensions
-        set ndims [$ndobj1 ndims]
-        if {[$ndobj2 ndims] != $ndims} {
-            return -code error "incompatible dimensionality"
-        }
-        set ndlist1 [$ndobj1]
-        set ndlist2 [$ndobj2]
-    }
-    # Check validity of ndims/axis
-    if {![string is integer -strict $axis]} {
-        return -code error "axis must be integer"
-    }
-    if {$axis >= $ndims} {
-        return -code error "axis out of range"
-    }
-    # Check dimensions
-    set dims1 [GetShape $ndims $ndlist1]
-    set dims2 [GetShape $ndims $ndlist2]
-    set i 0
-    foreach dim1 $dims1 dim2 $dims2 {
-        if {$dim1 ne $dim2 && $i != $axis} {
-            return -code error "incompatible dimensions along axis $i"
-        }
-        incr i
-    }
-    # Perform stack
-    set result [RecStack $ndlist1 $ndlist2 $axis]
-    # Return either value or temporary ndobj
-    switch $mode {
-        value {
-            return $result
-        }
-        ndobj {
-            return [TempObj $ndims $result]
-        }
-    }
-}
-
-# RecStack --
-# 
-# Recursive handler for nstack (after dimensions were checked)
-#
-# Arguments:
-# ndlist1 ndlist2:      ndlists to stack
-# axis:                 Axis to stack along
-
-proc ::ndlist::RecStack {ndlist1 ndlist2 axis} {
-    # Base case
-    if {$axis == 0} {
-        return [concat $ndlist1 $ndlist2]
-    }
-    # Recursion
-    incr axis -1
-    lmap ndrow1 $ndlist1 ndrow2 $ndlist2 {
-        RecStack $ndrow1 $ndrow2 $axis
-    }
 }
 
 ################################################################################
