@@ -33,7 +33,16 @@ namespace eval ::ndlist {
     namespace export i j k; # Index access commands
     namespace export nop; # Math operations over ndlists
     namespace export nstack; # Combine ndlists
-    namespace export range flatten reshape transpose leval find; # Utilities
+    # Various utilities
+    namespace export range; # Generate integer range
+    namespace export linsteps; # Walk between target values at constant step.
+    namespace export linspace; # Generate equally spaced list.
+    namespace export linterp; # Linear 1D interpolation
+    namespace export find; # Find non-zero indices in boolean list.
+    namespace export flatten reshape; # Vector <-> Matrix
+    namespace export transpose; # Matrix transpose
+    namespace export leval; # List functional mapping
+    namespace export find; # Boolean vector -> Indices
 }
 
 # NDLIST INITIALIZATION
@@ -1763,6 +1772,135 @@ proc ::ndlist::range {args} {
                 \"range start stop\", or \"range start stop step\""
     }
     return [Range $start $stop $step]
+}
+
+# linsteps --
+# 
+# Generate list that walks between targets, with a maximum step size.
+#
+# Syntax:
+# linsteps $stepSize $start $target ...
+# 
+# Arguments:
+# stepSize      Magnitude of step size (must be > 0.0)
+# start         Starting value
+# target ...    Targets to walk through
+
+proc ::ndlist::linsteps {stepSize start args} {
+    # Interpret inputs and coerce into double (throws error if not double)
+    set stepSize [expr {double($stepSize)}]
+    if {$stepSize <= 0.0} {
+        return -code error "Step size must be > 0.0"
+    }
+    set start [expr {double($start)}]
+    set targets [lmap target $args {
+        expr {double($target)}
+    }]
+    # Initialize with start
+    set values [list $start]
+    # Loop through targets
+    foreach target $targets {
+        set gap [expr {$target - $start}]
+        # Skip for duplicates
+        if {$gap == 0} {
+            continue
+        }
+        # Calculate step value and number of steps
+        set step [expr {$gap > 0 ? $stepSize : -$stepSize}]; 
+        set n [expr {int($gap/$step)}]
+        for {set i 1} {$i <= $n} {incr i} {
+            lappend values [expr {$start + $i*$step}]
+        }
+        # For the case where it doesn't go all the way
+        if {[lindex $values end] != $target} {
+            lappend values $target
+        }
+        # Reset for next target (if any)
+        set start $target
+    }
+    return $values
+}
+
+# linspace --
+#
+# Generate equally spaced list with specific number of points
+#
+# linspace $n $x1 $x2
+#
+# Arguments:
+# n         Number of points
+# x1        First number 
+# x2        Last number
+
+proc ::ndlist::linspace {n x1 x2} {
+    set x1 [expr {double($x1)}]
+    set x2 [expr {double($x2)}]
+    set gap [expr {$x2 - $x1}]
+    set values ""
+    for {set i 0} {$i < $n} {incr i} {
+        lappend values [expr {$x1 + $gap*$i/($n - 1.0)}]
+    }
+    return $values
+}
+
+# linterp --
+# 
+# Simple linear interpolation, assuming ascending order on list X
+#
+# Syntax:
+# linterp $xq $xq $yp
+#
+# Arguments:
+# xq:           x values to query
+# xp:           x points
+# yp:           y points (same length as xp)
+
+proc ::ndlist::linterp {xq xp yp} {
+    # Error check size of input
+    if {[llength $xp] != [llength $yp]} {
+        return -code error "x and y must be same size"
+    }
+    # Perform matches
+    set values ""
+    foreach x $xq {
+        set x1 [lindex $xp 0]
+        set y1 [lindex $yp 0]
+        # Check bounds
+        if {$x < $x1} {
+            return -code error "xq value $x below bounds of xp"
+        }; # end if
+        foreach x2 [lrange $xp 1 end] y2 [lrange $yp 1 end] {
+            # Error check
+            if {$x1 >= $x2} {
+                return -code error "xp must be strictly increasing"
+            }
+            # Compare x to x1 & x2
+            if {$x == $x1} {
+                # Simple match
+                lappend values $y1
+                break
+            } elseif {$x > $x1 && $x < $x2} {
+                # Interpolate
+                set r [expr {($x-$x1)/($x2-$x1)}]; # ratio into line-segment
+                set y [expr {$r*($y2-$y1)+$y1}]
+                lappend values $y
+                break
+            } elseif {$x == $x2} {
+                # Simple match
+                lappend values $y2
+                break
+            } else {
+                set x1 $x2
+                set y1 $y2 
+                continue
+            }; # end if
+        }; # end foreach
+        # Check bounds
+        if {$x > $x2} {
+            return -code error "xq value $x above bounds of xp"
+        }; # end if
+    }; # end foreach
+    return $values
 }
 
 # flatten --
