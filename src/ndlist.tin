@@ -23,6 +23,7 @@ namespace eval ::ndlist {
     
     # N-dimensional list access and mapping
     namespace export nrepeat; # Create ndlist with one value
+    namespace export nshape; # Get shape of ndlist
     namespace export nget; # Get values in ndlist
     namespace export nset; # Set values in ndlist
     namespace export nreplace; # Replace values in-place  
@@ -31,6 +32,8 @@ namespace eval ::ndlist {
     namespace export nmap; # Functional map over ndlists
     namespace export i j k; # Index access commands
     namespace export nop; # Math operations over ndlists
+    namespace export nstack; # Combine ndlists
+    namespace export range flatten reshape transpose leval find; # Utilities
 }
 
 # NDLIST INITIALIZATION
@@ -54,6 +57,27 @@ proc ::ndlist::nrepeat {args} {
     return $ndlist
 }
 
+# nshape --
+#
+# Get dimensions of ndlist given a number of dimensions. Assumes proper ndlist
+#
+# Arguments:
+# ndtype:       Type of ndlist (e.g. 1D, 2D, etc.)
+# ndlist:       ndlist to get size of
+# axis:         Dimension to get along. Blank for all dimensions
+
+proc ::ndlist::nshape {ndtype ndlist {axis ""}} {
+    set ndims [GetShape $ndtype]
+    # Switch for type
+    if {$axis == ""} {
+        return [GetDims $ndims $ndlist]
+    } elseif {$axis >= 0 && $axis < $ndims} {
+        # Get single dimension (along first index)
+        return [llength [lindex $ndlist {*}[lrepeat $axis 0]]]
+    } else {
+        return -code error "axis must be between 0 and [expr {$ndims - 1}]"
+    }
+}
 
 # NDLIST ACCESS
 ################################################################################
@@ -1488,9 +1512,6 @@ proc ::ndlist::k {} {
     return [i 2]
 }
 
-# NDLIST MATH OPERATIONS
-################################################################################
-
 # nop --
 #
 # Simple math operations on ndlists. Faster than nexpr for simple stuff.
@@ -1578,6 +1599,9 @@ proc ::ndlist::RecOp {ndims ndlist op args} {
         RecOp $ndims $ndrow $op {*}$args
     }
 }
+
+# NDLIST COMBINATION
+################################################################################
 
 # nstack --
 #
@@ -1684,6 +1708,279 @@ proc ::ndlist::RecStack {ndlist1 ndlist2 axis} {
     lmap ndrow1 $ndlist1 ndrow2 $ndlist2 {
         RecStack $ndrow1 $ndrow2 $axis
     }
+}
+
+# VARIOUS UTILITIES
+################################################################################
+
+# range --
+#
+# Generate integer range
+# 
+# range $n
+# range $start $stop
+# range $start $stop $step
+#
+# Arguments:
+# n:        Number of integers
+# start:    Start of resultant range.
+# stop:     End limit of resultant range.
+# step:     Step size. Default 1 or -1, depending on direction.
+
+proc ::ndlist::range {args} {
+    # Switch for arity
+    if {[llength $args] == 1} {
+        # Basic case
+        set n [lindex $args 0]
+        if {![string is integer -strict $n] || $n < 0} {
+            return -code error "n must be integer >= 0"
+        }
+        set start 0
+        set stop [expr {$n - 1}]
+        set step 1
+    } elseif {[llength $args] == 2} {
+        lassign $args start stop
+        if {![string is integer -strict $start]} {
+            return -code error "start must be integer"
+        }
+        if {![string is integer -strict $stop]} {
+            return -code error "stop must be integer"
+        }
+        set step [expr {$stop > $start ? 1 : -1}]
+    } elseif {[llength $args] == 3} {
+        lassign $args start stop step
+        if {![string is integer -strict $start]} {
+            return -code error "start must be integer"
+        }
+        if {![string is integer -strict $stop]} {
+            return -code error "stop must be integer"
+        }
+        if {![string is integer -strict $step]} {
+            return -code error "step must be integer"
+        }
+    } else {
+        return -code error "wrong # args: should be \"range n\",\
+                \"range start stop\", or \"range start stop step\""
+    }
+    return [Range $start $stop $step]
+}
+
+# flatten --
+#
+# Flatten an ndlist without shimmering
+# Reference: https://wiki.tcl-lang.org/page/join
+#
+# Arguments:
+# matrix:       Matrix to flatten to 1D
+
+proc ::ndlist::flatten {matrix} {
+    concat {*}$matrix
+}
+
+# reshape --
+# 
+# Create a row-oriented matrix from a list of values
+#
+# Arguments:
+# list:         List of values
+# n:            Number of rows
+# m:            Number of columns
+
+proc ::ndlist::reshape {list n m} {
+    set size [expr {$n*$m}]
+    if {[llength $list] != $size} {
+        return -code error "incompatible dimensions"
+    }
+    set i -$m
+    set j -1
+    lmap x [lrepeat $n {}] {
+        lrange $list [incr i $m] [incr j $m]
+    }
+}
+
+# transpose --
+# 
+# Transposes a matrix
+# Adapted from math::linearalgebra::transpose and lsearch example on Tcl wiki
+# written by MJ (https://wiki.tcl-lang.org/page/Transposing+a+matrix)
+# 
+# Arguments:
+# matrix:           Matrix to transpose
+
+proc ::ndlist::transpose {matrix} {
+    set n [llength $matrix]
+    set m [llength [lindex $matrix 0]]
+    if {$n == 1 && $m == 1} {
+        return $matrix
+    } elseif {$n > $m} {
+        set i -1
+        lmap x [lindex $matrix 0] {
+            lsearch -all -inline -subindices -index [incr i] $matrix *
+        }
+    } else {
+        set i -1
+        lmap x [lindex $matrix 0] {
+            incr i
+            lmap row $matrix {lindex $row $i}
+        }
+    }
+}
+
+# leval --
+#
+# Apply a command over a list, "leval"ing it.
+#
+# Syntax:
+# leval $command $list <$args...>
+#
+# Arguments:
+# command:      Command prefix (list)
+# list:         List to map over
+# args:         Additional arguments to command after list element
+
+proc ::ndlist::leval {command list args} {
+    lmap value $list {
+        uplevel 1 [linsert $command end $value {*}$args]
+    }
+}
+
+# find --
+#
+# Comparison-style vector searching. By default, converts logical vector into
+# list of indices for use in nget/nset/nreplace.
+#
+# Arguments:
+# vector:       Vector to find values. 
+# op scalar:    Comparison operator and comparison scalar value. Default != 0
+# option:       -first, -last, or -all. Default -all.
+#               If first or last, returns single index, -1 for failure.
+#               If all, returns list of indices, blank for none.
+
+proc ::ndlist::find {args} {
+    if {[llength $args] > 4} {
+        return -code error "wrong # args: should be\
+                \"find ?type? vector ?op value?\""
+    }
+    # Type of search
+    if {[llength $args] % 2 == 0} {
+        set type [lindex $args 0]
+        set vector [lindex $args 1]
+        if {$type ni {-first -last -all}} {
+            return -code error "Unknown option. Try -first, -last, or -all"
+        }
+    } else {
+        set type -all
+        set vector [lindex $args 0]
+    }
+    # Comparison operator and scalar value
+    if {[llength $args] > 2} {
+        # User provided comparison operator and scalar value
+        set op [lindex $args end-1]
+        set scalar [lindex $args end]
+        if {$op ni {== != > < >= <= in ni eq ne}} {
+            return -code error "Invalid comparison operator"
+        }
+        switch $type {
+            -first {FindFirst $vector $op $scalar}
+            -last {FindLast $vector $op $scalar}
+            -all {FindAll $vector $op $scalar}
+        }
+    } else {
+        # Treat as boolean vector
+        switch $type {
+            -first {FindFirstBool $vector}
+            -last {FindLastBool $vector}
+            -all {FindAllBool $vector}
+        }
+    }
+}
+
+# FindAll --
+#
+# Find all indices meeting criteria
+
+proc ::ndlist::FindAll {vector op scalar} {
+    set i 0
+    set indices ""
+    foreach value $vector {
+        if {[::tcl::mathop::$op $value $scalar]} {
+            lappend indices $i
+        }
+        incr i
+    }
+    return $indices
+}
+
+# FindAllBool --
+#
+# Find all true indices
+
+proc ::ndlist::FindAllBool {vector} {
+    set i 0
+    set indices ""
+    foreach value $vector {
+        if {$value} {
+            lappend indices $i
+        }
+        incr i
+    }
+    return $indices
+}
+
+# FindFirst --
+#
+# Find first index meeting criteria
+
+proc ::ndlist::FindFirst {vector op scalar} {
+    set i 0
+    foreach value $vector {
+        if {[::tcl::mathop::$op $value $scalar]} {
+            return $i
+        }
+        incr i
+    }
+    return -1
+}
+
+# FindFirstBool --
+#
+# Find first true indices
+
+proc ::ndlist::FindFirstBool {vector} {
+    set i 0
+    foreach value $vector {
+        if {$value} {
+            return $i
+        }
+        incr i
+    }
+    return -1
+}
+
+# FindLast --
+#
+# Find last index meeting criteria
+
+proc ::ndlist::FindLast {vector op scalar} {
+    for {set i [expr {[llength $vector] - 1}]} {$i >= 0} {incr i -1} {
+        if {[::tcl::mathop::$op [lindex $vector $i] $scalar]} {
+            return $i
+        }
+    }
+    return -1
+}
+
+# FindLastBool --
+#
+# Find last true index
+
+proc ::ndlist::FindLastBool {vector} {
+    for {set i [expr {[llength $vector] - 1}]} {$i >= 0} {incr i -1} {
+        if {[lindex $vector $i]} {
+            return $i
+        }
+    }
+    return -1
 }
 
 # Finally, provide the package
