@@ -26,6 +26,7 @@ namespace eval ::ndlist {
     namespace export nrepeat; # Create ndlist with one value
     namespace export nreshape; # Create ndlist from a vector
     namespace export nstack; # Combine ndlists
+    namespace export nswap; # Swap axes
     namespace export nget; # Get values in ndlist
     namespace export nset; # Set values in ndlist
     namespace export nreplace; # Replace values in-place
@@ -296,7 +297,55 @@ namespace eval ::ndlist {
         }
     }
     export @
-}
+    
+    # $ndobj T <$axis1 $axis2> <&>
+    #
+    # Get transpose of ndlist (or swap axes)
+    # 
+    # Arguments:
+    # axis1:        Axis to swap with axis 2 (default 0)
+    # axis2:        Axis to swap with axis 1 (default 1)
+    # &:            Option to return temporary ndobj
+    
+    method T {args} {
+        # Trim pointer reference argument
+        if {[lindex $args end] eq "&"} {
+            set mode ndobj
+            set args [lrange $args 0 end-1]
+        } else {
+            set mode value
+        }
+        # Switch for arity
+        if {[llength $args] == 0} {
+            # Default transpose case
+            if {$(ndims) <= 1} {
+                set result $(value) 
+            } else {
+                set result [::ndlist::nswap $(value)]
+            }
+        } elseif {[llength $args] == 2} {
+            # Axis swap case
+            lassign [lsort -integer $args] axis1 axis2
+            if {$axis2 >= $(ndims)} {
+                return -code error "axis out of range"
+            }
+            set result [::ndlist::nswap $(value) $axis1 $axis2]
+        } else {
+            return -code error "wrong # args: should be\
+                    \"ndobj T ?axis1 axis2? ?&?\""
+        }
+        # Return either value or temporary ndobj
+        switch $mode {
+            value {
+                return $result
+            }
+            ndobj {
+                return [TempObj $(ndims) $result]
+            }
+        }
+    }
+    export T
+}; # end "ndlist" type declaration
 
 # GetNDims --
 #
@@ -459,7 +508,7 @@ proc ::ndlist::nreshape {vector n m args} {
     return $ndlist
 }
 
-# NDLIST COMBINATION
+# NDLIST COMBINATION/MANIPULATION
 ################################################################################
 
 # nstack --
@@ -566,6 +615,95 @@ proc ::ndlist::RecStack {ndlist1 ndlist2 axis} {
     incr axis -1
     lmap ndrow1 $ndlist1 ndrow2 $ndlist2 {
         RecStack $ndrow1 $ndrow2 $axis
+    }
+}
+
+# nswap --
+#
+# Swaps axes (by default just transposes)
+#
+# Syntax:
+# nswap $ndlist <$axis1 $axis2>
+# ndlist:       ND list to manipulate
+# axis1:        Axis to swap with axis 2 (default 0)
+# axis2:        Axis to swap with axis 1 (default 1)
+
+proc ::ndlist::nswap {ndlist args} {
+    # Interpret input
+    if {[llength $args] == 0} {
+        set axis1 0
+        set axis2 1
+    } elseif {[llength $args] == 2} {
+        lassign [lsort -integer $args] axis1 axis2
+        if {$axis1 < 0} {
+            return -code error "axes out of range"
+        }
+    } else {
+        return -code error "wrong # args: should be\
+                \"nswap ndlist ?axis1 axis2?\""
+    }
+    # Perform axis swap
+    RecSwap $ndlist $axis1 $axis2
+}
+
+# RecSwap --
+# 
+# Recursive handler for nswap (after axes are checked)
+#
+# Arguments:
+# ndlist:           ND list to manipulate
+# axis1:            Axis to swap with axis 2
+# axis2:            Axis to swap with axis 1
+
+proc ::ndlist::RecSwap {ndlist axis1 axis2} {
+    # Check if at axis to swap
+    if {$axis1 == 0} {
+        # First pass (simple transpose)
+        set ndlist [Transpose $ndlist]; # (ijk -> jik)
+        # Base case
+        if {$axis2 == 1} {
+            return $ndlist
+        }
+        # Second pass (recursion that does forward and backward transpose)
+        incr axis2 -1
+        return [lmap ndrow $ndlist {
+            set ndrow [RecSwap $ndrow $axis1 $axis2]; # (jik -> jki)
+            Transpose $ndrow; # (jki -> kji)
+        }
+    }
+    # Simple recursion to get to first swap axis
+    incr axis1 -1
+    incr axis2 -1
+    lmap ndrow $ndlist {
+        RecSwap $ndrow $axis1 $axis2
+    }
+}
+
+# Transpose --
+# 
+# Transposes a matrix
+# Adapted from math::linearalgebra::transpose and lsearch example on Tcl wiki
+# written by MJ (https://wiki.tcl-lang.org/page/Transposing+a+matrix)
+# 
+# Arguments:
+# matrix:           Matrix to transpose
+
+proc ::ndlist::Transpose {matrix} {
+    set n [llength $matrix]
+    set m [llength [lindex $matrix 0]]
+    if {$n == 1 && $m == 1} {
+        return $matrix
+    } elseif {$n > $m} {
+        set i -1
+        lmap x [lindex $matrix 0] {
+            lsearch -all -inline -subindices -index [incr i] $matrix *
+        }
+    } else {
+        set i -1
+        lmap x [lindex $matrix 0] {
+            incr i
+            lmap row $matrix {lindex $row $i}
+        }
     }
 }
 
