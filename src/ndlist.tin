@@ -54,6 +54,7 @@ proc ::ndlist::nrepeat {args} {
     return $ndlist
 }
 
+
 # NDLIST ACCESS
 ################################################################################
 
@@ -94,7 +95,7 @@ proc ::ndlist::NGet {ndlist args} {
         return $ndlist
     }
     # Parse indices
-    set dims [GetDims $ndims $ndlist]
+    set dims [GetShape $ndims $ndlist]
     set iArgs [lassign [ParseIndices $indices $dims] iDims iLims]
     # Process limits and dimensions
     set subdims ""
@@ -110,18 +111,18 @@ proc ::ndlist::NGet {ndlist args} {
     return [list [RecGet $ndlist {*}$iArgs] {*}$subdims]
 }
 
-# GetDims --
+# GetShape --
 #
 # Private procedure to get list of dimensions of an ndlist along first index
 #
 # Syntax:
-# GetDims $ndims $ndlist
+# GetShape $ndims $ndlist
 #
 # Arguments:
 # ndims         Number of dimensions
 # ndlist        ND list to get dimensions from
 
-proc ::ndlist::GetDims {ndims ndlist} {
+proc ::ndlist::GetShape {ndims ndlist} {
     # Get list of dimensions (along first index)
     set dims ""
     foreach i [lrepeat $ndims {}] {
@@ -480,7 +481,7 @@ proc ::ndlist::NReplace {ndlist args} {
         return $sublist
     }
     # Parse indices
-    set dims [GetDims $ndims $ndlist]
+    set dims [GetShape $ndims $ndlist]
     set iArgs [lassign [ParseIndices $indices $dims] iDims iLims]
     # Switch for replacement type (removal or substitution)
     if {[llength $sublist] == 0} {
@@ -655,7 +656,7 @@ proc ::ndlist::Expand {ndlist n args} {
 
 proc ::ndlist::NTile {ndlist args} {    
     set dims1 $args
-    set dims0 [GetDims [llength $dims1] $ndlist]
+    set dims0 [GetShape [llength $dims1] $ndlist]
     foreach dim0 $dims0 dim1 $dims1 {
         if {$dim0 != $dim1} {
             return [RecTile $ndlist $dims0 $dims1]
@@ -812,7 +813,7 @@ proc ::ndlist::Replace {list sublist iType iList} {
         next $refName {*}$args
     }
     method SetValue {value} {
-        if {[catch {::ndlist::GetDims $(ndims) $value} result]} {
+        if {[catch {::ndlist::GetShape $(ndims) $value} result]} {
             return -code error $result
         }
         next $value
@@ -829,7 +830,7 @@ proc ::ndlist::Replace {list sublist iType iList} {
     method ndims {{ndims ""}} {
         if {$ndims ne ""} {
             # Check if ndims is valid, then assign it
-            if {[catch {::ndlist::GetDims $ndims $(value)} result]} {
+            if {[catch {::ndlist::GetShape $ndims $(value)} result]} {
                 return -code error $result
             }
             set (ndims) $ndims
@@ -837,19 +838,20 @@ proc ::ndlist::Replace {list sublist iType iList} {
         return $(ndims)
     }
     
-    # $ndobj shape <$dim>
+    # $ndobj shape <$axis>
     #
     # Query the shape of the ndobj, for all dimensions or a specified dim.
     
-    method shape {{dim ""}} {
+    method shape {{axis ""}} {
         # Switch for type
-        if {$dim == ""} {
-            return [::ndlist::GetDims $(ndims) $(value)]
-        } elseif {$dim >= 0 && $dim < $(ndims)} {
+        if {$axis == ""} {
+            return [::ndlist::GetShape $(ndims) $(value)]
+        } elseif {$axis >= 0 && $axis < $(ndims)} {
             # Get single dimension (along first index)
-            return [llength [lindex $(value) {*}[lrepeat $dim 0]]]
+            return [llength [lindex $(value) {*}[lrepeat $axis 0]]]
         } else {
-            return -code error "dim must be between 0 and [expr {$(ndims) - 1}]"
+            return -code error \
+                    "axis must be between 0 and [expr {$(ndims) - 1}]"
         }
     }
     
@@ -1356,7 +1358,7 @@ proc ::ndlist::nmap {args} {
 proc ::ndlist::GetCombinedSize {ndims args} {
     set cdims [lrepeat $ndims 1]; # Combined dimensions
     foreach ndlist $args {
-        set dims [GetDims $ndims $ndlist]
+        set dims [GetShape $ndims $ndlist]
         set cdims [lmap cdim $cdims dim $dims {
             if {$cdim == 1} {
                 set cdim $dim
@@ -1374,35 +1376,35 @@ proc ::ndlist::GetCombinedSize {ndims args} {
 # Private procedure to perform a single loop over ndlist
 #
 # Syntax:
-# SingleMap $ndims $ndlist $body <$dim>
+# SingleMap $ndims $ndlist $body <$axis>
 #
 # Arguments:
 # ndims         Number of dimensions of ndlist
 # ndlist        ndlist to loop over
 # body          Body to evaluate in caller's caller.
-# dim           Recursion variable. Initializes as zero. (depth)
+# axis           Recursion variable. Initializes as zero. (depth)
 
-proc ::ndlist::SingleMap {ndims ndlist body {dim 0}} {
+proc ::ndlist::SingleMap {ndims ndlist body {axis 0}} {
     variable nmap_i
     variable nmap_break
-    set nmap_i($dim) -1
+    set nmap_i($axis) -1
     if {$ndims == 1} {
         # Base case
         set result [uplevel 1 [list lmap x $ndlist "
-            incr nmap_i($dim)
+            incr nmap_i($axis)
             uplevel 1 [list $body]
         "]]
         # Check for break
-        if {$nmap_i($dim) != [llength $ndlist] - 1} {
+        if {$nmap_i($axis) != [llength $ndlist] - 1} {
             set nmap_break 1
         }
         return $result
     } 
     # Recursion case
     tailcall lmap x $ndlist "
-        incr nmap_i($dim)
+        incr nmap_i($axis)
         if {\$nmap_break} {break}
-        SingleMap [incr ndims -1] \$x [list $body] [incr dim]
+        SingleMap [incr ndims -1] \$x [list $body] [incr axis]
     "
 }
 
@@ -1411,16 +1413,16 @@ proc ::ndlist::SingleMap {ndims ndlist body {dim 0}} {
 # Used for when there are multiple ndlists.
 #
 # Syntax:
-# MultiMap $ndims $linkVars $ndlists $body <$dim>
+# MultiMap $ndims $linkVars $ndlists $body <$axis>
 # 
 # Arguments:
 # ndims         Number of dimensions at the current recursion level.
 # linkVars      Variables in caller that link to caller's caller.
 # ndlists       Lists to iterate over.
 # body          Body to evaluate in caller's caller.
-# dim           Recursion variable. Initializes as zero. (depth)
+# axis          Recursion variable. Initializes as zero. (depth)
 
-proc ::ndlist::MultiMap {ndims linkVars ndlists body {dim 0}} {
+proc ::ndlist::MultiMap {ndims linkVars ndlists body {axis 0}} {
     variable nmap_i
     variable nmap_break
     # Create link-value mapping
@@ -1429,15 +1431,15 @@ proc ::ndlist::MultiMap {ndims linkVars ndlists body {dim 0}} {
         lappend linkMap $linkVar $ndlist
     }
     # Initialize index
-    set nmap_i($dim) -1
+    set nmap_i($axis) -1
     # Base case
     if {$ndims == 1} {
         set result [uplevel 1 [list lmap {*}$linkMap "
-            incr nmap_i($dim)
+            incr nmap_i($axis)
             uplevel 1 [list $body]
         "]]
         # Check for break
-        if {$nmap_i($dim) != [llength $ndlist] - 1} {
+        if {$nmap_i($axis) != [llength $ndlist] - 1} {
             set nmap_break 1
         }
         return $result
@@ -1448,10 +1450,10 @@ proc ::ndlist::MultiMap {ndims linkVars ndlists body {dim 0}} {
         append linkRef "\$$linkVar "
     }
     tailcall lmap {*}$linkMap "
-        incr nmap_i($dim)
+        incr nmap_i($axis)
         if {\$nmap_break} {break}
         MultiMap [incr ndims -1] [list $linkVars] \[list $linkRef\] \
-                [list $body] [incr dim]
+                [list $body] [incr axis]
     "
 }
 
@@ -1460,14 +1462,14 @@ proc ::ndlist::MultiMap {ndims linkVars ndlists body {dim 0}} {
 # Access nmap indices (also works with nexpr)
 #
 # Syntax:
-# i <$dim>
+# i <$axis>
 #
 # Arguments:
-# dim           Dimension to get index from. Default 0
+# axis          Dimension to get index from. Default 0
 
-proc ::ndlist::i {{dim 0}} {
+proc ::ndlist::i {{axis 0}} {
     variable nmap_i
-    return $nmap_i($dim)
+    return $nmap_i($axis)
 }
 
 # j --
@@ -1548,14 +1550,8 @@ proc ::ndlist::nop {args} {
     if {$op in {in ni}} {
         set opargs [list $opargs]
     }
-    # Switch for dimensionality
-    if {$ndims == 0} {
-        # Scalar case
-        set result [::tcl::mathop::$op $ndlist {*}$opargs]
-    } else {
-        # Recursive ND case
-        set result [RecOp $ndims $ndlist $op {*}$opargs]
-    }    
+    # Perform operation
+    set result [RecOp $ndims $ndlist $op {*}$opargs]
     # Return either value or temporary ndobj
     switch $mode {
         value {
@@ -1573,8 +1569,8 @@ proc ::ndlist::nop {args} {
 
 proc ::ndlist::RecOp {ndims ndlist op args} {
     # Base case
-    if {$ndims == 1} {
-        return [Op $ndlist $op {*}$args]
+    if {$ndims == 0} {
+        return [::tcl::mathop::$op $ndlist {*}$args]
     }
     # Recursion
     incr ndims -1
@@ -1583,13 +1579,110 @@ proc ::ndlist::RecOp {ndims ndlist op args} {
     }
 }
 
-# Op --
+# nstack --
 #
-# Base case (list) for RecOp
+# Stack ndlists along a dimension
+#
+# Syntax:
+# nstack $ndobj1 $ndobj2 $axis <&>
+# nstack $ndtype $ndlist1 $ndlist2 $axis <&>
+#
+# Arguments:
+# ndobj1 ndobj2:    Ndlist objects to stack
+# axis:             Axis to stack along
+# &:                Option to return temporary ndobj
+# ndtype:           Number of dimensions (e.g. 1D, 2D, etc.)
+# ndlist1 ndlist2:  Ndlists to stack
 
-proc ::ndlist::Op {list op args} {
-    lmap value $list {
-        ::tcl::mathop::$op $value {*}$args
+proc ::ndlist::nstack {args} {
+    # Interpret input
+    if {[IsNDType [lindex $args 0]]} {
+        # nstack $ndtype $ndlist1 $ndlist2 $axis <&>
+        # Check arity
+        if {[llength $args] == 4} {
+            set mode value
+        } elseif {[llength $args] == 5 && [lindex $args end] eq "&"} {
+            set mode ndobj
+        } else {
+            return -code error "wrong # args: should be\
+                    \"nstack ndtype ndlist1 ndlist2 axis ?&?\"" 
+        }
+        lassign $args ndtype ndlist1 ndlist2 axis
+        set ndims [GetNDims $ndtype]
+    } else {
+        # nstack $ndobj1 $ndobj2 $axis <&>
+        # Check arity
+        if {[llength $args] == 3} {
+            set mode value
+        } elseif {[llength $args] == 4 && [lindex $args end] eq "&"} {
+            set mode ndobj
+        } else {
+            return -code error "wrong # args: should be\
+                    \"nstack ndobj1 ndobj2 axis ?&?\"" 
+        }
+        lassign $args ndobj1 ndobj2 axis
+        # Check if ndlist objects
+        if {![::vutil::type isa ndlist $ndobj1]} {
+            return -code error "\"$ndobj1\" is not an ndlist object"
+        }
+        if {![::vutil::type isa ndlist $ndobj2]} {
+            return -code error "\"$ndobj2\" is not an ndlist object"
+        }
+        # Check that they have the same dimensions
+        set ndims [$ndobj1 ndims]
+        if {[$ndobj2 ndims] != $ndims} {
+            return -code error "incompatible dimensionality"
+        }
+        set ndlist1 [$ndobj1]
+        set ndlist2 [$ndobj2]
+    }
+    # Check validity of ndims/axis
+    if {![string is integer -strict $axis]} {
+        return -code error "axis must be integer"
+    }
+    if {$axis >= $ndims} {
+        return -code error "axis out of range"
+    }
+    # Check dimensions
+    set dims1 [GetShape $ndims $ndlist1]
+    set dims2 [GetShape $ndims $ndlist2]
+    set i 0
+    foreach dim1 $dims1 dim2 $dims2 {
+        if {$dim1 ne $dim2 && $i != $axis} {
+            return -code error "incompatible dimensions along axis $i"
+        }
+        incr i
+    }
+    # Perform stack
+    set result [RecStack $ndlist1 $ndlist2 $axis]
+    # Return either value or temporary ndobj
+    switch $mode {
+        value {
+            return $result
+        }
+        ndobj {
+            return [TempObj $ndims $result]
+        }
+    }
+}
+
+# RecStack --
+# 
+# Recursive handler for nstack (after dimensions were checked)
+#
+# Arguments:
+# ndlist1 ndlist2:      ndlists to stack
+# axis:                 Axis to stack along
+
+proc ::ndlist::RecStack {ndlist1 ndlist2 axis} {
+    # Base case
+    if {$axis == 0} {
+        return [concat $ndlist1 $ndlist2]
+    }
+    # Recursion
+    incr axis -1
+    lmap ndrow1 $ndlist1 ndrow2 $ndlist2 {
+        RecStack $ndrow1 $ndrow2 $axis
     }
 }
 
