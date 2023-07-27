@@ -110,7 +110,7 @@ namespace eval ::ndlist {
         # Flatten the ndlist to a vector (1D)
         set vector $(value)
         for {set i 1} {$i < $(ndims)} {incr i} {
-            set vector [concat {*}$list]
+            set vector [concat {*}$vector]
         }
         # Reshape the ndlist (throws error if dimensions do not match)
         if {[llength $args] == 0} {
@@ -340,7 +340,7 @@ namespace eval ::ndlist {
                 return $result
             }
             ndobj {
-                return [TempObj $(ndims) $result]
+                return [::ndlist::TempObj $(ndims) $result]
             }
         }
     }
@@ -498,14 +498,14 @@ proc ::ndlist::nreshape {vector n m args} {
     set i -$m
     set j -1
     set matrix [lmap x [lrepeat $n {}] {
-        lrange $list [incr i $m] [incr j $m]
+        lrange $vector [incr i $m] [incr j $m]
     }]
     # If more dimensions are provided, enter recursion.
     if {[llength $args] > 0} {
-        return [lmap row $ndlist {nreshape $row $m {*}$args}]
+        return [lmap row $matrix {nreshape $row $m {*}$args}]
     }
     # Return the reshaped ndlist
-    return $ndlist
+    return $matrix
 }
 
 # NDLIST COMBINATION/MANIPULATION
@@ -658,18 +658,19 @@ proc ::ndlist::nswap {ndlist args} {
 proc ::ndlist::RecSwap {ndlist axis1 axis2} {
     # Check if at axis to swap
     if {$axis1 == 0} {
-        # First pass (simple transpose)
+        # First transpose
         set ndlist [Transpose $ndlist]; # (ijk -> jik)
         # Base case
         if {$axis2 == 1} {
             return $ndlist
         }
-        # Second pass (recursion that does forward and backward transpose)
+        # Recursion (pass axis1 to axis2 position, and axis2 to axis1+1)
         incr axis2 -1
-        return [lmap ndrow $ndlist {
+        set ndlist [lmap ndrow $ndlist {
             set ndrow [RecSwap $ndrow $axis1 $axis2]; # (jik -> jki)
-            Transpose $ndrow; # (jki -> kji)
-        }
+        }]
+        # Final transpose
+        return [Transpose $ndlist]; # (jki -> kji)
     }
     # Simple recursion to get to first swap axis
     incr axis1 -1
