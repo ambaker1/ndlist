@@ -156,6 +156,7 @@ namespace eval ::ndlist {
     method := {expr} {
         my = [uplevel 1 [list ::ndlist::nexpr $expr]]
     }
+    export :=
     
     # Basic operators, same as for vutil float type (calls nop)
     method += {expr} {
@@ -170,6 +171,7 @@ namespace eval ::ndlist {
     method /= {expr} {
         my = [::ndlist::nop [self] / [uplevel 1 [list expr $expr]]]
     }
+    export += -= *= /=
     
     # @ --
     #
@@ -403,7 +405,7 @@ proc ::ndlist::ndlist {ndtype refName args} {
 #
 # Arguments:
 # refName       Variable name for garbage collection
-# arg ...       Input arguments to pass to obj var superclass
+# value         Value to set matrix to
 
 proc ::ndlist::matrix {refName args} {
     upvar 1 $refName refVar
@@ -415,11 +417,11 @@ proc ::ndlist::matrix {refName args} {
 # Shorthand to create a new 1D ndlist.
 #
 # Syntax:
-# vector $refName <$arg ...>
+# vector $refName <$value>
 #
 # Arguments:
 # refName       Variable name for garbage collection
-# arg ...       Input arguments to pass to obj var superclass
+# value         Value to set vector to
 
 proc ::ndlist::vector {refName args} {
     upvar 1 $refName refVar
@@ -431,11 +433,11 @@ proc ::ndlist::vector {refName args} {
 # Shorthand to create a new 0D ndlist.
 #
 # Syntax:
-# scalar $refName <$arg ...>
+# scalar $refName <$value>
 #
 # Arguments:
 # refName       Variable name for garbage collection
-# arg ...       Input arguments to pass to obj var superclass
+# value         Value of scalar
 
 proc ::ndlist::scalar {refName args} {
     upvar 1 $refName refVar
@@ -459,14 +461,15 @@ proc ::ndlist::TempObj {ndims ndlist} {
 # Create an ndlist filled with one value
 #
 # Syntax:
-# nrepeat $n1 $n2 ... $value
+# nrepeat $value $n1 $n2 ...
 #
 # Arguments:
-# n1 n2 ...     Dimensions of ndlist
 # value         Value to repeat
+# n1 n2 ...     Dimensions of ndlist
 
-proc ::ndlist::nrepeat {args} {
-    foreach n [lassign [lreverse $args] ndlist] {
+proc ::ndlist::nrepeat {value args} {
+    set ndlist $value
+    foreach n [lreverse $args] {
         set ndlist [lrepeat $n $ndlist]
     }
     return $ndlist
@@ -495,10 +498,10 @@ proc ::ndlist::nreshape {vector n m args} {
         return -code error "incompatible dimensions"
     }
     # Create matrix
-    set i -$m
+    set i -$M
     set j -1
     set matrix [lmap x [lrepeat $n {}] {
-        lrange $vector [incr i $m] [incr j $m]
+        lrange $vector [incr i $M] [incr j $M]
     }]
     # If more dimensions are provided, enter recursion.
     if {[llength $args] > 0} {
@@ -1681,6 +1684,7 @@ proc ::ndlist::nmap {args} {
         # nmap $ndtype $varName $ndlist <$varName $ndlist ...> $body &
         if {[lindex $args end] eq "&"} {
             set mode ndobj
+            set args [lrange $args 0 end-1]
         } else {
             return -code error "wrong # args: should be \"nmap ndtype varName\
                     ndlist ?varName ndlist ...? body ?&?\""
