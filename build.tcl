@@ -17,9 +17,16 @@ set testmat {{1 2 3} {4 5 6} {7 8 9}}
 test ndlist {
     # Create ndlist object
 } -body {
-    ndlist 3D x [nrepeat 0.0 1 2 3]
+    ndlist new 3D x [nrepeat 0.0 1 2 3]
     $x info
 } -result {exists 1 ndims 3 shape {1 2 3} type ndlist value {{{0.0 0.0 0.0} {0.0 0.0 0.0}}}}
+
+test tensor {
+    # Create tensor object (shorthand for ndlist new)
+} -body {
+    tensor 3D y [nrepeat 0.0 1 2 3]
+    assert {[$x info] eq [$y info]}
+} -result {}
 
 test matrix {
     # Create ndlist object
@@ -113,21 +120,21 @@ test nswap1 {
 test nswap2 {
     # transpose axes 1 & 2
 } -body {
-    ndlist 3D x [nrepeat 0.0 3 2 1]
+    tensor 3D x [nrepeat 0.0 3 2 1]
     [$x T 1 2 &] shape
 } -result {3 1 2}
 
 test nswap3 {
     # transpose axes 0 & 2
 } -body {
-    ndlist 3D x [nrepeat 0.0 3 2 1]
+    tensor 3D x [nrepeat 0.0 3 2 1]
     [$x T 0 2 &] shape
 } -result {1 2 3}
 
 test nswap4 {
     # transpose axes 0 & 3
 } -body {
-    ndlist 4D x [nrepeat 0.0 4 3 2 10]
+    tensor 4D x [nrepeat 0.0 4 3 2 10]
     [$x T 0 3 &] shape
 } -result {10 3 2 4}
 
@@ -272,7 +279,7 @@ test nset_filler {
     set a ""
     assert {[nset a 1 1 1 foo] eq {{{bar bar} {bar bar}} {{bar bar} {bar foo}}}}; # fills with bar
     set ::ndlist::filler 0; # reset to default
-    ndlist 3D a ""
+    tensor 3D a ""
     $a @ 1 1 1 = foo
     $a
 } -result {{{0 0} {0 0}} {{0 0} {0 foo}}}
@@ -399,11 +406,6 @@ if {$nFailed > 0} {
 file copy -force {*}[glob -directory build *] [pwd]
 
 exec tclsh install.tcl
-
-exit
-
-# TO DO: vutil needs to be modified so that the type stays with the namespace.
-# Right now, "type new" creates the type within 
 
 # Verify installation
 tin forget ndlist
