@@ -22,7 +22,8 @@ namespace eval ::ndlist {
     variable temp; # Temporary ndlist object
     
     # N-dimensional list access and mapping
-    namespace export ndlist matrix vector scalar; # Create ndlist objects
+    namespace export ndlist; # ND list type class
+    namespace export tensor matrix vector scalar; # Shorthand for new ndlist objects
     namespace export nrepeat; # Create ndlist with one value
     namespace export nreshape; # Create ndlist from a vector
     namespace export nstack; # Combine ndlists
@@ -39,19 +40,19 @@ namespace eval ::ndlist {
 # NDLIST OBJECT VARIABLES
 ################################################################################
 
-# new ndlist --
+# ndlist --
 #
-# Object variable Type for ndlists
+# Object variable class for ndlists
 #
 # Syntax:
-# new ndlist $ndtype $refName <$value>
+# ndlist new $ndtype $refName <$value>
 #
 # Arguments:
 # ndtype        Type of ND list (0D for scalar, 1D for vector, etc.)
 # refName       Variable name for garbage collection
 # value         ndlist value (must be proper list, at least along 0 index)
 
-::vutil::type new ndlist {
+::vutil::type create ndlist ::ndlist::ndlist {
     constructor {ndtype refName args} {
         set (ndims) [::ndlist::GetNDims $ndtype]
         next $refName {*}$args
@@ -380,20 +381,20 @@ proc ::ndlist::IsNDType {string} {
     regexp {^(0|[1-9]\d*)[dD]$} $string
 }
 
-# ndlist --
+# tensor --
 #
-# Shorthand to create a new ndlist.
+# Shorthand to create a new ndlist of arbitrary dimension
 #
 # Syntax:
-# ndlist $ndtype $refName <$value>
+# tensor $ndtype $refName <$value>
 #
 # Arguments:
 # refName       Variable name for garbage collection
 # value         Value to initialize 
 
-proc ::ndlist::ndlist {ndtype refName args} {
+proc ::ndlist::tensor {ndtype refName args} {
     upvar 1 $refName refVar
-    ::vutil::new ndlist $ndtype refVar {*}$args
+    ndlist new $ndtype refVar {*}$args
 }
 
 # matrix --
@@ -409,7 +410,7 @@ proc ::ndlist::ndlist {ndtype refName args} {
 
 proc ::ndlist::matrix {refName args} {
     upvar 1 $refName refVar
-    ::vutil::new ndlist 2D refVar {*}$args
+    ndlist new 2D refVar {*}$args
 }
 
 # vector --
@@ -425,7 +426,7 @@ proc ::ndlist::matrix {refName args} {
 
 proc ::ndlist::vector {refName args} {
     upvar 1 $refName refVar
-    ::vutil::new ndlist 1D refVar {*}$args
+    ndlist new 1D refVar {*}$args
 }
 
 # scalar --
@@ -441,7 +442,7 @@ proc ::ndlist::vector {refName args} {
 
 proc ::ndlist::scalar {refName args} {
     upvar 1 $refName refVar
-    ::vutil::new ndlist 0D refVar {*}$args
+    ndlist new 0D refVar {*}$args
 }
 
 # TempObj --
@@ -450,8 +451,8 @@ proc ::ndlist::scalar {refName args} {
 
 proc ::ndlist::TempObj {ndims ndlist} {
     variable temp
-    ::vutil::new ndlist ${ndims}D temp $ndlist
-} 
+    ndlist new ${ndims}D temp $ndlist
+}
 
 # NDLIST INITIALIZATION
 ################################################################################
