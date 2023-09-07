@@ -9,134 +9,172 @@ tin bake doc/template/version.tin doc/template/version.tex $config
 source build/ndlist.tcl 
 namespace import ndlist::*
 
+tin import flytrap
+
 # Matrix for testing (DO NOT CHANGE)
 set testmat {{1 2 3} {4 5 6} {7 8 9}}
 
-# ndlist/matrix/vector/scalar
-################################################################################
-test ndlist {
-    # Create ndlist object
-} -body {
-    ndlist new 3D x [nrepeat 0.0 1 2 3]
-    $x info
-} -result {exists 1 ndims 3 shape {1 2 3} type ndlist value {{{0.0 0.0 0.0} {0.0 0.0 0.0}}}}
-
-test tensor {
-    # Create tensor object (shorthand for ndlist new)
-} -body {
-    tensor 3D y [nrepeat 0.0 1 2 3]
-    assert {[$x info] eq [$y info]}
-} -result {}
-
-test matrix {
-    # Create ndlist object
-} -body {
-    matrix x $testmat
-    $x info
-} -result [list exists 1 ndims 2 shape {3 3} type ndlist value $testmat]
-
-test vector {
-    # Create vector
-} -body {
-    vector x {1 2 3}
-    $x info
-} -result {exists 1 ndims 1 shape 3 type ndlist value {1 2 3}}
-
-test scalar {
-    # Create scalar
-} -body {
-    scalar x 5.0
-    $x info
-} -result {exists 1 ndims 0 shape {} type ndlist value 5.0}
-
-
 # nrepeat
 ################################################################################
+puts "Creating ndlist value..."
 test nrepeat {
     # Assert that nrepeat works
 } -body {
-    nrepeat 0 1 2 3
+    nrepeat {1 2 3} 0 
 } -result {{{0 0 0} {0 0 0}}}
 
-
-# nreshape
+# nshape/nsize 
 ################################################################################
+puts "Getting shape/size of ndlists"
+test nshape {
+    # Assert that nshape works
+} -body {
+    nshape 2D {{1 2} {3 4} {5 6}}
+} -result {3 2}
+
+test nsize {
+    # Assert that nshape works
+} -body {
+    nsize 2D {{1 2} {3 4} {5 6}}
+} -result {6}
+
+# nflatten/nreshape
+################################################################################
+
+puts "Flattening/reshaping ndlists..."
+
+test nflatten0D {
+    # Turn scalar into vector
+} -body {
+    nflatten 0D {hello world}
+} -result {{hello world}}
+
+test nflatten1D {
+    # Verify vector
+} -body {
+    nflatten 1D {hello world}
+} -result {hello world}
+
+test nflatten2D {
+    # Flatten matrix to vector
+} -body {
+    nflatten 2D {{1 2} {3 4} {5 6}}
+} -result {1 2 3 4 5 6}
+
+test nflatten3D {
+    # Flatten tensor to vector
+} -body {
+    nflatten 3D {{{1 2} {3 4}} {{5 6} {7 8}}}
+} -result {1 2 3 4 5 6 7 8}
+
 test nreshape1 {
     # Check that nreshape works for matrices
 } -body {
-    nreshape {1 2 3 4 5 6} 2 3
+    nreshape 1D {1 2 3 4 5 6} {2 3}
 } -result {{1 2 3} {4 5 6}}
 
 test nreshape2 {
     # Check that nreshape works for higher dimensions
 } -body {
-    nreshape {1 2 3 4 5 6 7 8} 2 2 2
+    nreshape 1D {1 2 3 4 5 6 7 8} {2 2 2}
 } -result {{{1 2} {3 4}} {{5 6} {7 8}}}
 
-# nstack
+
+# ntranspose
 ################################################################################
-test nstack1 {
+
+puts "Transposing ndlists ..."
+
+test ntranspose0D {
+    # Transpose scalar returns self
+} -body {
+    ntranspose 0D {hello world}
+} -result {hello world}
+
+test ntranspose1D {
+    # Transpose vector just returns self
+} -body {
+    ntranspose 1D {hello world}
+} -result {hello world}
+
+test ntranspose2D_default {
+    # Flip rows/columns
+} -body {
+    ntranspose 2D {{1 2} {3 4}}
+} -result {{1 3} {2 4}}
+
+test ntranspose2D_11 {
+    # Same axis, return self
+} -body {
+    ntranspose 2D {{1 2} {3 4}} 1 1
+} -result {{1 2} {3 4}}
+
+test ntranspose2D_10 {
+    # Axis order flipped, still transpose
+} -body {
+    ntranspose 2D {{1 2} {3 4}} 1 0
+} -result {{1 3} {2 4}}
+
+test ntranspose3D_01 {
+    # Just flip rows and columns
+} -body {
+    ntranspose 3D {{{1 2} {3 4}} {{5 6} {7 8}}}; # 2x2x2
+} -result {{{1 2} {5 6}} {{3 4} {7 8}}}
+
+test ntranspose3D_12 {
+    # transpose inner matrices
+} -body {
+    ntranspose 3D {{{1 2} {3 4}} {{5 6} {7 8}}} 1 2; # 2x2x2
+} -result {{{1 3} {2 4}} {{5 7} {6 8}}}
+
+test ntranspose3D_02 {
+    # transpose outer dimensions
+} -body {
+    ntranspose 3D {{{1 2} {3 4}} {{5 6} {7 8}}} 0 2; # 2x2x2
+    # 0,0,0: 1 -> 0,0,0
+    # 0,0,1: 2 -> 1,0,0
+    # 0,1,0: 3 -> 0,1,0
+    # 0,1,1: 4 -> 1,1,0
+    # 1,0,0: 5 -> 0,0,1
+    # 1,0,1: 6 -> 1,0,1
+    # 1,1,0: 7 -> 0,1,1
+    # 1,1,1: 7 -> 1,1,1
+} -result {{{1 5} {3 7}} {{2 6} {4 8}}}
+
+# ninsert
+################################################################################
+
+puts "Combining ndlists ..."
+
+test ninsert1 {
     # Stack vectors (simple concat)
 } -body {
-    nstack 1D {1 2 3} {4 5 6} 0
+    ninsert 1D {1 2 3} end {4 5 6} 0
 } -result {1 2 3 4 5 6}
 
-test nstack2 {
-    # Augment matrices (simple concat)
-} -body {
-    nstack 2D {1 2 3} {4 5 6} 1
-} -result {{1 4} {2 5} {3 6}}
-
-test nstack3 {
+test ninsert2D_0 {
     # Create headers
 } -body {
-    matrix x {{A B C}}
-    matrix y $testmat
-    nstack $x $y 0
+    ninsert 2D $testmat 0 {{A B C}}
 } -result {{A B C} {1 2 3} {4 5 6} {7 8 9}}
 
-test nstack4 {
+test ninsert2D_1 {
+    # Augment matrices (simple concat)
+} -body {
+    ninsert 2D {1 2 3} end {4 5 6} 1
+} -result {{1 4} {2 5} {3 6}}
+
+test nstack3D_2 {
     # Test on tensors
 } -body {
-    matrix x $testmat
-    $x reshape 3 3 1; # Converts to 3D tensor
-    [nstack $x [nop $x * 2 &] 2 &] --> x
-    $x shape
-} -result {3 3 2}
+    set x [nreshape 1D {1 2 3 4 5 6 7 8 9} {3 3 1}]; # Create tensor
+    set y [nreshape 1D {A B C D E F G H I} {3 3 1}]; # 
+    ninsert 3D $x end $y 2
+} -result {{{1 A} {2 B} {3 C}} {{4 D} {5 E} {6 F}} {{7 G} {8 H} {9 I}}}
 
-test nstack4_continued {
-    # Verify that the values got stacked properly
-} $x {{{1 2} {2 4} {3 6}} {{4 8} {5 10} {6 12}} {{7 14} {8 16} {9 18}}}
-
-# nswap
+# nget/nset/nreplace (ndlist access/modification)
 ################################################################################
-
-test nswap1 {
-    # Verify that nswap works as transpose
-} -body {
-    nswap $testmat
-} -result {{1 4 7} {2 5 8} {3 6 9}}
-
-test nswap2 {
-    # transpose axes 1 & 2
-} -body {
-    tensor 3D x [nrepeat 0.0 3 2 1]
-    [$x T 1 2 &] shape
-} -result {3 1 2}
-
-test nswap3 {
-    # transpose axes 0 & 2
-} -body {
-    tensor 3D x [nrepeat 0.0 3 2 1]
-    [$x T 0 2 &] shape
-} -result {1 2 3}
-
-test nswap4 {
-    # transpose axes 0 & 3
-} -body {
-    tensor 4D x [nrepeat 0.0 4 3 2 10]
-    [$x T 0 3 &] shape
-} -result {10 3 2 4}
+puts "Accessing/modififying ndlists"
 
 # nget
 test nget {
@@ -252,7 +290,7 @@ test nset-nreplace {
 }
 
 # nset --
-test nset1 {
+test nset_I_2D {
     # Check that nset works on a non-existent matrix (and grows the matrix)
     # (nset just calls nreplace)
 } -body {
@@ -263,26 +301,89 @@ test nset1 {
     set I
 } -result {{1 0 0} {0 1 0} {0 0 1}}
 
+test nset_I_3D {
+    # Create "Identity tensor"
+} -body {
+    if {[info exists I]} {unset I}
+    for {set i 0} {$i < 3} {incr i} {
+        nset I $i $i $i 1
+    }
+    set I
+} -result {{{1 0 0} {0 0 0} {0 0 0}} {{0 0 0} {0 1 0} {0 0 0}} {{0 0 0} {0 0 0} {0 0 1}}}
+
 test nset2 {
-    # Swap rows and columns
+    # Swap rows and columns (example)
 } -body {
     set a {{1 2} {3 4} {5 6}}
     nset a {1 0} : [nget $a {0 1} :]
 } -result {{3 4} {1 2} {5 6}}
 
 test nset_filler {
-    # Test out filler
+    # Test out custom filler
 } -body {
+    assert $::ndlist::filler eq 0
     set a ""
-    assert {[nset a 1 1 1 foo] eq {{{0 0} {0 0}} {{0 0} {0 foo}}}}; # fills with zeros
     set ::ndlist::filler bar; # custom filler
-    set a ""
-    assert {[nset a 1 1 1 foo] eq {{{bar bar} {bar bar}} {{bar bar} {bar foo}}}}; # fills with bar
-    set ::ndlist::filler 0; # reset to default
-    tensor 3D a ""
-    $a @ 1 1 1 = foo
-    $a
-} -result {{{0 0} {0 0}} {{0 0} {0 foo}}}
+    nset a 1 1 1 foo
+} -result {{{bar bar} {bar bar}} {{bar bar} {bar foo}}}
+set ::ndlist::filler 0; # reset to default
+
+# ndlist/matrix/vector/scalar
+################################################################################
+puts "Creating ndlist objects..."
+
+test ndlist {
+    # Create ndlist object
+} -body {
+    ndlist new 3D x [nrepeat {1 2 3} 0.0]
+    $x info
+} -result {exists 1 ndims 3 shape {1 2 3} type ndlist value {{{0.0 0.0 0.0} {0.0 0.0 0.0}}}}
+
+test tensor {
+    # Create tensor object (shorthand for ndlist new)
+} -body {
+    tensor 3D y [nrepeat {1 2 3} 0.0]
+    assert {[$x info] eq [$y info]}
+} -result {}
+
+test matrix {
+    # Create ndlist object
+} -body {
+    matrix x $testmat
+    $x info
+} -result [list exists 1 ndims 2 shape {3 3} type ndlist value $testmat]
+
+test vector {
+    # Create vector
+} -body {
+    vector x {1 2 3}
+    $x info
+} -result {exists 1 ndims 1 shape 3 type ndlist value {1 2 3}}
+
+test scalar {
+    # Create scalar
+} -body {
+    scalar x 5.0
+    $x info
+} -result {exists 1 ndims 0 shape {} type ndlist value 5.0}
+
+pause
+
+    namespace export tensor matrix vector scalar; # ndobjects
+    namespace export neval nexpr; # Extension of leval and nexpr
+    namespace export nmap i j k; # Functional map over ndlists
+    
+    op $value + 1
+    op $value !
+    op $value -
+    op $value * -1
+    
+    lop $x * -1
+    lop $x + 1
+    
+    $x .= {+ 1 2 3}
+    
+    
 
 # nop 
 test nop1 {
