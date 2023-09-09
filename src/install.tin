@@ -1,4 +1,4 @@
-package require tin 0.7
-tin depend vutil 0.9
+package require tin 1.0
+tin depend vutil @VUTIL_VERSION@
 set dir [tin mkdir -force ndlist @VERSION@]
 file copy pkgIndex.tcl ndlist.tcl README.md LICENSE $dir

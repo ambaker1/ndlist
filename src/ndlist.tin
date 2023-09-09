@@ -15,8 +15,6 @@ package require vutil @VUTIL_VERSION@
 # Define namespace
 namespace eval ::ndlist {
     # Internal variables
-    variable at; # Reference array variable
-    array unset at
     variable nmap_i; # nmap index array
     array unset nmap_i
     variable nmap_break; # nmap break passer
@@ -29,8 +27,9 @@ namespace eval ::ndlist {
     namespace export ntranspose ninsert; # Transpose and combine ndlists
     namespace export nget nset nreplace; # ndlist access/modification
     namespace export tensor matrix vector scalar; # ndobjects
-    namespace export neval nexpr; # Extension of leval and nexpr
-    namespace export nmap i j k; # Functional map over ndlists
+    namespace export nop; # Math mapping over ndlists
+    namespace export neval nexpr; # ND version of vutil leval and lexpr
+    namespace export nmap i j k; # Functional mapping over ndlists
 }
 
 # BASIC NDLIST CREATION AND METADATA
@@ -1522,7 +1521,7 @@ proc ::ndlist::scalar {refName args} {
 # nop 2D $matrix in {1 2 3}; # Returns boolean matrix, if values are in a list
 
 proc ::ndlist::nop {nd ndlist op args} {
-    RecOp [GetNDims $nd] $ndlist $op {*}$opargs
+    RecOp [GetNDims $nd] $ndlist $op {*}$args
 }
 
 # RecOp --
@@ -1561,15 +1560,15 @@ proc ::ndlist::RecOp {ndims ndlist op args} {
 # refName:      Reference variable to tie new ndobj to.
 
 proc ::ndlist::neval {body args} {
-    variable at; # Reference array
     # Interpret input
     set args [lassign [::vutil::GetRefName {*}$args] refName]
     if {[llength $args] == 2} {
         # neval $body $nd $ndlist <"-->" $refName>
         # Create temporary ndlist object to refer to.
-        ::vutil::new ndlist temp {*}$args
+        lassign $args nd ndlist
+        ::vutil::new ndlist temp $nd $ndlist
         uplevel 1 [list $temp ::= $body]; # Calls neval
-        tailcall new ndlist $refName [$temp]
+        tailcall ::vutil::new ndlist $refName $nd [$temp]
     } elseif {[llength $args] > 0} {
         return -code error "wrong # args: should be\
                 \"neval body ?nd ndlist? ?--> refName?\""
@@ -1589,14 +1588,14 @@ proc ::ndlist::neval {body args} {
         if {[array exists subVar]} {
             return -code error "\"$subName\" is an array"
         }
-        type assert ndlist $subVar
+        ::vutil::type assert ndlist $subVar
         # Validate ndlist dimensionalities
         if {$ndims == -1} {
             set ndims [$subVar ndims]
         } elseif {[$subVar ndims] != $ndims} {
             return -code error "incompatible dimensionality"
         }
-        lappend varMap ::ndlist::at($subName) [$subVar]
+        lappend varMap ::vutil::at($subName) [$subVar]
     }
     # Handle case with no ndlist references (normal eval)
     if {$ndims == -1} {
@@ -1604,15 +1603,15 @@ proc ::ndlist::neval {body args} {
     }
     # Handle case with list references (call lmap)
     try {
-        set oldRefs [array get at]
-        array unset at
+        set oldRefs [array get ::vutil::at]
+        array unset ::vutil::at
         set ndlist [uplevel 1 [list ::ndlist::nmap $ndims {*}$varMap $body]]
     } finally {
-        array unset at
-        array set at $oldRefs
+        array unset ::vutil::at
+        array set ::vutil::at $oldRefs
     }
     # Create the new ndlist
-    tailcall ::vutil::new ndlist $ndims $refName $ndlist  
+    tailcall ::vutil::new ndlist $refName $ndims $ndlist  
 }
 
 # nexpr --
