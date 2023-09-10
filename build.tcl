@@ -15,6 +15,15 @@ tin import flytrap
 # Matrix for testing (DO NOT CHANGE)
 set testmat {{1 2 3} {4 5 6} {7 8 9}}
 
+# ndlist 
+################################################################################
+puts "Expanding ragged list"
+test nrepeat {
+    # Assert that nrepeat works
+} -body {
+    ndlist 2D {1 {2 3}}
+} -result {{1 0} {2 3}}
+
 # nrepeat
 ################################################################################
 puts "Creating ndlist value..."

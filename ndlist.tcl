@@ -193,7 +193,7 @@ proc ::ndlist::MaxShape {ndims ndlist} {
                 set maxdim [llength $ndrow]
             }
         }
-        return [list [llength $ndlist] $maxcols]
+        return [list [llength $ndlist] $maxdim]
     }
     # Recursion for higher dimensions
     incr ndims -1
