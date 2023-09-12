@@ -1,7 +1,7 @@
 package require tin 1.0
 tin import assert from tin
 tin import tcltest
-set version 0.1
+set version 0.1.1
 set vutil_version 1.1
 set config [dict create VERSION $version VUTIL_VERSION $vutil_version]
 tin bake src build $config
