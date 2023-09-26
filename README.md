@@ -1,5 +1,7 @@
-# ndlist
-N-Dimensional List Implementation in Tcl
+# N-Dimensional Lists (ndlist)
+Utilities for accessing, modifying and manipulating N-Dimensional lists in Tcl.
+
+Also adds the "ndlist" object variable type, using the type framework provided by the [vutil](https://github.com/ambaker1/vutil) package.
 
 Full documentation [here](https://raw.githubusercontent.com/ambaker1/ndlist/main/doc/ndlist.pdf).
 

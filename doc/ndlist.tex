@@ -16,7 +16,7 @@
 \begin{abstract}
 \begin{center}
 The ``ndlist'' module provides tools for vector, matrix, and tensor manipulation and processing, where vectors are represented by Tcl lists, and matrices are represented by nested Tcl lists, and higher dimension lists represented by additional levels of nesting. 
-Additionally, this package provides the ``ndlist'' object variable type.
+Additionally, this package provides the ``ndlist'' object variable type, using the object variable framework provided by the \textcolor{blue}{\href{https://github.com/ambaker1/vutil}{vutil}} package.
 \end{center}
 \end{abstract}
 \clearpage
@@ -336,7 +336,8 @@ For more info on these methods, see the documentation for the ``vutil'' package.
 \method{ndlist}{:=} \$expr \\
 \method{ndlist}{::=} \$body \\
 \method{ndlist}{info} <\$field> \\
-\method{ndlist}{print} <-nonewline> <\$channelID>
+\method{ndlist}{print} <-nonewline> <\$channelID> \\
+\method{ndlist}{destroy}
 \end{syntax}
 \begin{args}
 \$refName & Reference name to copy to. \\
@@ -381,7 +382,7 @@ The method ``\methodlink[0]{ndlist}{@}'' allows you to access or modify portions
 \quad = \$value  & \quad Assign \texttt{\$value} to range after passing through the \cmdlink{ndlist} command. \\
 \quad .= \$oper & \quad Modify range in place using \cmdlink{nop}. \\
 \quad := \$expr & \quad Modify range in place using \cmdlink{nexpr}. \\
-\quad := \$body & \quad Modify range in place using \cmdlink{neval}. 
+\quad ::= \$body & \quad Modify range in place using \cmdlink{neval}. 
 \end{args}
 
 \begin{example}{ND List Object Access/Manipulation}

@@ -522,7 +522,7 @@ proc ::ndlist::Transpose {matrix} {
 # Insert ndlists in other ndlists, verifying that dimensions are compatible.
 #
 # Syntax:
-# ninsert $nd $ndlist $axis $index $sublist
+# ninsert $nd $ndlist $axis $index $sublist <$axis>
 #
 # Arguments:
 # nd            Number of dimensions
@@ -990,7 +990,6 @@ proc ::ndlist::nset {varName args} {
 # nreplace --
 #
 # Replace portion of ndlist - return new list, same dimension. 
-# Can also return an ndobject.
 #
 # Syntax:
 # nreplace $ndlist $i1 $i2 ... $sublist
@@ -1916,4 +1915,4 @@ proc ::ndlist::k {} {
 ################################################################################
 
 # Finally, provide the package
-package provide ndlist 0.1
+package provide ndlist 0.1.1
