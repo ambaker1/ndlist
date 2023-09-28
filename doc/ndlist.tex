@@ -152,41 +152,9 @@ puts $a
 \end{lstlisting}
 \end{example}
 
+
 \clearpage
-
-\section{Basic Math Operations}
-Basic math operators can be mapped over an ND list with the command \cmdlink{nop}. 
-This command is built-in to ND list objects with the ``\texttt{.=}'' operator.
-
-\begin{syntax}
-\command{nop} \$nd \$ndlist \$op \$arg...
-\end{syntax}
-\begin{args}
-\$nd & Dimensionality of ND list (e.g. 2D for a matrix).  \\
-\$ndlist & ND list to perform element-wise operation over. \\
-\$op & Math operator (using tcl::mathop namespace). \\
-\$arg... & Operator arguments (see tcl::mathop documentation).
-\end{args}
-
-\begin{example}{Element-wise operations}
-\begin{lstlisting}
-# Using ND list values
-puts [nop 1D {1 2 3} -]
-puts [nop 1D {1 2 3} + 1]
-# Using ND list objects
-matrix x {{1 2 3} {4 5 6}}
-[$x .= {>= 3}] print
-\end{lstlisting}
-\tcblower
-\begin{lstlisting}
--1 -2 -3
-2 3 4
-{0 0 1} {1 1 1}
-\end{lstlisting}
-\end{example}
-\clearpage
-
-\section{General Purpose Mapping}
+\section{ND Mapping}
 The command \cmdlink{nmap} is a general purpose mapping function for N-dimensional lists in Tcl. 
 If multiple ND lists are provided for iteration, they must agree in dimension or be unity, like in \cmdlink{nset}. 
 Returns an ND list in similar fashion to the Tcl \textit{lmap} command. 
@@ -232,6 +200,38 @@ puts [nmap 2D x $testmat {format %.2f $x}]
 \end{lstlisting}
 \end{example}
 
+\clearpage
+\subsection{Basic Math Operations}
+Basic math operators can be mapped over an ND list with the command \cmdlink{nop}. 
+This method is much faster than \cmdlink{nmap} for simple math operations.
+
+\begin{syntax}
+\command{nop} \$nd \$ndlist \$op \$arg...
+\end{syntax}
+\begin{args}
+\$nd & Dimensionality of ND list (e.g. 2D for a matrix).  \\
+\$ndlist & ND list to perform element-wise operation over. \\
+\$op & Math operator (using tcl::mathop namespace). \\
+\$arg... & Operator arguments (see tcl::mathop documentation).
+\end{args}
+
+Additionally, this command is built-in to ND list objects with the ``\texttt{.=}'' operator, as shown below. 
+\begin{example}{Element-wise operations}
+\begin{lstlisting}
+# Using ND list values
+puts [nop 1D {1 2 3} -]
+puts [nop 1D {1 2 3} + 1]
+# Using ND list objects
+matrix x {{1 2 3} {4 5 6}}
+[$x .= {>= 3}] print
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+-1 -2 -3
+2 3 4
+{0 0 1} {1 1 1}
+\end{lstlisting}
+\end{example}
 
 \clearpage
 \section{ND List Objects}
@@ -542,7 +542,7 @@ puts [ninsert 3D $x end $y 2]
 
 \clearpage
 
-\subsection{Filling Blanks}
+\section{Filling Blanks}
 Modifying an ND list outside of its dimensions automatically expands the list with blanks to match the new shape. 
 The command \cmdlink{nfill} replaces blank values with a specified filler value.
 For ND list objects, the method \methodlink[0]{ndlist}{fill} fills blanks in the value stored in the object.
