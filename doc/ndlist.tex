@@ -68,7 +68,7 @@ puts [nrepeat {1 2 3} 0]
 \end{example}
 
 The command \cmdlink{ndlist} initializes an ND list from a value input, expanding if necessary to match maximum dimensions.
-If the input value is ``ragged'', as in it has inconsistent dimensions, it will be expanded to match the maximum dimensions, filled in with the value \texttt{\$::ndlist::filler}. By default, this is 0, but can be modified.
+If the input value is ``ragged'', as in it has inconsistent dimensions, it will be expanded to match the maximum dimensions, filled in with blanks.
 \begin{syntax}
 \command{ndlist} \$nd \$value
 \end{syntax}
@@ -82,7 +82,7 @@ puts [ndlist 2D {1 {2 3}}]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
-{{1 0} {2 3}}
+{{1 {}} {2 3}}
 \end{lstlisting}
 \end{example}
 
@@ -259,22 +259,6 @@ Additionally, elements can be skipped with \textit{continue}, and the entire loo
 \$ndlist & ND list to iterate over. \\
 \$body & Tcl script to evaluate at every loop iteration. 
 \end{args}
-\begin{example}{ND list mapping}
-\begin{lstlisting}
-set testmat {{1 2 3} {4 5 6} {7 8 9}}
-# Checkerboard sign pattern
-puts [nmap 2D x $testmat {expr {
-    $x*([i]%2 + [j]%2 == 1?-1:1)
-}}]
-puts [nmap 2D x $testmat {format %.2f $x}]; # Simple formatting
-\end{lstlisting}
-\tcblower
-\begin{lstlisting}
-{1 -2 3} {-4 5 -6} {7 -8 9}
-{1.00 2.00 3.00} {4.00 5.00 6.00} {7.00 8.00 9.00}
-\end{lstlisting}
-\end{example}
-
 \subsection{Map Index Access}
 The iteration indices of \cmdlink{nmap} are accessed with the commands \cmdlink{i}, \cmdlink{j}, \& \cmdlink{k}. 
 The commands \cmdlink{j} and \cmdlink{k} are simply shorthand for \cmdlink{i} with dimensions 1 and 2.
@@ -290,6 +274,23 @@ The commands \cmdlink{j} and \cmdlink{k} are simply shorthand for \cmdlink{i} wi
 \begin{args}	
 \$axis & Dimension to access mapping index at. Default 0.
 \end{args}
+\begin{example}{ND list mapping}
+\begin{lstlisting}
+set testmat {{1 2 3} {4 5 6} {7 8 9}}
+# Checkerboard sign pattern
+puts [nmap 2D x $testmat {expr {
+    $x*([i]%2 + [j]%2 == 1?-1:1)
+}}]
+# Simple formatting
+puts [nmap 2D x $testmat {format %.2f $x}]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+{1 -2 3} {-4 5 -6} {7 -8 9}
+{1.00 2.00 3.00} {4.00 5.00 6.00} {7.00 8.00 9.00}
+\end{lstlisting}
+\end{example}
+
 
 \clearpage
 \section{ND List Objects}
@@ -353,7 +354,7 @@ For more info on these methods, see the documentation for the ``vutil'' package.
 \begin{example}{ND list object methods}
 \begin{lstlisting}
 matrix X {{1 2} {3 4}}
-$X ::= {format %0.2f $@.}; Format values
+$X ::= {format %0.2f $@.}; # Format values
 $X print
 $X --> Y; # Copy object
 $Y .= {+ 1}; # Perform math operation
@@ -362,7 +363,7 @@ $Y print
 \tcblower
 \begin{lstlisting}
 {1.00 2.00} {3.00 4.00}
-{2.00 3.00} {4.00 5.00}
+{2.0 3.0} {4.0 5.0}
 \end{lstlisting}
 \end{example}
 
@@ -385,7 +386,7 @@ The method ``\methodlink[0]{ndlist}{@}'' allows you to access or modify portions
 \quad ::= \$body & \quad Modify range in place using \cmdlink{neval}. 
 \end{args}
 
-\begin{example}{ND List Object Access/Manipulation}
+\begin{example}{ND list object access/manipulation}
 \begin{lstlisting}
 # Access ND List Objects
 matrix X {{1 2} {3 4}}
@@ -418,14 +419,14 @@ Additionally, these are built into the ``\texttt{:=}'' and ``\texttt{::=}'' ND l
 \$expr & Tcl expression with list object references. \\
 \$nd & Dimensionality of ND list (e.g. 2D for a matrix).  \\
 \$ndlist & ND list to iterate over, with \texttt{\$@.} reference. \\
-\$refName & Optional reference variable to tie resulting ND list to. Blank to return value.
+\$refName & Reference variable to tie resulting ND list to. Default blank returns value.
 \end{args}
 
 \begin{example}{Element-wise expressions}
 \begin{lstlisting}
 matrix x {{1 2} {3 4} {5 6}}
 matrix y 5.0
-nexpr {$@x + $@y}
+puts [nexpr {$@x + $@y}]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
@@ -595,6 +596,37 @@ puts [ninsert 3D $x end $y 2]
 \tcblower
 \begin{lstlisting}
 {{1 A} {2 B} {3 C}} {{4 D} {5 E} {6 F}} {{7 G} {8 H} {9 I}}
+\end{lstlisting}
+\end{example}
+
+\clearpage
+
+\subsection{Filling Blanks}
+Modifying an ND list outside of its dimensions automatically expands the list with blanks to match the new shape. 
+The command \cmdlink{nfill} replaces blank values with a specified filler value.
+For ND list objects, the method \methodlink[0]{ndlist}{fill} fills blanks in the value stored in the object.
+\begin{syntax}
+\command{nfill} \$nd \$ndlist \$filler \\
+\method{ndlist}{fill} \$filler
+\end{syntax}
+\begin{args}
+\$nd & Dimensionality of ND list (e.g. 2D for a matrix).  \\
+\$ndlist & ND list to iterate over. \\
+\$filler & Filler to replace blanks with.
+\end{args}
+
+\begin{example}{Creating an identity matrix}
+\begin{lstlisting}
+set I ""
+for {set i 0} {$i < 3} {incr i} {
+    nset I $i $i 1
+}
+set I [nfill 2D $I 0]
+puts $I
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+{1 0 0} {0 1 0} {0 0 1}
 \end{lstlisting}
 \end{example}
 
