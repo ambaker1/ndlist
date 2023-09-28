@@ -20,7 +20,7 @@ namespace eval ::ndlist {
     variable nmap_break; # nmap break passer
     
     # N-dimensional list access and mapping
-    namespace export ndlist nrepeat nrange; # Create ndlists
+    namespace export ndlist nrepeat; # Create ndlists
     namespace export nshape nsize; # Get dimensions and size
     namespace export nflatten nreshape; # Reshape an ndlist
     namespace export ntranspose ninsert; # Transpose and combine ndlists
@@ -30,6 +30,7 @@ namespace eval ::ndlist {
     namespace export neval nexpr; # ND version of vutil leval and lexpr
     namespace export nmap i j k; # Functional mapping over ndlists
     namespace export nfill; # Fill blanks with a value.
+    namespace export range; # Index range
 }
 
 # BASIC NDLIST CREATION AND METADATA
@@ -871,58 +872,6 @@ proc ::ndlist::Index2Integer {index n} {
         set i [expr {$i % $n}]
     }
     return $i
-}
-
-# nrange --
-#
-# Generate integer range
-# 
-# nrange $n
-# nrange $start $stop
-# nrange $start $stop $step
-#
-# Arguments:
-# n:        Number of integers
-# start:    Start of resultant range.
-# stop:     End limit of resultant range.
-# step:     Step size. Default 1 or -1, depending on direction.
-
-proc ::ndlist::nrange {args} {
-    # Switch for arity
-    if {[llength $args] == 1} {
-        # Basic case
-        set n [lindex $args 0]
-        if {![string is integer -strict $n] || $n < 0} {
-            return -code error "n must be integer >= 0"
-        }
-        set start 0
-        set stop [expr {$n - 1}]
-        set step 1
-    } elseif {[llength $args] == 2} {
-        lassign $args start stop
-        if {![string is integer -strict $start]} {
-            return -code error "start must be integer"
-        }
-        if {![string is integer -strict $stop]} {
-            return -code error "stop must be integer"
-        }
-        set step [expr {$stop > $start ? 1 : -1}]
-    } elseif {[llength $args] == 3} {
-        lassign $args start stop step
-        if {![string is integer -strict $start]} {
-            return -code error "start must be integer"
-        }
-        if {![string is integer -strict $stop]} {
-            return -code error "stop must be integer"
-        }
-        if {![string is integer -strict $step]} {
-            return -code error "step must be integer"
-        }
-    } else {
-        return -code error "wrong # args: should be \"nrange n\",\
-                \"nrange start stop\", or \"nrange start stop step\""
-    }
-    return [Range $start $stop $step]
 }
 
 # Range --
@@ -1943,6 +1892,58 @@ proc ::ndlist::nfill {nd ndlist filler} {
     nmap $nd value $ndlist {
         expr {$value eq "" ? $filler : $value}
     }
+}
+
+# range --
+#
+# Utility to generate integer range
+# 
+# range $n
+# range $start $stop
+# range $start $stop $step
+#
+# Arguments:
+# n:        Number of integers
+# start:    Start of resultant range.
+# stop:     End limit of resultant range.
+# step:     Step size. Default 1 or -1, depending on direction.
+
+proc ::ndlist::range {args} {
+    # Switch for arity
+    if {[llength $args] == 1} {
+        # Basic case
+        set n [lindex $args 0]
+        if {![string is integer -strict $n] || $n < 0} {
+            return -code error "n must be integer >= 0"
+        }
+        set start 0
+        set stop [expr {$n - 1}]
+        set step 1
+    } elseif {[llength $args] == 2} {
+        lassign $args start stop
+        if {![string is integer -strict $start]} {
+            return -code error "start must be integer"
+        }
+        if {![string is integer -strict $stop]} {
+            return -code error "stop must be integer"
+        }
+        set step [expr {$stop > $start ? 1 : -1}]
+    } elseif {[llength $args] == 3} {
+        lassign $args start stop step
+        if {![string is integer -strict $start]} {
+            return -code error "start must be integer"
+        }
+        if {![string is integer -strict $stop]} {
+            return -code error "stop must be integer"
+        }
+        if {![string is integer -strict $step]} {
+            return -code error "step must be integer"
+        }
+    } else {
+        return -code error "wrong # args: should be \"range n\",\
+                \"range start stop\", or \"range start stop step\""
+    }
+    return [Range $start $stop $step]
 }
 
 ################################################################################
