@@ -88,7 +88,7 @@ puts [ndlist 2D {1 {2 3}}]
 
 \clearpage
 
-\subsection{ND List Access}
+\subsection{Access}
 Portions of an ND list can be accessed with the command \cmdlink{nget}, using index notation as described on pg. \pageref{indexformat}. 
 \begin{syntax}
 \command{nget} \$ndlist \$i ...
@@ -119,22 +119,22 @@ puts [nget $A {0 0 0} 1*]; # can repeat indices
 \end{example}
 
 \clearpage
-\subsection{ND List Modification}
+\subsection{Modification}
 A ND list can be modified by reference with \cmdlink{nset}, and by value  with \cmdlink{nreplace}, using the same index argument syntax as \cmdlink{nget}. 
 If the blank string is used as a replacement value, it will remove values from the ND lists, as long as it is only removing along one dimension. 
 Otherwise, the replacement ND list must agree in dimension to the to the index argument dimensions, or be unity. 
 For example, you can replace a 4x3 portion of a matrix with 4x3, 4x1, 1x3, or 1x1 matrices.
 If modifying outside of the dimensions of the ND list, the ND list will be expanded to the new dimensions, like in the command \cmdlink{ndlist}.
 \begin{syntax}
-\command{nset} \$varName \$arg1 \$arg2 ... \$sublist
+\command{nset} \$varName \$i ... \$sublist
 \end{syntax}
 \begin{syntax}
-\command{nreplace} \$ndlist \$arg1 \$arg2 ... \$sublist
+\command{nreplace} \$ndlist \$i ... \$sublist
 \end{syntax}
 \begin{args}
 \$varName & Name of ND list to modify. \\
 \$ndlist & ND list to modify. \\
-\$arg1 \$arg2 ... & Index arguments, using index notation (see pg. \pageref{indexformat}). The number of index arguments determines the interpreted dimensions. \\
+\$i ... & Index arguments, using index notation (see pg. \pageref{indexformat}). The number of index arguments determines the interpreted dimensions. \\
 \$sublist & Replacement list, or blank to delete values.
 \end{args}
 \begin{example}{Swapping rows in a matrix}
@@ -154,7 +154,7 @@ puts $a
 
 
 \clearpage
-\section{ND Mapping}
+\section{N-Dimensional Mapping}
 The command \cmdlink{nmap} is a general purpose mapping function for N-dimensional lists in Tcl. 
 If multiple ND lists are provided for iteration, they must agree in dimension or be unity, like in \cmdlink{nset}. 
 Returns an ND list in similar fashion to the Tcl \textit{lmap} command. 
@@ -168,7 +168,7 @@ Additionally, elements can be skipped with \textit{continue}, and the entire loo
 \$ndlist & ND list to iterate over. \\
 \$body & Tcl script to evaluate at every loop iteration. 
 \end{args}
-\subsection{Map Index Access}
+\subsection{Map Indices}
 The iteration indices of \cmdlink{nmap} are accessed with the commands \cmdlink{i}, \cmdlink{j}, \& \cmdlink{k}. 
 The commands \cmdlink{j} and \cmdlink{k} are simply shorthand for \cmdlink{i} with dimensions 1 and 2.
 \begin{syntax}
@@ -201,7 +201,7 @@ puts [nmap 2D x $testmat {format %.2f $x}]
 \end{example}
 
 \clearpage
-\subsection{Basic Math Operations}
+\subsection{Math Mapping}
 Basic math operators can be mapped over an ND list with the command \cmdlink{nop}. 
 This method is much faster than \cmdlink{nmap} for simple math operations.
 
@@ -571,7 +571,7 @@ puts $I
 \end{lstlisting}
 \end{example}
 \clearpage
-\section{ND List Indexing}\label{indexformat}
+\section{Index Notation}\label{indexformat}
 Index input for all ND list access and modification functions (\cmdlink{nget}, \cmdlink{nreplace}, \cmdlink{nset} and the ND list object method ``\methodlink[0]{ndlist}{@}'') gets passed through the ND list index parser \cmdlink{::ndlist::ParseIndex}.
 \begin{syntax}
 \command{::ndlist::ParseIndex} \$input \$n
