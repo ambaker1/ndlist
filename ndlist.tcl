@@ -18,10 +18,9 @@ namespace eval ::ndlist {
     variable nmap_i; # nmap index array
     array unset nmap_i
     variable nmap_break; # nmap break passer
-    variable filler 0; # Filler for nreplace
     
     # N-dimensional list access and mapping
-    namespace export ndlist nrepeat nrange; # Create ndlists
+    namespace export ndlist nrepeat; # Create ndlists
     namespace export nshape nsize; # Get dimensions and size
     namespace export nflatten nreshape; # Reshape an ndlist
     namespace export ntranspose ninsert; # Transpose and combine ndlists
@@ -30,6 +29,8 @@ namespace eval ::ndlist {
     namespace export nop; # Math mapping over ndlists
     namespace export neval nexpr; # ND version of vutil leval and lexpr
     namespace export nmap i j k; # Functional mapping over ndlists
+    namespace export nfill; # Fill blanks with a value.
+    namespace export range; # Index range
 }
 
 # BASIC NDLIST CREATION AND METADATA
@@ -211,7 +212,7 @@ proc ::ndlist::MaxShape {ndims ndlist} {
 #
 # Expand an ndlist to specified shape. Not the same as "nreshape".
 # If the given dimensions are smaller, it will throw an error.
-# Fills with "$::ndlist::filler" (default 0) which can be modified by user.
+# Fills with blanks.
 #
 # Syntax:
 # Expand $ndlist $n1 $n2 ...
@@ -221,10 +222,9 @@ proc ::ndlist::MaxShape {ndims ndlist} {
 # n1 n2 ...     New dimensions (must be greater)
 
 proc ::ndlist::Expand {ndlist n args} {
-    variable filler
     # Expand list as needed
     if {[llength $ndlist] < $n} {
-        lappend ndlist {*}[lrepeat [expr {$n-[llength $ndlist]}] $filler]
+        lappend ndlist {*}[lrepeat [expr {$n-[llength $ndlist]}] ""]
     }
     # Throw error if dimension is greater than n
     if {[llength $ndlist] != $n} {
@@ -874,58 +874,6 @@ proc ::ndlist::Index2Integer {index n} {
     return $i
 }
 
-# nrange --
-#
-# Generate integer range
-# 
-# nrange $n
-# nrange $start $stop
-# nrange $start $stop $step
-#
-# Arguments:
-# n:        Number of integers
-# start:    Start of resultant range.
-# stop:     End limit of resultant range.
-# step:     Step size. Default 1 or -1, depending on direction.
-
-proc ::ndlist::nrange {args} {
-    # Switch for arity
-    if {[llength $args] == 1} {
-        # Basic case
-        set n [lindex $args 0]
-        if {![string is integer -strict $n] || $n < 0} {
-            return -code error "n must be integer >= 0"
-        }
-        set start 0
-        set stop [expr {$n - 1}]
-        set step 1
-    } elseif {[llength $args] == 2} {
-        lassign $args start stop
-        if {![string is integer -strict $start]} {
-            return -code error "start must be integer"
-        }
-        if {![string is integer -strict $stop]} {
-            return -code error "stop must be integer"
-        }
-        set step [expr {$stop > $start ? 1 : -1}]
-    } elseif {[llength $args] == 3} {
-        lassign $args start stop step
-        if {![string is integer -strict $start]} {
-            return -code error "start must be integer"
-        }
-        if {![string is integer -strict $stop]} {
-            return -code error "stop must be integer"
-        }
-        if {![string is integer -strict $step]} {
-            return -code error "step must be integer"
-        }
-    } else {
-        return -code error "wrong # args: should be \"nrange n\",\
-                \"nrange start stop\", or \"nrange start stop step\""
-    }
-    return [Range $start $stop $step]
-}
-
 # Range --
 #
 # Private handler to generate an integer range
@@ -1427,11 +1375,27 @@ proc ::ndlist::Replace {list sublist iType iList} {
     # $ndobj insert $index $sublist <$axis>
     #
     # Insert an ndlist object into another ndlist object.
+    #
+    # Arguments:
+    # index         Index to insert at
+    # sublist       ndlist to insert
+    # axis          Axis to insert along. Default 0.
     
     method insert {index sublist {axis 0}} {
         set sublist [ndlist $(ndims) $sublist]
         set (value) [ninsert $(ndims) [my GetValue] $index $sublist $axis]
         return [self]
+    }
+    
+    # $ndobj fill $filler
+    #
+    # Fill blanks with a value.
+    #
+    # Arguments:
+    # filler            Filler to replace blanks.
+    
+    method fill {filler} {
+        set (value) [nfill $(ndims) [my GetValue] $filler]
     }
     
     # @ --
@@ -1912,7 +1876,77 @@ proc ::ndlist::k {} {
     return [i 2]
 }
 
+# nfill --
+#
+# Fill all blanks in an ndlist with a value.
+#
+# Syntax:
+# nfill $nd $ndlist $filler
+#
+# Arguments:
+# nd                Number of dimensions (e.g. 1D, 2D, etc.)
+# ndlist            ND list to get dimensions of
+# filler            Filler to replace blanks.
+
+proc ::ndlist::nfill {nd ndlist filler} {
+    nmap $nd value $ndlist {
+        expr {$value eq "" ? $filler : $value}
+    }
+}
+
+# range --
+#
+# Utility to generate integer range
+# 
+# range $n
+# range $start $stop
+# range $start $stop $step
+#
+# Arguments:
+# n:        Number of integers
+# start:    Start of resultant range.
+# stop:     End limit of resultant range.
+# step:     Step size. Default 1 or -1, depending on direction.
+
+proc ::ndlist::range {args} {
+    # Switch for arity
+    if {[llength $args] == 1} {
+        # Basic case
+        set n [lindex $args 0]
+        if {![string is integer -strict $n] || $n < 0} {
+            return -code error "n must be integer >= 0"
+        }
+        set start 0
+        set stop [expr {$n - 1}]
+        set step 1
+    } elseif {[llength $args] == 2} {
+        lassign $args start stop
+        if {![string is integer -strict $start]} {
+            return -code error "start must be integer"
+        }
+        if {![string is integer -strict $stop]} {
+            return -code error "stop must be integer"
+        }
+        set step [expr {$stop > $start ? 1 : -1}]
+    } elseif {[llength $args] == 3} {
+        lassign $args start stop step
+        if {![string is integer -strict $start]} {
+            return -code error "start must be integer"
+        }
+        if {![string is integer -strict $stop]} {
+            return -code error "stop must be integer"
+        }
+        if {![string is integer -strict $step]} {
+            return -code error "step must be integer"
+        }
+    } else {
+        return -code error "wrong # args: should be \"range n\",\
+                \"range start stop\", or \"range start stop step\""
+    }
+    return [Range $start $stop $step]
+}
+
 ################################################################################
 
 # Finally, provide the package
-package provide ndlist 0.1.1
+package provide ndlist 0.2

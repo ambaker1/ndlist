@@ -1,7 +1,7 @@
 package require tin 1.0
 tin import assert from tin
 tin import tcltest
-set version 0.1.1
+set version 0.2
 set vutil_version 1.1
 set config [dict create VERSION $version VUTIL_VERSION $vutil_version]
 tin bake src build $config
@@ -22,7 +22,7 @@ test nrepeat {
     # Assert that nrepeat works
 } -body {
     ndlist 2D {1 {2 3}}
-} -result {{1 0} {2 3}}
+} -result {{1 {}} {2 3}}
 
 # nrepeat
 ################################################################################
@@ -33,17 +33,17 @@ test nrepeat {
     nrepeat {1 2 3} 0 
 } -result {{{0 0 0} {0 0 0}}}
 
-# nrange
+# range
 ################################################################################
-puts "Creating nrange"
-test nrange {
+puts "Creating range"
+test range {
     # Generate range of integers
 } -body {
-assert [nrange 3] eq [nrange 0 2]
-assert [nrange 10 3 -2] eq {10 8 6 4}
-assert [nrange 4] eq {0 1 2 3}
-assert [nrange 0 4] eq {0 1 2 3 4}
-assert [nrange 0 4 2] eq {0 2 4}
+assert [range 3] eq [range 0 2]
+assert [range 10 3 -2] eq {10 8 6 4}
+assert [range 4] eq {0 1 2 3}
+assert [range 0 4] eq {0 1 2 3 4}
+assert [range 0 4 2] eq {0 2 4}
 } -result {}
 
 # nshape/nsize 
@@ -321,7 +321,7 @@ test nset_I_2D {
     for {set i 0} {$i < 3} {incr i} {
         nset I $i $i 1
     }
-    set I
+    nfill 2D $I 0
 } -result {{1 0 0} {0 1 0} {0 0 1}}
 
 test nset_I_3D {
@@ -331,7 +331,7 @@ test nset_I_3D {
     for {set i 0} {$i < 3} {incr i} {
         nset I $i $i $i 1
     }
-    set I
+    nfill 3D $I 0
 } -result {{{1 0 0} {0 0 0} {0 0 0}} {{0 0 0} {0 1 0} {0 0 0}} {{0 0 0} {0 0 0} {0 0 1}}}
 
 test nset2 {
@@ -341,17 +341,13 @@ test nset2 {
     nset a {1 0} : [nget $a {0 1} :]
 } -result {{3 4} {1 2} {5 6}}
 
-test nset_filler {
-    # Test out custom filler
+test nset_fill_foobar {
+    # Fill blanks with a value.
 } -body {
-    assert $::ndlist::filler eq 0
     set a ""
-    set ::ndlist::filler bar; # custom filler
     nset a 1 1 1 foo
+    nfill 3D $a bar
 } -result {{{bar bar} {bar bar}} {{bar bar} {bar foo}}}
-set ::ndlist::filler 0; # reset to default
-
-
 
 # nop 
 test nop1 {
