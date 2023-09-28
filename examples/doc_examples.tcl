@@ -22,15 +22,6 @@ puts [nreplace $a : 1 ""]; # Delete a column (modify in-place)
 nset a {1 0} : [nget $a {0 1} :]; # Swap rows and columns (modify by reference)
 puts $a
 
-puts "Integer range generator"
-puts [nrange 3]
-puts [nrange 0 2]
-puts [nrange 10 3 -2]
-# Alternative for-loop
-foreach i [nrange 5] {
-    puts $i
-}
-
 puts "Element-wise operations"
 # Using ND list values
 puts [nop 1D {1 2 3} -]
@@ -117,3 +108,12 @@ for {set i 0} {$i < 3} {incr i} {
 }
 set I [nfill 2D $I 0]
 puts $I
+
+puts "Integer range generator"
+puts [range 3]
+puts [range 0 2]
+puts [range 10 3 -2]
+# Alternative for-loop
+foreach i [range 5] {
+    puts $i
+}
