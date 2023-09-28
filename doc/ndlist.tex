@@ -580,7 +580,7 @@ Index input for all ND list access and modification functions (\cmdlink{nget}, \
 \$input & Index input. Options are shown below: \\
 \quad : & All indices \\
 \quad \$start:\$stop & Range of indices (e.g. 0:4 or 1:end-2).\\
-\quad \$start:\$step:\$stop & Stepped range of indices (e.g. 0:2:-2 or 2:3:end), using \cmdlink{nrange}. \\
+\quad \$start:\$step:\$stop & Stepped range of indices (e.g. 0:2:-2 or 2:3:end), using \cmdlink{range}. \\
 \quad \$iList & List of indices (e.g. \{0 end-1 5\} or 3). \\
 \quad \$i* & Single index with asterisk, ``flattens'' the ndlist (e.g. 0* or end-3*). \\
 \$n & Number of elements in list.
@@ -597,7 +597,7 @@ Additionally, index range arguments \texttt{\$start} and \texttt{\$stop}, all in
 
 \clearpage
 \subsection{Range Generator}
-The index range notation ``\texttt{\$start:\$step:\$stop}'' uses the command \cmdlink{range}, which simply generates a range of integer values.
+The index range notation ``\texttt{\$start:\$step:\$stop}'' uses the command \cmdlink{range}, which simply generates a list of integer values. 
 \begin{syntax}
 \command{range} \$n \\
 range \$start \$stop <\$step>
