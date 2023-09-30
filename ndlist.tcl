@@ -1778,10 +1778,11 @@ proc ::ndlist::SingleMap {ndims ndlist body {axis 0}} {
     set nmap_i($axis) -1
     if {$ndims == 1} {
         # Base case
-        set result [uplevel 1 [list lmap x $ndlist "
+        upvar 1 x x
+        set result [lmap x $ndlist {
             incr nmap_i($axis)
-            uplevel 1 [list $body]
-        "]]
+            uplevel 2 $body
+        }]
         # Check for break
         if {$nmap_i($axis) != [llength $ndlist] - 1} {
             set nmap_break 1
@@ -1949,4 +1950,4 @@ proc ::ndlist::range {args} {
 ################################################################################
 
 # Finally, provide the package
-package provide ndlist 0.2
+package provide ndlist 0.2.1
