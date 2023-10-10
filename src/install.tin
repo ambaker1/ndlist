@@ -1,4 +1,5 @@
 package require tin 1.0
+package require math @MATH_VERSION@
 tin depend vutil @VUTIL_VERSION@
 set dir [tin mkdir -force ndlist @VERSION@]
 file copy pkgIndex.tcl ndlist.tcl README.md LICENSE $dir

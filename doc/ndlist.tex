@@ -580,7 +580,7 @@ Index input for all ND list access and modification functions (\cmdlink{nget}, \
 \$input & Index input. Options are shown below: \\
 \quad : & All indices \\
 \quad \$start:\$stop & Range of indices (e.g. 0:4 or 1:end-2).\\
-\quad \$start:\$step:\$stop & Stepped range of indices (e.g. 0:2:-2 or 2:3:end), using \cmdlink{range}. \\
+\quad \$start:\$step:\$stop & Stepped range of indices (e.g. 0:2:-2 or 2:3:end). \\
 \quad \$iList & List of indices (e.g. \{0 end-1 5\} or 3). \\
 \quad \$i* & Single index with asterisk, ``flattens'' the ndlist (e.g. 0* or end-3*). \\
 \$n & Number of elements in list.
@@ -595,41 +595,6 @@ Additionally, index range arguments \texttt{\$start} and \texttt{\$stop}, all in
 \end{args}
 
 
-\clearpage
-\subsection{Range Generator}
-The index range notation ``\texttt{\$start:\$step:\$stop}'' uses the command \cmdlink{range}, which simply generates a list of integer values. 
-\begin{syntax}
-\command{range} \$n \\
-range \$start \$stop <\$step>
-\end{syntax}
-\begin{args}
-\$n & Number of indices, starting at 0 (e.g. 3 returns 0 1 2). \\
-\$start & Starting value. \\
-\$stop & Stop value. \\
-\$step & Step size. Default 1 or -1, depending on direction of start to stop.
-\end{args}
-\begin{example}{Integer range generator}
-\begin{lstlisting}
-puts [range 3]
-puts [range 0 2]
-puts [range 10 3 -2]
-# Alternative for-loop
-foreach i [range 5] {
-    puts $i
-}
-\end{lstlisting}
-\tcblower
-\begin{lstlisting}
-0 1 2
-0 1 2
-10 8 6 4
-0
-1
-2
-3
-4
-\end{lstlisting}
-\end{example}
 \clearpage
 {\normalsize\printindex}
 \end{document}

@@ -10,7 +10,8 @@
 ################################################################################
 
 # Required packages
-package require vutil 1.1
+package require vutil 2.2
+package require math 1.2.5
 
 # Define namespace
 namespace eval ::ndlist {
@@ -25,12 +26,12 @@ namespace eval ::ndlist {
     namespace export nflatten nreshape; # Reshape an ndlist
     namespace export ntranspose ninsert; # Transpose and combine ndlists
     namespace export nget nset nreplace; # ndlist access/modification
-    namespace export tensor matrix vector scalar; # ndobjects
-    namespace export nop; # Math mapping over ndlists
+    namespace export matrix vector scalar; # Shorthand for making ndlist objects
     namespace export neval nexpr; # ND version of vutil leval and lexpr
-    namespace export nmap i j k; # Functional mapping over ndlists
+    namespace export nmap i j k; # General ND list mapping.
     namespace export nfill; # Fill blanks with a value.
-    namespace export range; # Index range
+    namespace export nreduce; # Reduce an ND list along axis
+    namespace export range; # Integer range generator
 }
 
 # BASIC NDLIST CREATION AND METADATA
@@ -876,15 +877,15 @@ proc ::ndlist::Index2Integer {index n} {
 
 # Range --
 #
-# Private handler to generate an integer range
-#
+# Private routine to generate integer range, used in ParseIndex
+# 
 # Syntax:
 # Range $start $stop $step
-# 
+#
 # Arguments:
-# start:    Start of resultant range.
-# stop:     End limit of resultant range.
-# step:     Step size.
+# start     Start of resultant range.
+# stop      End limit of resultant range.
+# step      Step size.
 
 proc ::ndlist::Range {start stop step} {
     # Avoid divide by zero
@@ -1244,11 +1245,10 @@ proc ::ndlist::Replace {list sublist iType iList} {
     return $list
 }
 
-
 # NDLIST OBJECT VARIABLE TYPE
 ################################################################################
-
-# ::ndlist::ndobj --
+ 
+# ::vutil::new ndlist --
 #
 # Object variable class for ndlists. Not exported.
 #
@@ -1256,37 +1256,31 @@ proc ::ndlist::Replace {list sublist iType iList} {
 # ::vutil::new ndlist $refName $nd <$value>
 #
 # Arguments:
-# refName       Variable name for garbage collection
 # nd            Number of dimensions (e.g. 1D, 2D, etc.)
+# refName       Variable name for garbage collection
 # value         Value of ndlist
 
-::vutil::type create ndlist ::ndlist::ndobj {
+::vutil::type create ndlist ::ndlist::Class {
     # Configure constructor and cloned method to configure namespace path
-    constructor {refName nd args} {
+    constructor {refName nd {value ""}} {
         namespace path [concat [namespace path] ::ndlist]
         set (ndims) [GetNDims $nd]; # Verifies nd syntax
-        next $refName {*}$args
+        next $refName $value
     }
     method <cloned> {args} {
         namespace path [concat [namespace path] ::ndlist]
         next {*}$args
     }
-    # SetValue creates an ndlist (this ensures that input is valid)
-    method SetValue {value} {
-        next [ndlist $(ndims) $value]
+    # Modify API for ND lists
+    method ValidateValue {value} {
+        ndlist $(ndims) $value
     }
-    method info {args} {
+    method UpdateFields {} {
         set (shape) [my shape]
-        next {*}$args
     }
-    # Modify 
-    method GetOpValue {op args} {
-        nop $(ndims) [my GetValue] $op {*}$args
+    method Uplevel {level body} {
+        next $level [list ::ndlist::neval $body]
     }
-    method GetEvalValue {body {level 1}} {
-        next [list ::ndlist::neval $body] $level
-    }
-    # Modify left assignment to ensure same dimensionality
     method SetObject {object} {
         ::vutil::type assert ndlist $object
         if {[$object ndims] != $(ndims)} {
@@ -1306,9 +1300,9 @@ proc ::ndlist::Replace {list sublist iType iList} {
     method ndims {{nd ""}} {
         if {$nd ne ""} {
             set ndims [GetNDims $nd]
-            # Expand ndlist as needed
+            # Expand ndlist as needed (throws error if incompatible)
             if {$ndims > $(ndims)} {
-                set (value) [ndlist $ndims [my GetValue]]
+                set (value) [ndlist $ndims $(value)]
             }
             set (ndims) $ndims
         }
@@ -1323,7 +1317,7 @@ proc ::ndlist::Replace {list sublist iType iList} {
     # axis      Axis to get shape along
     
     method shape {{axis ""}} {
-        nshape $(ndims) [my GetValue] $axis
+        nshape $(ndims) $(value) $axis
     }
     
     # $ndobj size
@@ -1331,7 +1325,7 @@ proc ::ndlist::Replace {list sublist iType iList} {
     # Get total size of array (number of elements)
     
     method size {} {
-        nsize $(ndims) [my GetValue] 
+        nsize $(ndims) $(value) 
     }
     
     # $ndobj flatten
@@ -1340,7 +1334,7 @@ proc ::ndlist::Replace {list sublist iType iList} {
     # Note that flattening a scalar will turn it into a 1-element vector
     
     method flatten {} {
-        set (value) [nflatten $(ndims) [my GetValue]]
+        set (value) [nflatten $(ndims) $(value)]
         set (ndims) 1
         return [self]
     }
@@ -1354,7 +1348,7 @@ proc ::ndlist::Replace {list sublist iType iList} {
     
     method reshape {shape} {
         # Call the nreshape proc, and assign new dimensionality
-        set (value) [nreshape $(ndims) [my GetValue] $shape]
+        set (value) [nreshape $(ndims) $(value) $shape]
         set (ndims) [llength $shape]
         return [self]
     }
@@ -1368,7 +1362,7 @@ proc ::ndlist::Replace {list sublist iType iList} {
     # axis2         Axis to swap with axis 1 (default 1)
     
     method transpose {args} {
-        set (value) [ntranspose $(ndims) [my GetValue] {*}$args]
+        set (value) [ntranspose $(ndims) $(value) {*}$args]
         return [self]
     }
     
@@ -1383,7 +1377,7 @@ proc ::ndlist::Replace {list sublist iType iList} {
     
     method insert {index sublist {axis 0}} {
         set sublist [ndlist $(ndims) $sublist]
-        set (value) [ninsert $(ndims) [my GetValue] $index $sublist $axis]
+        set (value) [ninsert $(ndims) $(value) $index $sublist $axis]
         return [self]
     }
     
@@ -1395,8 +1389,44 @@ proc ::ndlist::Replace {list sublist iType iList} {
     # filler            Filler to replace blanks.
     
     method fill {filler} {
-        set (value) [nfill $(ndims) [my GetValue] $filler]
+        set (value) [nfill $(ndims) $(value) $filler]
     }
+    
+    # $ndobj reduce $command <$axis>
+    #
+    # Reduce the ND list along an axis. Returns self.
+    #
+    # Arguments:
+    # command       Reducing function.
+    # axis          Axis to reduce along. Default 0.
+    
+    method reduce {command {axis 0}} {
+        set (value) [nreduce $(ndims) $command $(value) $axis]
+        incr (ndims) -1
+        return [self]
+    }
+    
+    # $ndobj max <$axis> 
+    # $ndobj min <$axis> 
+    # $ndobj sum <$axis> 
+    # $ndobj product <$axis> 
+    # $ndobj mean <$axis> 
+    # $ndobj median <$axis> 
+    # $ndobj sigma <$axis> 
+    #
+    # ND list statistics. (returns an ND list with decremented ndims)
+    # Uses ::math package statistic functions
+    #
+    # Arguments:
+    # axis          Axis to perform calculation over (default 0).
+    
+    method max {{axis 0}} {nreduce $(ndims) ::math::max $(value) $axis}
+    method min {{axis 0}} {nreduce $(ndims) ::math::min $(value) $axis}
+    method sum {{axis 0}} {nreduce $(ndims) ::math::sum $(value) $axis}
+    method product {{axis 0}} {nreduce $(ndims) ::math::product $(value) $axis}
+    method mean {{axis 0}} {nreduce $(ndims) ::math::mean $(value) $axis}
+    method median {{axis 0}} {nreduce $(ndims) ::math::median $(value) $axis}
+    method sigma {{axis 0}} {nreduce $(ndims) ::math::sigma $(value) $axis}
     
     # @ --
     #
@@ -1406,8 +1436,7 @@ proc ::ndlist::Replace {list sublist iType iList} {
     # $ndobj @ $i $j $k; # nget, returns value
     # $ndobj @ $i $j $k --> $refName; # nget, creates new object
     # $ndobj @ $i $j $k <- $object; # nset, by object (must match dimension)
-    # $ndobj @ $i $j $k = $sublist; # nset, by value
-    # $ndobj @ $i $j $k .= $oper; # Math operator modification
+    # $ndobj @ $i $j $k = $value; # nset, by value
     # $ndobj @ $i $j $k := $expr; # Math expression modification
     # $ndobj @ $i $j $k ::= $body; # Tcl script evaluation modification
     
@@ -1419,10 +1448,10 @@ proc ::ndlist::Replace {list sublist iType iList} {
         if {[llength $args] == 0} {
             # Value query (nget). Return value
             # $ndobj @ $i ...
-            return [nget [my GetValue] {*}$indices]
+            return [nget $(value) {*}$indices]
         } elseif {[llength $args] != 2} {
             return -code error "wrong # args: should be\
-                    \"[self] @ i ... option value\""
+                    \"[self] @ i ... op value\""
         }
         # Get number of dimensions of queried range
         set ndims [GetNewNDims $indices]; # ndims of range
@@ -1432,7 +1461,7 @@ proc ::ndlist::Replace {list sublist iType iList} {
             # Create new object
             # $ndobj @ $i ... --> $refName
             set refName $arg
-            set ndlist [nget [my GetValue] {*}$indices]
+            set ndlist [nget $(value) {*}$indices]
             # Return with new object
             tailcall ::vutil::new ndlist $refName $ndims $ndlist
         } elseif {$op eq "<-"} {
@@ -1448,12 +1477,13 @@ proc ::ndlist::Replace {list sublist iType iList} {
         } elseif {$op eq "="} {
             # Direct replacement
             # $ndobj @ $i ... = $value
-            nset (value) {*}$indices [ndlist $ndims $arg]
-        } elseif {$op in {.= := ::=}} {
+            set value $arg
+            nset (value) {*}$indices [ndlist $ndims $value]
+        } elseif {$op in {:= ::=}} {
             # Modification by reference
-            # $ndobj @ $i ... <.= $oper | := $expr | ::= $body>
+            # $ndobj @ $i ... <:= $expr | ::= $body>
             # Create temporary list object for assignment
-            ::vutil::new ndlist temp $ndims [nget [my GetValue] {*}$indices]
+            ::vutil::new ndlist temp $ndims [nget $(value) {*}$indices]
             uplevel 1 [list $temp $op $arg]
             nset (value) {*}$indices [$temp]
         } else {
@@ -1463,34 +1493,13 @@ proc ::ndlist::Replace {list sublist iType iList} {
         return [self]
     }
     export @
-}; # end "ndlist" type declaration
-
-# Create mathop methods
-
-# NDLIST OBJECT CREATION ALIASES COMMANDS
-################################################################################
-
-# tensor --
-#
-# Shorthand to create a new ndobj of arbitrary dimension
-#
-# Syntax:
-# tensor $refName $nd <$value>
-#
-# Arguments:
-# refName       Variable name for garbage collection
-# nd            Number of dimensions (e.g. 1D, 2D, etc.)
-# value         Value to initialize with
-
-proc ::ndlist::tensor {refName nd args} {
-    tailcall ndobj new $refName $nd {*}$args
-}
+}; # end "tensor" type declaration
 
 # matrix --
 # vector --
 # scalar --
 #
-# Shorthand to create a new 2D/1D/0D ndobj.
+# Shorthand for creating standard 2D, 1D, and 0D ndlist objects
 #
 # Syntax:
 # matrix $refName <$value>
@@ -1499,67 +1508,20 @@ proc ::ndlist::tensor {refName nd args} {
 #
 # Arguments:
 # refName       Variable name for garbage collection
-# value         Value to set matrix to
+# value         Value of ndlist
 
-proc ::ndlist::matrix {refName args} {
-    tailcall ndobj new $refName 2D {*}$args
+proc ::ndlist::matrix {refName {value ""}} {
+    tailcall ::vutil::new ndlist $refName 2D $value
 }
-proc ::ndlist::vector {refName args} {
-    tailcall ndobj new $refName 1D {*}$args
+proc ::ndlist::vector {refName {value ""}} {
+    tailcall ::vutil::new ndlist $refName 1D $value
 }
-proc ::ndlist::scalar {refName args} {
-    tailcall ndobj new $refName 0D {*}$args
+proc ::ndlist::scalar {refName {value ""}} {
+    tailcall ::vutil::new ndlist $refName 0D $value
 }
 
 # NDLIST FUNCTIONAL MAPPING COMMANDS
 ################################################################################
-
-# nop --
-#
-# Simple math operations on ndlists.
-#
-# Syntax:
-# nop $nd $ndlist $op $arg ...
-#
-# Arguments:
-# nd            Number of dimensions (e.g. 1D, 2D, etc.)
-# ndlist        ndlist to iterate over
-# op            Valid mathop (see tcl::mathop documentation)
-# arg ...       Values to perform mathop with 
-#
-# Matrix examples:
-# nop 2D $matrix /; # Performs reciprocal
-# nop 2D $matrix -; # Negates values
-# nop 2D $matrix !; # Boolean negation
-# nop 2D $matrix + 5 1; # Adds 5 and 1 to each matrix element
-# nop 2D $matrix ** 2; # Squares entire matrix
-# nop 2D $matrix in {1 2 3}; # Returns boolean matrix, if values are in a list
-
-proc ::ndlist::nop {nd ndlist op args} {
-    RecOp [GetNDims $nd] $ndlist $op {*}$args
-}
-
-# RecOp --
-#
-# Recursive handler for nop
-#
-# Arguments:
-# ndims         Number of dimensions
-# ndlist        ndlist to iterate over
-# op            Valid mathop (see tcl::mathop documentation)
-# arg ...       Values to perform mathop with 
-
-proc ::ndlist::RecOp {ndims ndlist op args} {
-    # Base case
-    if {$ndims == 0} {
-        return [::tcl::mathop::$op $ndlist {*}$args]
-    }
-    # Recursion
-    incr ndims -1
-    lmap ndrow $ndlist {
-        RecOp $ndims $ndrow $op {*}$args
-    }
-}
 
 # neval --
 # 
@@ -1590,7 +1552,7 @@ proc ::ndlist::neval {body args} {
     }
     # Normal case (no input list)
     # Perform @ substitution and get names of substituted variables
-    lassign [::vutil::refsub $body] body subNames
+    lassign [::vutil::RefSub $body] body subNames
     # Get variable mapping
     set varMap ""
     set ndims -1
@@ -1610,7 +1572,7 @@ proc ::ndlist::neval {body args} {
         } elseif {[$subVar ndims] != $ndims} {
             return -code error "incompatible dimensionality"
         }
-        lappend varMap ::vutil::at($subName) [$subVar]
+        lappend varMap ::@($subName) [$subVar]
     }
     # Handle case with no ndlist references (normal eval)
     if {$ndims == -1} {
@@ -1618,12 +1580,12 @@ proc ::ndlist::neval {body args} {
     }
     # Handle case with list references (call lmap)
     try {
-        set oldRefs [array get ::vutil::at]
-        array unset ::vutil::at
+        set oldRefs [array get ::@]
+        array unset ::@
         set ndlist [uplevel 1 [list ::ndlist::nmap $ndims {*}$varMap $body]]
     } finally {
-        array unset ::vutil::at
-        array set ::vutil::at $oldRefs
+        array unset ::@
+        array set ::@ $oldRefs
     }
     # Create the new ndlist
     tailcall ::vutil::new ndlist $refName $ndims $ndlist  
@@ -1895,59 +1857,88 @@ proc ::ndlist::nfill {nd ndlist filler} {
     }
 }
 
-# range --
+# nreduce --
 #
-# Utility to generate integer range
-# 
-# range $n
-# range $start $stop
-# range $start $stop $step
+# Use a reducing function to process an ND list along an axis.
+# Reducing function must take arbitrary number of inputs.
+#
+# Syntax:
+# nreduce $nd $command $ndlist <$axis>
 #
 # Arguments:
-# n:        Number of integers
-# start:    Start of resultant range.
-# stop:     End limit of resultant range.
-# step:     Step size. Default 1 or -1, depending on direction.
+# nd                Number of dimensions (e.g. 1D, 2D, etc.)
+# command           Reducing function (prefix) to apply along axis. 
+# ndlist            ND list to reduce
+# axis              Axis to reduce along over. Default 0.
+# arg ...           Additional arguments for stat function
 
-proc ::ndlist::range {args} {
-    # Switch for arity
-    if {[llength $args] == 1} {
-        # Basic case
-        set n [lindex $args 0]
-        if {![string is integer -strict $n] || $n < 0} {
-            return -code error "n must be integer >= 0"
-        }
-        set start 0
-        set stop [expr {$n - 1}]
-        set step 1
-    } elseif {[llength $args] == 2} {
-        lassign $args start stop
-        if {![string is integer -strict $start]} {
-            return -code error "start must be integer"
-        }
-        if {![string is integer -strict $stop]} {
-            return -code error "stop must be integer"
-        }
-        set step [expr {$stop > $start ? 1 : -1}]
-    } elseif {[llength $args] == 3} {
-        lassign $args start stop step
-        if {![string is integer -strict $start]} {
-            return -code error "start must be integer"
-        }
-        if {![string is integer -strict $stop]} {
-            return -code error "stop must be integer"
-        }
-        if {![string is integer -strict $step]} {
-            return -code error "step must be integer"
-        }
-    } else {
-        return -code error "wrong # args: should be \"range n\",\
-                \"range start stop\", or \"range start stop step\""
+proc ::ndlist::nreduce {nd command ndlist {axis 0}} {
+    # Interpret input
+    set ndims [GetNDims $nd]
+    if {$ndims == 0} {
+        return -code error "cannot reduce a scalar"
     }
-    return [Range $start $stop $step]
+    if {![string is integer -strict $axis] || $axis < 0} {
+        return -code error "axis must be integer >= 0"
+    }
+    if {$axis >= $ndims} {
+        return -code error "axis out of range"
+    }
+    # Move axis to back of ND list
+    set ndlist [MoveAxisToBack $ndims $ndlist $axis] 
+    # Reduce the ND list.
+    RecReduce $ndims $command $ndlist
+}
+
+# MoveAxisToBack --
+#
+# Private recursive function for moving an axis to the back of the ND list.
+#
+# Syntax:
+# MoveAxisToBack $ndims $ndlist $axis
+#
+# Arguments:
+# ndims             Number of dimensions
+# ndlist            ND list to iterate over
+# axis              Axis to move to back
+
+proc ::ndlist::MoveAxisToBack {ndims ndlist axis} {
+    # Base case
+    if {$ndims == 1} {
+        return $ndlist
+    }
+    # Recursion
+    incr ndims -1
+    if {$axis == 0} {
+        set ndlist [Transpose $ndlist]; # (ijk -> jik)
+    } else {
+        incr axis -1
+    }
+    lmap ndrow $ndlist {
+        MoveAxisToBack $ndims $ndrow $axis; # (jik -> jki)
+    }
+}
+
+# RecReduce --
+#
+# Recursive handler for nreduce, reduces the values at the last level.
+#
+# Syntax:
+# RecReduce $ndims $command $ndlist
+
+proc ::ndlist::RecReduce {ndims command ndlist} {
+    # Base case
+    if {$ndims == 1} {
+        return [eval [concat $command $ndlist]]
+    }
+    # Recursion
+    incr ndims -1
+    lmap ndrow $ndlist {
+        RecReduce $ndims $command $ndrow
+    }
 }
 
 ################################################################################
 
 # Finally, provide the package
-package provide ndlist 0.2.1
+package provide ndlist 0.3

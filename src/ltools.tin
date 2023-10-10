@@ -1,0 +1,226 @@
+# ltools.tcl
+################################################################################
+# List utilities 
+
+# Copyright (C) 2023 Alex Baker, ambaker1@mtu.edu
+# All rights reserved. 
+
+# See the file "LICENSE" in the top level directory for information on usage, 
+# redistribution, and for a DISCLAIMER OF ALL WARRANTIES.
+################################################################################
+
+# Define namespace and exported commands
+namespace eval ::ndlist {
+    namespace export linspace linsteps linterp; # List generation
+    namespace export lapply lexpr lop; # List mapping
+}
+
+# linspace --
+#
+# Generate equally spaced list with specific number of points
+#
+# Syntax:
+# linspace $n $x1 $x2
+#
+# Arguments:
+# n         Number of points
+# x1        First number 
+# x2        Last number
+
+proc ::ndlist::linspace {n x1 x2} {
+    set x1 [expr {double($x1)}]
+    set x2 [expr {double($x2)}]
+    set gap [expr {$x2 - $x1}]
+    set values ""
+    for {set i 0} {$i < $n} {incr i} {
+        lappend values [expr {$x1 + $gap*$i/($n - 1.0)}]
+    }
+    return $values
+}
+
+# linsteps --
+# 
+# Generate list that walks between targets, with a maximum step size.
+#
+# Syntax:
+# linsteps $stepSize $start $target ...
+# 
+# Arguments:
+# stepSize      Magnitude of step size (must be > 0.0)
+# start         Starting value
+# target ...    Targets to walk through
+
+proc ::ndlist::linsteps {stepSize start args} {
+    # Interpret inputs and coerce into double (throws error if not double)
+    set stepSize [expr {double($stepSize)}]
+    if {$stepSize <= 0.0} {
+        return -code error "Step size must be > 0.0"
+    }
+    set start [expr {double($start)}]
+    set targets [lmap target $args {expr {double($target)}}]
+    # Initialize with start
+    set values [list $start]
+    # Loop through targets
+    foreach target $targets {
+        set gap [expr {$target - $start}]
+        # Skip for duplicates
+        if {$gap == 0} {
+            continue
+        }
+        # Calculate step value and number of steps
+        set step [expr {$gap > 0 ? $stepSize : -$stepSize}]; 
+        set n [expr {int($gap/$step)}]
+        for {set i 1} {$i <= $n} {incr i} {
+            lappend values [expr {$start + $i*$step}]
+        }
+        # For the case where it doesn't go all the way
+        if {[lindex $values end] != $target} {
+            lappend values $target
+        }
+        # Reset for next target (if any)
+        set start $target
+    }
+    return $values
+}
+
+# linterp --
+# 
+# Simple linear interpolation, assuming ascending order on list xp
+#
+# Syntax:
+# linterp $xq $xp $yp
+#
+# Arguments:
+# xq            x values to query
+# xp            x points
+# yp            y points (same length as xp)
+
+proc ::ndlist::linterp {xq xp yp} {
+    # Error check size of input
+    if {[llength $xp] != [llength $yp]} {
+        return -code error "x and y must be same size"
+    }
+    # Convert points to double
+    set xp [lmap x $xp {expr {double($x)}}]
+    set yp [lmap y $yp {expr {double($y)}}]
+    # Perform matches
+    set values ""
+    foreach x $xq {
+        set x1 [lindex $xp 0]
+        set y1 [lindex $yp 0]
+        # Check bounds
+        if {$x < $x1} {
+            return -code error "xq value $x below bounds of xp"
+        }; # end if
+        foreach x2 [lrange $xp 1 end] y2 [lrange $yp 1 end] {
+            # Error check
+            if {$x1 >= $x2} {
+                return -code error "xp must be strictly increasing"
+            }
+            # Compare x to x1 & x2
+            if {$x == $x1} {
+                # Simple match
+                lappend values $y1
+                break
+            } elseif {$x > $x1 && $x < $x2} {
+                # Interpolate
+                set r [expr {($x-$x1)/($x2-$x1)}]; # ratio into line-segment
+                set y [expr {$r*($y2-$y1)+$y1}]
+                lappend values $y
+                break
+            } elseif {$x == $x2} {
+                # Simple match
+                lappend values $y2
+                break
+            } else {
+                set x1 $x2
+                set y1 $y2 
+                continue
+            }; # end if
+        }; # end foreach
+        # Check bounds
+        if {$x > $x2} {
+            return -code error "xq value $x above bounds of xp"
+        }; # end if
+    }; # end foreach
+    return $values
+}
+
+# lapply --
+#
+# Apply a simple command over one list.
+#
+# Syntax:
+# lapply $command $list $arg ...
+#
+# Arguments:
+# command       Command to map over list
+# list          List to map over
+# arg ...       Additional arguments
+
+proc ::ndlist::lapply {command list args} {
+    lmap value $list {
+        eval [linsert $command end $value {*}$args]
+    }
+}
+
+# lop --
+#
+# Math operations over lists, using lmap.
+#
+# Syntax:
+# lop $list $op $arg ...
+# lop $list1 .$op $list2
+#
+# Arguments:
+# op            Math operator (see ::tcl::mathop namespace)
+# list          List to map over (with $op syntax)
+# list1 list2   Lists to map over (must be same length) (with .$op syntax)
+# arg ...       Additional arguments (with $op syntax)
+
+proc ::ndlist::lop {list op args} {
+    # Element-wise operation
+    if {[string index $op 0] eq "."} {
+        # Check arity
+        if {[llength $args] != 1} {
+            return -code error "wrong # args: should be \"lop list1 .op list2\""
+        }
+        # Interpret input
+        set op [string range $op 1 end]
+        set list1 $list
+        set list2 [lindex $args 0]
+        # Perform mapping over two lists
+        return [lmap value1 $list1 value2 $list2 {
+            ::tcl::mathop::$op $value1 $value2
+        }]
+    }
+    # Perform mapping over single list
+    lmap value $list {
+        ::tcl::mathop::$op $value {*}$args
+    }
+}
+
+# lexpr --
+#
+# lmap, but with expr.
+#
+# Syntax:
+# lexpr $varList $list <$varList $list ...> $expr
+#
+# Arguments:
+# varName ...   List(s) of variables to map with
+# list ...      List(s) to map over.
+# expr          Tcl math expression to evaluate.
+
+proc ::ndlist::lexpr {args} {
+    # Check arity
+    if {[llength $args] == 1 || [llength $args] % 2 == 0} {
+        return -code error "wrong # args: should be\
+                \"lexpr varList list ?varList list ...? expr"
+    }
+    # Interpret input
+    set varMap [lrange $args 0 end-1]
+    set expr [lindex $args end]
+    # Call modified lmap
+    tailcall lmap {*}$varMap [list expr $expr]
+}
