@@ -2,33 +2,22 @@
 # Matrix for testing (DO NOT CHANGE)
 set testmat {{1 2 3} {4 5 6} {7 8 9}}
 
-# ndlist/nrepeat/nexpand
+# ndlist/nshape/nsize 
 ################################################################################
-puts "Creating ND lists"
+puts "ND list definition"
+# ndlist
 test ndlist {
     # Create an ndlist (validates)
 } -body {
-    assert [ndlist 2D $testmat] eq $testmat
-    catch {ndlist 2D {1 {2 3}}}
-} -result {1}
+    ndlist 2D $testmat
+} -result $testmat
 
-# nrepeat
-test nrepeat {
-    # Assert that nrepeat works
+test ndlist_error {
+    # Throws error if ragged.
 } -body {
-    nrepeat 0 1 2 3
-} -result {{{0 0 0} {0 0 0}}}
+    ndlist 2D {1 {2 3}}
+} -returnCodes {1} -result {not a valid 2D list}
 
-# nexpand
-test nexpand {
-    # Expand an existing ndlist to new dimensions (copies existing data)
-} -body {
-    nexpand {1 2 3} 3 2
-} -result {{1 1} {2 2} {3 3}}
-
-# nshape/nsize 
-################################################################################
-puts "Getting shape/size of ND lists"
 # nshape
 test nshape {
     # Assert that nshape works
@@ -37,11 +26,85 @@ test nshape {
 } -result {3 2}
 
 # nsize
-test nsize {
-    # Assert that nsize works
+test nsize0D {
+    # No size for scalars
+} -body {
+    nsize 0D foo
+} -result {}
+
+test nsize1D {
+    # Same as llength
+} -body {
+    nsize 1D {foo bar}
+} -result {2}
+
+test nsize2D {
+    # Product of rows/columns
 } -body {
     nsize 2D {{1 2} {3 4} {5 6}}
 } -result {6}
+
+test nsize3D {
+    # Product of all dimensions
+} -body {
+    nsize 3D {{{1 2} {3 4} {5 6}} {{1 2} {3 4} {5 6}}}
+} -result {12}
+
+# nrepeat/nreshape/nexpand
+################################################################################
+puts "ND list creation"
+
+# nrepeat
+test nrepeat {
+    # Assert that nrepeat works
+} -body {
+    nrepeat 0.0 1 2 3
+} -result {{{0.0 0.0 0.0} {0.0 0.0 0.0}}}
+
+# nreshape
+test nreshape1 {
+    # Check that nreshape works for matrices
+} -body {
+    nreshape {1 2 3 4 5 6} 2 3
+} -result {{1 2 3} {4 5 6}}
+
+test nreshape_error {
+    # incompatible length error
+} -body {
+    nreshape {1 2 3 4 5 6} 3 3
+} -returnCodes {1} -result {incompatible dimensions}
+
+test nreshape2 {
+    # Check that nreshape works for higher dimensions
+} -body {
+    nreshape {1 2 3 4 5 6 7 8} 2 2 2
+} -result {{{1 2} {3 4}} {{5 6} {7 8}}}
+
+# nexpand
+test nexpand {
+    # Expand an ndlist
+} -body {
+    nexpand {1 2 3} 3 2
+} -result {{1 1} {2 2} {3 3}}
+
+test nexpand_3D {
+    # Expand an ndlist to a tensor
+} -body {
+    nexpand {{1 2 3}} 3 3 2
+} -result {{{1 1} {2 2} {3 3}} {{1 1} {2 2} {3 3}} {{1 1} {2 2} {3 3}}}
+
+test nexpand_stride {
+    # Expand a strided ndlist
+} -body {
+    nexpand {{1 2}} 2 4
+} -result {{1 2 1 2} {1 2 1 2}}
+
+# nexpand
+test nexpand_error {
+    # Cannot expand if dimensions don't match.
+} -body {
+    nexpand {1 2 3} 4 2
+} -returnCodes {1} -result {incompatible dimensions}
 
 # nget/nset/nreplace (ndlist access/modification)
 ################################################################################
@@ -210,8 +273,8 @@ test ninsert2D_1 {
 test ninsert3D_2 {
     # Test on tensors
 } -body {
-    set x [nreshape 1D {1 2 3 4 5 6 7 8 9} 3 3 1]; # Create tensor
-    set y [nreshape 1D {A B C D E F G H I} 3 3 1]; # 
+    set x [nreshape {1 2 3 4 5 6 7 8 9} 3 3 1]; # Create tensor
+    set y [nreshape {A B C D E F G H I} 3 3 1]; # 
     ninsert 3D $x end $y 2
 } -result {{{1 A} {2 B} {3 C}} {{4 D} {5 E} {6 F}} {{7 G} {8 H} {9 I}}}
 
@@ -224,7 +287,7 @@ test nstack {
     assert [ninsert 3D $x end $y 2] eq [nstack 3D $x $y 2]
 } -result {}
 
-# nflatten/nreshape/nswapaxes
+# nflatten/nswapaxes
 ################################################################################
 puts "Manipulating ND lists"
 
@@ -253,66 +316,53 @@ test nflatten3D {
     nflatten 3D {{{1 2} {3 4}} {{5 6} {7 8}}}
 } -result {1 2 3 4 5 6 7 8}
 
-# nreshape
-test nreshape1 {
-    # Check that nreshape works for matrices
-} -body {
-    nreshape 1D {1 2 3 4 5 6} 2 3
-} -result {{1 2 3} {4 5 6}}
-
-test nreshape2 {
-    # Check that nreshape works for higher dimensions
-} -body {
-    nreshape 1D {1 2 3 4 5 6 7 8} 2 2 2
-} -result {{{1 2} {3 4}} {{5 6} {7 8}}}
-
 # nswapaxes
-test nswapaxes0D {
-    # Error, no axes to swap
+test nswapaxes_error {
+    # Error, axes must be positive
 } -body {
-    nswapaxes 0D {hello world} 0 0
+    nswapaxes {hello world} -1 0
 } -returnCodes {1} -result {axes out of range}
 
-test nswapaxes1D {
+test nswapaxes_error {
     # Transpose vector just returns self
 } -body {
-    nswapaxes 1D {hello world} 0 0
+    nswapaxes {hello world} 0 0
 } -result {hello world}
 
-test nswapaxes2D_01 {
+test nswapaxes_01 {
     # Flip rows/columns
 } -body {
-    nswapaxes 2D {{1 2} {3 4}} 0 1
+    nswapaxes {{1 2} {3 4}} 0 1
 } -result {{1 3} {2 4}}
 
-test nswapaxes2D_11 {
+test nswapaxes_11 {
     # Same axis, return self
 } -body {
-    nswapaxes 2D {{1 2} {3 4}} 1 1
+    nswapaxes {{1 2} {3 4}} 1 1
 } -result {{1 2} {3 4}}
 
-test nswapaxes2D_10 {
+test nswapaxes_10 {
     # Axis order flipped, still transpose
 } -body {
-    nswapaxes 2D {{1 2} {3 4}} 1 0
+    nswapaxes {{1 2} {3 4}} 1 0
 } -result {{1 3} {2 4}}
 
-test nswapaxes3D_01 {
+test nswapaxes_01 {
     # Just flip rows and columns
 } -body {
-    nswapaxes 3D {{{1 2} {3 4}} {{5 6} {7 8}}} 0 1; # 2x2x2
+    nswapaxes {{{1 2} {3 4}} {{5 6} {7 8}}} 0 1; # 2x2x2
 } -result {{{1 2} {5 6}} {{3 4} {7 8}}}
 
-test nswapaxes3D_12 {
+test nswapaxes_12 {
     # transpose inner matrices
 } -body {
-    nswapaxes 3D {{{1 2} {3 4}} {{5 6} {7 8}}} 1 2; # 2x2x2
+    nswapaxes {{{1 2} {3 4}} {{5 6} {7 8}}} 1 2; # 2x2x2
 } -result {{{1 3} {2 4}} {{5 7} {6 8}}}
 
-test nswapaxes3D_02 {
+test nswapaxes_02 {
     # transpose outer dimensions
 } -body {
-    nswapaxes 3D {{{1 2} {3 4}} {{5 6} {7 8}}} 0 2; # 2x2x2
+    nswapaxes {{{1 2} {3 4}} {{5 6} {7 8}}} 0 2; # 2x2x2
     # 0,0,0: 1 -> 0,0,0
     # 0,0,1: 2 -> 1,0,0
     # 0,1,0: 3 -> 0,1,0
@@ -447,29 +497,17 @@ test nop0_multiple {
 test nop1_noargs {
     # Self-op (no additional arguments)
 } -body {
-nop 1D {1 2 3} -
+    nop 1D {1 2 3} -
 } -result {-1 -2 -3}
 
 test nop1_onearg {
-    # Self-op (no additional arguments)
+    # Add one
 } -body {
     nop 1D {1 2 3} + 1
 } -result {2 3 4}
 
-test nop1_dot {
-    # Self-op (no additional arguments)
-} -body {
-    nop 1D {1 2 3} .+ {3 2 1}
-} -result {4 4 4}
-
 test nop2 {
     # Test for higher dimensions
 } -body {
-    nop 2D {{1 2 3}} .+ {3 2 1}
-} -result {{4 5 6} {3 4 5} {2 3 4}}
-
-test nop_error {
-    # Error for using .op incorrectly.
-} -body {
-    nop 1D {1 2 3} .+ {1 1 1} {5 3 9}
-} -returnCodes {1} -result "wrong # args: should be \"nop nd ndlist1 .op ndlist2\""
+    nop 2D {{1 2 3} {4 5 6}} > 2
+} -result {{0 0 1} {1 1 1}}
