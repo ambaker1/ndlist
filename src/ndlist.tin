@@ -14,9 +14,8 @@ namespace eval ::ndlist {
     # Source all required files
     set dir [file dirname [file normalize [info script]]]
     source [file join $dir core.tcl]; # ND list core routines
-    source [file join $dir linalg.tcl]; # Linear algebra routines
+    source [file join $dir linalg.tcl]; # Linear algebra utilities
     source [file join $dir ltools.tcl]; # List utilities
-    source [file join $dir mathfunc.tcl]; # Math functions
     source [file join $dir stat.tcl]; # Basic statistics
 }
 

@@ -11,13 +11,13 @@
 
 # Define namespace and exported commands
 namespace eval ::ndlist {    
-    namespace export ndlist nshape nsize ; # Basics
+    namespace export ndlist nshape nsize; # Basics
     namespace export nrepeat nreshape nexpand; # Creation
     namespace export nget nset nreplace; # Access/modification
     namespace export ninsert nstack; # Combination
     namespace export nflatten nswapaxes; # Manipulation
-    namespace export napply napply2 nreduce nmap; # Functional mapping
-    namespace export nop nop2 nexpr; # Math mapping
+    namespace export napply napply2 nop nop2 nreduce; # Functional mapping
+    namespace export nmap nexpr; # Generalized mapping
 }
 
 # NDLIST BASICS
