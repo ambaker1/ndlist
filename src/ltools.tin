@@ -12,7 +12,8 @@
 # Define namespace and exported commands
 namespace eval ::ndlist {
     namespace export linspace linsteps linterp; # List generation
-    namespace export lapply lexpr lop; # List mapping
+    namespace export lapply lapply2; # Functional mapping
+    namespace export lop lop2 lexpr; # Math mapping
 }
 
 # linspace --
@@ -91,59 +92,39 @@ proc ::ndlist::linsteps {stepSize start args} {
 # linterp $xq $xp $yp
 #
 # Arguments:
-# xq            x values to query
-# xp            x points
+# xq            x value to query
+# xp            x points (must be strictly increasing)
 # yp            y points (same length as xp)
 
 proc ::ndlist::linterp {xq xp yp} {
     # Error check size of input
     if {[llength $xp] != [llength $yp]} {
-        return -code error "x and y must be same size"
+        return -code error "xp and yp must be same size"
     }
-    # Convert points to double
-    set xp [lmap x $xp {expr {double($x)}}]
-    set yp [lmap y $yp {expr {double($y)}}]
-    # Perform matches
-    set values ""
-    foreach x $xq {
-        set x1 [lindex $xp 0]
-        set y1 [lindex $yp 0]
-        # Check bounds
-        if {$x < $x1} {
-            return -code error "xq value $x below bounds of xp"
-        }; # end if
-        foreach x2 [lrange $xp 1 end] y2 [lrange $yp 1 end] {
-            # Error check
-            if {$x1 >= $x2} {
-                return -code error "xp must be strictly increasing"
-            }
-            # Compare x to x1 & x2
-            if {$x == $x1} {
-                # Simple match
-                lappend values $y1
-                break
-            } elseif {$x > $x1 && $x < $x2} {
-                # Interpolate
-                set r [expr {($x-$x1)/($x2-$x1)}]; # ratio into line-segment
-                set y [expr {$r*($y2-$y1)+$y1}]
-                lappend values $y
-                break
-            } elseif {$x == $x2} {
-                # Simple match
-                lappend values $y2
-                break
-            } else {
-                set x1 $x2
-                set y1 $y2 
-                continue
-            }; # end if
-        }; # end foreach
-        # Check bounds
-        if {$x > $x2} {
-            return -code error "xq value $x above bounds of xp"
-        }; # end if
-    }; # end foreach
-    return $values
+    # Check bounds
+    if {$xq < [lindex $xp 0]} {
+        return -code error "xq value $x below bounds of xp"
+    }
+    if {$xq > [lindex $xp end]} {
+        return -code error "xq value $x above bounds of xp"
+    }
+    # Perform search
+    set i [lsearch -sorted -real -bisect $xp $xq]
+    # Get bounding points
+    set x1 [lindex $xp $i]
+    set y1 [lindex $yp $i]
+    set x2 [lindex $xp $i+1]
+    set y2 [lindex $yp $i+1]
+    # Edge cases
+    if {$xq == $x1} {
+        return [expr {double($y1)}]
+    }
+    if {$xq == $x2} {
+        return [expr {double($y2)}]
+    }
+    # Straight-line interpolation
+    set r [expr {double($xq-$x1)/($x2-$x1)}]
+    return [expr {$r*($y2-$y1)+$y1}]
 }
 
 # lapply --
@@ -164,39 +145,57 @@ proc ::ndlist::lapply {command list args} {
     }
 }
 
+# lapply2 --
+#
+# Apply a simple command over multiple lists.
+#
+# Syntax:
+# lapply $command $list1 $list2 $arg ...
+#
+# Arguments:
+# command       Command to map over list
+# list          List to map over
+# arg ...       Additional arguments
+
+proc ::ndlist::lapply2 {command list1 list2 args} {
+    lmap value1 $list1 value2 $list2 {
+        eval [linsert $command end $value1 $value2 {*}$args]
+    }
+}
+
 # lop --
 #
-# Math operations over lists, using lmap.
+# Math operations over a list, using lmap.
 #
 # Syntax:
 # lop $list $op $arg ...
-# lop $list1 .$op $list2
 #
 # Arguments:
+# list          List to map over
 # op            Math operator (see ::tcl::mathop namespace)
-# list          List to map over (with $op syntax)
-# list1 list2   Lists to map over (must be same length) (with .$op syntax)
-# arg ...       Additional arguments (with $op syntax)
+# arg ...       Additional arguments
 
 proc ::ndlist::lop {list op args} {
-    # Element-wise operation
-    if {[string index $op 0] eq "."} {
-        # Check arity
-        if {[llength $args] != 1} {
-            return -code error "wrong # args: should be \"lop list1 .op list2\""
-        }
-        # Interpret input
-        set op [string range $op 1 end]
-        set list1 $list
-        set list2 [lindex $args 0]
-        # Perform mapping over two lists
-        return [lmap value1 $list1 value2 $list2 {
-            ::tcl::mathop::$op $value1 $value2
-        }]
-    }
-    # Perform mapping over single list
     lmap value $list {
         ::tcl::mathop::$op $value {*}$args
+    }
+}
+
+# lop2 --
+#
+# Math operations over multiple lists, using lmap.
+#
+# Syntax:
+# lop $list1 $op $list2 $arg ...
+#
+# Arguments:
+# list1 list2   Lists to map over
+# op            Math operator (see ::tcl::mathop namespace)
+# arg ...       Additional arguments
+
+proc ::ndlist::lop2 {list1 op list2 args} {
+    lmap value1 $list1 value2 $list2 {
+        ::tcl::mathop::$op $value1 $value2 {*}$args
     }
 }
 

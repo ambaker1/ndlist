@@ -59,13 +59,7 @@ namespace eval ::ndlist {
 # ndlist        ND list to map over
 
 proc ::ndlist::MathFunc1 {func nd ndlist} {
-    # Interpret input
     set ndims [GetNDims $nd]
-    # Scalar case
-    if {$ndims == 0} {
-        return [::tcl::mathfunc::$func $ndlist]
-    }
-    # ND case
     napply $ndims ::tcl::mathfunc::$func $ndlist
 }
 
@@ -83,16 +77,8 @@ proc ::ndlist::MathFunc1 {func nd ndlist} {
 
 
 proc ::ndlist::MathFunc2 {func nd ndlist1 ndlist2} {
-    # Interpret input
     set ndims [GetNDims $nd]
-    # Scalar case
-    if {$ndims == 0} {
-        return [::tcl::mathfunc::$func $ndlist1 $ndlist2]
-    }
-    # ND case
-    nmap $ndims value1 $ndlist1 value2 $ndlist2 {
-        ::tcl::mathfunc::$func $value1 $value2
-    }
+    napply2 $ndims ::tcl::mathfunc::$func $ndlist1 $ndlist2
 }
 
 # rand --

@@ -11,20 +11,21 @@
 
 # Define namespace and exported commands
 namespace eval ::ndlist {    
-    namespace export ndlist nrepeat nexpand; # Creation
-    namespace export nshape nsize; # Metadata access
+    namespace export ndlist nshape nsize ; # Basics
+    namespace export nrepeat nreshape nexpand; # Creation
     namespace export nget nset nreplace; # Access/modification
     namespace export ninsert nstack; # Combination
-    namespace export nflatten nreshape nswapaxes; # Manipulation
-    namespace export napply nreduce nmap nexpr nop; # Mapping
+    namespace export nflatten nswapaxes; # Manipulation
+    namespace export napply napply2 nreduce nmap; # Functional mapping
+    namespace export nop nop2 nexpr; # Math mapping
 }
 
-# NDLIST CREATION
+# NDLIST BASICS
 ################################################################################
 
 # ndlist --
 #
-# Validate that the list is an ndlist of specified dims, and return the ndlist.
+# Validates an ND list, and returns the ND list.
 #
 # Syntax:
 # ndlist $nd $value
@@ -39,26 +40,7 @@ proc ::ndlist::ndlist {nd value} {
     set ndlist $value
     # Check if it is a valid ndlist, and try to shape it into one.
     if {![IsShape $ndlist {*}[GetShape $ndims $ndlist]]} {
-        return -code error "not a valid ndlist"
-    }
-    return $ndlist
-}
-
-# nrepeat --
-#
-# Create an ndlist filled with one value
-#
-# Syntax:
-# nrepeat $value $arg ...
-#
-# Arguments:
-# value         Value to repeat
-# arg ...       Shape of ndlist
-
-proc ::ndlist::nrepeat {value args} {
-    set ndlist $value
-    foreach n [lreverse $args] {
-        set ndlist [lrepeat $n $ndlist]
+        return -code error "not a valid ${ndims}D list"
     }
     return $ndlist
 }
@@ -149,87 +131,6 @@ proc ::ndlist::GetShape {ndims ndlist} {
     return $dims
 }
 
-# nexpand --
-#
-# Expand an ndlist to compatible dimensions.
-# A dimension of an ndlist can be expanded if it has dimension 1
-#
-# Syntax:
-# nexpand $ndlist $n1 $n2 ...
-#
-# Arguments:
-# ndlist        ND list to expand
-# n1 n2 ...     New dimensions
-
-proc ::ndlist::nexpand {ndlist args} {    
-    set dims1 $args
-    set dims0 [GetShape [llength $dims1] $ndlist]
-    foreach dim0 $dims0 dim1 $dims1 {
-        if {$dim0 != $dim1} {
-            return [RecExpand $ndlist $dims0 $dims1]
-        }
-    }
-    return $ndlist
-}
-
-# RecExpand --
-#
-# Recursive handler for nexpand. 
-# Expands a compatible ndlist (dimensions must match or be unity) 
-# For example, 1x1, 1x4, 4x1, and 5x4 are all compatible with 5x4.
-#
-# Syntax:
-# RecExpand $ndlist $dims0 $dims1
-#
-# Arguments:
-# ndlist        ND list to expand
-# dims0         Old dimensions list
-# dims1         New dimensions list
-
-proc ::ndlist::RecExpand {ndlist dims0 dims1} {
-    # Switch for base cases
-    if {[llength $dims0] == 0} {
-        return $ndlist
-    } elseif {[llength $dims0] == 1} {
-        return [Expand $ndlist $dims0 $dims1]
-    }
-    # Strip dimension from args
-    set dims0 [lassign $dims0 n0]
-    set dims1 [lassign $dims1 n1]
-    if {$n0 != $n1} {
-        lrepeat $n1 [RecExpand [lindex $ndlist 0] $dims0 $dims1]
-    } else {
-        lmap ndrow $ndlist {
-            RecExpand $ndrow $dims0 $dims1
-        }
-    }
-}
-
-# Expand --
-#
-# Base case for RecExpand. Throws error if dimensions are incompatible
-#
-# Syntax:
-# Expand $list $n0 $n1
-#
-# Arguments:
-# list          List to expand
-# n0            Length of list
-# n1            New length of list
-
-proc ::ndlist::Expand {list n0 n1} {
-    if {$n0 == $n1} {
-        return $list
-    } elseif {$n0 == 1} {
-        return [lrepeat $n1 [lindex $list 0]]
-    } else {
-        return -code error "incompatible dimensions"
-    }
-}
-
-# NDLIST METADATA
-################################################################################
-
 # nshape --
 # 
 # Get shape of ndlist
@@ -279,6 +180,158 @@ proc ::ndlist::nsize {nd ndlist} {
     }
     # Get size (product of shape)
     return [product [GetShape $ndims $ndlist]]
+}
+
+# NDLIST CREATION
+################################################################################
+
+# nrepeat --
+#
+# Create an ndlist filled with one value
+#
+# Syntax:
+# nrepeat $value $arg ...
+#
+# Arguments:
+# value         Value to repeat
+# arg ...       Shape of ndlist
+
+proc ::ndlist::nrepeat {value args} {
+    set ndlist $value
+    foreach n [lreverse $args] {
+        set ndlist [lrepeat $n $ndlist]
+    }
+    return $ndlist
+}
+
+# nreshape --
+#
+# Reshape a vector to different dimensions.
+#
+# Syntax:
+# nreshape $vector $arg ...
+#
+# Arguments:
+# vector        1D list to reshape into matrix or higher-dimensional tensor
+# arg ...       New shape (and dimensions)
+
+proc ::ndlist::nreshape {vector args} {
+    # Scalar case
+    if {[llength $args] == 0} {
+        if {[llength $vector] != 1} {
+            return -code error "incompatible dimensions"
+        }
+        # Note: 1 element list can be converted to scalar.
+        return [lindex $vector 0]
+    }
+    # Vector case
+    if {[llength $args] == 1} {
+        if {[llength $vector] != [lindex $args 0]} {
+            return -code error "incompatible dimensions"
+        }
+        return $vector
+    }
+    # Matrix and higher-dimensional case
+    set size [product $args]
+    if {[llength $vector] != $size} {
+        return -code error "incompatible dimensions"
+    }
+    RecReshape $vector {*}$args
+}
+
+# RecReshape --
+#
+# Recursive handler for reshaping an ndlist
+#
+# Syntax:
+# RecReshape $vector $n $m <$arg...>
+#
+# Arguments:
+# vector        List to reshape into a matrix
+# n m           Matrix dimensions
+# arg...        Dimensions of each matrix element. Default scalar.
+
+proc ::ndlist::RecReshape {vector n m args} {
+    # Create matrix
+    set rowSize [product [list $m {*}$args]]
+    set i -$rowSize
+    set j -1
+    set matrix [lmap x [lrepeat $n {}] {
+        lrange $vector [incr i $rowSize] [incr j $rowSize]
+    }]
+    # Base case
+    if {[llength $args] == 0} {
+        return $matrix
+    }
+    # Recursion
+    lmap row $matrix {
+        RecReshape $row $m {*}$args
+    }
+}
+
+# nexpand --
+#
+# Expands an ndlist to new dimensions.
+# New dimensions must match or be divisible by old dimensions.
+# For example, 1x1, 2x1, 4x1, 1x3, 2x3 and 4x3 are compatible with 4x3.
+#
+# Syntax:
+# nexpand $ndlist $arg ...
+#
+# Arguments:
+# ndlist        ND list to expand
+# arg ...       New shape (and dimensions)
+
+proc ::ndlist::nexpand {ndlist args} {    
+    set dims1 $args
+    set dims0 [GetShape [llength $dims1] $ndlist]
+    foreach dim0 $dims0 dim1 $dims1 {
+        if {$dim0 != $dim1} {
+            return [RecExpand $ndlist $dims0 $dims1]
+        }
+    }
+    return $ndlist
+}
+
+# RecExpand --
+#
+# Recursive handler for nexpand. 
+
+#
+# Syntax:
+# RecExpand $ndlist $dims0 $dims1
+#
+# Arguments:
+# ndlist        ND list to expand
+# dims0         Old dimensions list
+# dims1         New dimensions list
+
+proc ::ndlist::RecExpand {ndlist dims0 dims1} {
+    # Base case
+    if {[llength $dims0] == 0} {
+        return $ndlist
+    }
+    # Recursion
+    set dims0 [lassign $dims0 n0]
+    set dims1 [lassign $dims1 n1]
+    # Same dimension case
+    if {$n1 == $n0} {
+        return [lmap ndrow $ndlist {
+            RecExpand $ndrow $dims0 $dims1
+        }]
+    }
+    # Singleton dimension case
+    if {$n0 == 1} {
+        return [lrepeat $n1 [RecExpand [lindex $ndlist 0] $dims0 $dims1]]
+    }
+    # Stride dimension case
+    if {$n1 % $n0 == 0} {
+        return [lrepeat [expr {$n1/$n0}] {*}[lmap ndrow $ndlist {
+            RecExpand $ndrow $dims0 $dims1
+        }]]
+    }
+    # Error case
+    return -code error "incompatible dimensions"
 }
 
 # NDLIST ACCESS/MODIFICATION
@@ -417,8 +470,6 @@ proc ::ndlist::ParseIndices {inputs dims} {
 # ParseIndex --
 # 
 # Used for parsing index input (i.e. list of indices, range 0:10, etc)
-# Returns list, with first element being the index input type, and the remaining
-# arguments being the index integers.
 # Returns error if out of range
 
 # Returns:
@@ -487,7 +538,7 @@ proc ::ndlist::ParseIndex {input n} {
                     } else {
                         # Forward stepped range (list)
                         set iType L
-                        set iList [Range $i1 $i2 $step]
+                        set iList [range $i1 $i2 $step]
                         set iDim [llength $iList]
                         set iLim [lindex $iList end]; # end of list
                     }
@@ -501,7 +552,7 @@ proc ::ndlist::ParseIndex {input n} {
                     } else {
                         # Reverse stepped range (list)
                         set iType L
-                        set iList [Range $i1 $i2 $step]
+                        set iList [range $i1 $i2 $step]
                         set iDim [llength $iList]
                         set iLim [lindex $iList 0]; # start of list
                     }
@@ -575,37 +626,6 @@ proc ::ndlist::Index2Integer {index n} {
         set i [expr {$i % $n}]
     }
     return $i
-}
-
-# Range --
-#
-# Private procedure for integer range
-#
-# Syntax:
-# Range $start $stop $step
-#
-# Arguments:
-# start     Start of resultant range.
-# stop      End limit of resultant range.
-# step      Step size.
-
-proc ::ndlist::Range {start stop step} {
-    # Avoid divide by zero
-    if {$step == 0} {
-        return ""
-    }
-    # Get range length
-    set n [expr {($stop - $start)/$step + 1}]
-    # Basic cases
-    if {$n <= 0} {
-        return ""
-    }
-    if {$n == 1} {
-        return $start
-    }
-    # General case (generate list)
-    set i [expr {$start - $step}]
-    lmap x [lrepeat $n {}] {incr i $step}
 }
 
 # nset --
@@ -940,7 +960,7 @@ proc ::ndlist::nstack {nd ndlist1 ndlist2 {axis 0}} {
     ninsert $nd $ndlist1 end $ndlist2 $axis
 }
 
-# NDLIST TRANSFORMATION
+# NDLIST MANIPULATION
 ################################################################################
 
 # nflatten --
@@ -971,97 +991,23 @@ proc ::ndlist::nflatten {nd ndlist} {
     return $vector
 }
 
-# nreshape --
-#
-# Reshape an ndlist to specified dimensions.
-#
-# Syntax:
-# nreshape $nd $ndlist $arg...
-#
-# Arguments:
-# nd            Number of dimensions (e.g. 1D, 2D, etc.)
-# ndlist        ND list to reshape dimensions of
-# arg...        New shape (and dimensions)
-
-proc ::ndlist::nreshape {nd ndlist args} {
-    # Get flattened ndlist
-    set vector [nflatten $nd $ndlist]
-    # Switch for target dimensionality
-    set ndims [llength $args]
-    if {$ndims == 0} {
-        # Scalar (same as flatten)
-        set newlist $vector
-    } elseif {$ndims == 1} {
-        # Vector (verify length, and then return vector)
-        if {[lindex $args 0] != [llength $vector]} {
-            return -code error "incompatible dimensions"
-        }
-        set newlist $vector
-    } else {
-        # Reshape into matrix or higher-dimension tensor
-        set newlist [RecReshape $vector {*}$args] 
-    }
-    return $newlist
-}
-
-# RecReshape --
-#
-# Recursive handler for reshaping an ndlist
-#
-# Syntax:
-# RecReshape $vector $n $m <$arg...>
-#
-# Arguments:
-# vector        Vector to reshape into a matrix
-# n m           Matrix dimensions
-# arg...        Dimensions of each matrix element. Default scalar.
-
-proc ::ndlist::RecReshape {vector n m args} {
-    # Get size of each "row"
-    set M $m
-    foreach arg $args {
-        set M [expr {$M * $arg}]
-    }
-    # Get total size and compare with vector length
-    set size [expr {$n*$M}]
-    if {[llength $vector] != $size} {
-        return -code error "incompatible dimensions"
-    }
-    # Create matrix
-    set i -$M
-    set j -1
-    set matrix [lmap x [lrepeat $n {}] {
-        lrange $vector [incr i $M] [incr j $M]
-    }]
-    # Base case
-    if {[llength $args] == 0} {
-        return $matrix
-    }
-    # Recursion
-    lmap row $matrix {
-        RecReshape $row $m {*}$args
-    }
-}
-
 # nswapaxes --
 #
 # Swaps axes
 #
 # Syntax:
-# nswapaxes $nd $ndlist $axis1 $axis2
+# nswapaxes $ndlist $axis1 $axis2
 #
 # Arguments:
-# nd            Number of dimensions
 # ndlist        ND list to manipulate
 # axis1         Axis to swap with axis 2
 # axis2         Axis to swap with axis 1
 
-proc ::ndlist::nswapaxes {nd ndlist axis1 axis2} {
+proc ::ndlist::nswapaxes {ndlist axis1 axis2} {
     # Get axes in order
     lassign [lsort -integer [list $axis1 $axis2]] axis1 axis2
-    # Get dimensions and check axes
-    set ndims [GetNDims $nd]
-    if {$axis1 < 0 || $axis2 >= $ndims} {
+    # Check axes
+    if {$axis1 < 0} {
         return -code error "axes out of range"
     }
     # Trivial case (same axis)
@@ -1147,6 +1093,52 @@ proc ::ndlist::RecApply {ndims command ndlist args} {
     incr ndims -1
     lmap ndrow $ndlist {
         RecApply $ndims $command $ndrow {*}$args
+    }
+}
+
+# napply2 --
+#
+# Apply a function over two ND lists
+#
+# Syntax:
+# napply2 $nd $command $ndlist1 $ndlist2 $arg ...
+#
+# Arguments:
+# nd                Number of dimensions (e.g. 1D, 2D, etc.)
+# command           Command prefix
+# ndlist1 ndlist2   ND lists to iterate over
+# arg ...           Additional arguments to append to command.
+
+proc ::ndlist::napply2 {nd command ndlist1 ndlist2 args} {
+    set ndims [GetNDims $nd]
+    set dims [GetMaxShape $ndims $ndlist1 $ndlist2]
+    set ndlist1 [nexpand $ndlist1 {*}$dims]
+    set ndlist2 [nexpand $ndlist2 {*}$dims]
+    RecApply2 $ndims $command $ndlist1 $ndlist2 {*}$args
+}
+
+# RecApply2 --
+#
+# Recursive handler for napply2
+#
+# Syntax:
+# RecApply2 $ndims $command $ndlist1 $ndlist2 $arg...
+# 
+# Arguments:
+# ndims             Number of dimensions at the current recursion level.
+# command           Command prefix
+# ndlist1 ndlist2   ND lists to iterate over
+# arg...            Additional arguments to append to command.
+
+proc ::ndlist::RecApply2 {ndims command ndlist1 ndlist2 args} {
+    # Base case
+    if {$ndims == 0} {
+        return [eval [linsert $command end $ndlist1 $ndlist2 {*}$args]]
+    }
+    # Recursion
+    incr ndims -1
+    lmap ndrow1 $ndlist1 ndrow2 $ndlist2 {
+        RecApply2 $ndims $command $ndrow1 $ndrow2 {*}$args
     }
 }
 
@@ -1248,7 +1240,7 @@ proc ::ndlist::nmap {nd args} {
         return [uplevel 1 $body]
     }
     # Expand all ndlists to have the same shape, and then flatten.
-    set dims [GetCombinedShape $ndims {*}$ndlists]
+    set dims [GetMaxShape $ndims {*}$ndlists]
     set ndlists [lmap ndlist $ndlists {nexpand $ndlist {*}$dims}]
     set ndlists [lmap ndlist $ndlists {nflatten $ndims $ndlist}]
     # Update varName-ndlist mapping with flattened ndlists.
@@ -1257,36 +1249,27 @@ proc ::ndlist::nmap {nd args} {
         lappend varMap [list $varName] $ndlist
     }
     # Perform linear mapping in caller, then reshape and return.
-    set flatList [uplevel 1 [list lmap {*}$varMap $body]]
-    return [nreshape 1D $flatList {*}$dims]
+    nreshape [uplevel 1 [list lmap {*}$varMap $body]] {*}$dims
 }
 
-# GetCombinedShape --
-# 
-# Get combined size for combining ndlists (in nmap)
+# GetMaxShape --
+#
+# Get maximum dimensions of multiple ND lists (for expanding)
 #
 # Syntax:
-# GetCombinedShape $ndims $ndlist ...
+# GetMaxShape $ndims $arg ...
 #
 # Arguments:
-# ndims             Number of dimensions in each ndlist
-# ndlist ...        ndlists to get combined dimensions of (for tiling)
+# ndims         Number of dimensions (e.g. 1D, 2D, etc.)
+# arg ...       ND lists to get max shape from
 
-proc ::ndlist::GetCombinedShape {ndims args} {
-    set cdims [lrepeat $ndims 1]; # Combined dimensions
-    foreach ndlist $args {
-        set dims [GetShape $ndims $ndlist]
-        set cdims [lmap cdim $cdims dim $dims {
-            if {$cdim == 1} {
-                set cdim $dim
-            } elseif {$dim != 1 && $dim != $cdim} {
-                return -code error "incompatible dimensions"
-            }
-            set cdim
-        }]
-    }
-    return $cdims
+proc ::ndlist::GetMaxShape {ndims args} {
+    set shapes [lmap ndlist $args {GetShape $ndims $ndlist}]
+    lmap dims [transpose $shapes] {max $dims}
 }
+
+# ND LIST MATH MAPPING
+################################################################################
 
 # nop --
 #
@@ -1294,11 +1277,10 @@ proc ::ndlist::GetCombinedShape {ndims args} {
 #
 # Syntax:
 # nop $nd $ndlist $op $arg ...
-# nop $nd $ndlist1 .$op $ndlist2
 #
 # Arguments:
 # nd            Number of dimensions (e.g. 1D, 2D, etc.)
-# ndlist        ndlist(s) to iterate over
+# ndlist        ND list to iterate over
 # op            Valid mathop (see tcl::mathop documentation)
 # arg ...       Values to perform mathop with 
 #
@@ -1309,34 +1291,34 @@ proc ::ndlist::GetCombinedShape {ndims args} {
 # nop 2D $matrix + 5 1; # Adds 5 and 1 to each matrix element
 # nop 2D $matrix ** 2; # Squares entire matrix
 # nop 2D $matrix in {1 2 3}; # Returns boolean matrix, if values are in a list
-# nop 2D $x .+ $y; # Element-wise addition of x and y
 
 proc ::ndlist::nop {nd ndlist op args} {
-    # Interpret input
-    set ndims [GetNDims $nd]
-    # Element-wise math operation 
-    if {[string index $op 0] eq "."} {
-        # Check arity
-        if {[llength $args] != 1} {
-            return -code error "wrong # args: should be\
-                    \"nop nd ndlist1 .op ndlist2\""
-        }
-        # Interpret input
-        set op [string range $op 1 end]
-        set ndlist1 $ndlist
-        set ndlist2 [lindex $args 0]
-        # Perform mapping over two ND lists
-        return [nmap $ndims value1 $ndlist1 value2 $ndlist2 {
-            ::tcl::mathop::$op $value1 $value2
-        }]
-    }
-    # Perform mapping over single ND list
-    napply $ndims ::tcl::mathop::$op $ndlist {*}$args
+    napply [GetNDims $nd] ::tcl::mathop::$op $ndlist {*}$args
+}
+
+# nop2 --
+#
+# Simple math operations over two ND lists (element-wise)
+#
+# Syntax:
+# nop2 $nd $ndlist1 $op $ndlist2 $arg ...
+#
+# Arguments:
+# nd                Number of dimensions (e.g. 1D, 2D, etc.)
+# ndlist1 ndlist2   ND lists to iterate over
+# op                Valid mathop (see tcl::mathop documentation)
+# arg ...           Additional values to perform mathop with 
+#
+# Matrix examples:
+# nop2 2D $A + $B
+
+proc ::ndlist::nop2 {nd ndlist1 op ndlist2 args} {
+    napply2 [GetNDims $nd] ::tcl::mathop::$op $ndlist1 $ndlist2 {*}$args
 }
 
 # nexpr --
 #
-# nmap, but with expr.
+# Generalized math mapping (uses nmap)
 #
 # Syntax:
 # nexpr $nd $varName $ndlist <$varName $ndlist ...> $expr

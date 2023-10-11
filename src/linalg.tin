@@ -26,10 +26,10 @@ namespace eval ::ndlist {
 # range $start $stop $step
 #
 # Arguments:
-# n:        Number of integers
-# start:    Start of resultant range.
-# stop:     End limit of resultant range.
-# step:     Step size. Default 1 or -1, depending on direction.
+# n         Number of integers
+# start     Start of resultant range.
+# stop      End limit of resultant range.
+# step      Step size. Default 1 or -1, depending on direction.
 
 proc ::ndlist::range {args} {
     # Switch for arity
@@ -66,7 +66,23 @@ proc ::ndlist::range {args} {
         return -code error "wrong # args: should be \"range n\",\
                 \"range start stop\", or \"range start stop step\""
     }
-    return [Range $start $stop $step]
+    # Compute range
+    # Avoid divide by zero
+    if {$step == 0} {
+        return ""
+    }
+    # Get range length
+    set n [expr {($stop - $start)/$step + 1}]
+    # Basic cases
+    if {$n <= 0} {
+        return
+    }
+    if {$n == 1} {
+        return $start
+    }
+    # General case (generate list)
+    set i [expr {$start - $step}]
+    lmap x [lrepeat $n {}] {incr i $step}
 }
 
 # ones --
@@ -135,21 +151,24 @@ proc ::ndlist::dot {a b} {
 
 # cross --
 # 
-# Cross product of two 3D vectors, vec1 vec2
+# Cross product of two 3D vectors
+#
+# Syntax:
+# cross $a $b
 #
 # Arguments:
-# a:            First vector, 3D
-# b:            Second vector, 3D
+# a b        Vectors, length 3
 
 proc ::ndlist::cross {a b} {
+    # Check dimensions
     if {[llength $a] != 3 || [llength $b] != 3} {
         return -code error "cross-product only defined for 3D vectors"
     }
     lassign $a a1 a2 a3
     lassign $b b1 b2 b3
-    set c1 [expr {double($a2*$b3 - $a3*$b2)}]
-    set c2 [expr {double($a3*$b1 - $a1*$b3)}]
-    set c3 [expr {double($a1*$b2 - $a2*$b1)}]
+    set c1 [expr {$a2*$b3 - $a3*$b2}]
+    set c2 [expr {$a3*$b1 - $a1*$b3}]
+    set c3 [expr {$a1*$b2 - $a2*$b1}]
     return [list $c1 $c2 $c3]
 }
 
@@ -158,17 +177,13 @@ proc ::ndlist::cross {a b} {
 # Norm of vector (returns double)
 #
 # Arguments:
-# vector:       Vector
-# p:            Norm type. Default 2 (euclidean distance).
+# vector        Vector
+# p             Norm type. Default 2 (euclidean distance).
 
 proc ::ndlist::norm {vector {p 2}} {
     switch $p {
         1 { # Sum of absolute values
-            set norm 0.0
-            foreach value $vector {
-                set norm [expr {$norm+abs($value)}]
-            }
-            return $norm
+            return [sum [abs $vector]]
         }
         2 { # Euclidean (use hypot function to avoid overflow)
             set norm 0.0
@@ -178,17 +193,13 @@ proc ::ndlist::norm {vector {p 2}} {
             return $norm
         }
         Inf { # Absolute maximum of the vector
-            return [expr {double([max [abs $vector]])}]
+            return [max [abs $vector]]
         }
         default { # Arbitrary integer norm
             if {![string is integer -strict $p] || $p <= 0} {
                 return -code error "p must be integer > 0"
             }
-            set sum 0.0
-            foreach value $vector {
-                set sum [expr {$sum+$value**$p}]
-            }
-            return [expr {pow($sum,1.0/$p)}]
+            return [expr {pow([sum [lop $vector ** $p]],1.0/$p)}]
         }
     }
 }
@@ -196,11 +207,13 @@ proc ::ndlist::norm {vector {p 2}} {
 # matmul --
 #
 # Multiplies two matrices. Must agree in dimension.
+# Returns a nxm matrix, by computing the dot-product of rows and columns
+# 
+# Syntax:
+# matmul $A $B
 #
 # Arguments:
 # A B           Matrices, matching inner dimensions
-#
-# Returns a nxm matrix, by computing the dot-product of rows and columns
 
 proc ::ndlist::matmul {A B} {
     # Check dimensions

@@ -165,7 +165,7 @@ proc ::ndlist::median {list} {
 
 proc ::ndlist::stdev {list {pop 0}} {
     # Variance function checks list length 
-    expr {sqrt([variance $list 0])}
+    expr {sqrt([variance $list $pop])}
 }
 
 # variance -- 
@@ -179,7 +179,7 @@ proc ::ndlist::stdev {list {pop 0}} {
 # list      List of values (length > 0 or 1)
 # pop       Whether to compute population variance (default 0)
 
-proc ::ndlist::variance {list pop} {
+proc ::ndlist::variance {list {pop 0}} {
     # Check list length
     set n [llength $list]
     set pop [expr {bool($pop)}]
