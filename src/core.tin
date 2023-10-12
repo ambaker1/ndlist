@@ -450,16 +450,49 @@ proc ::ndlist::GetNewNDims {indices} {
 # ParseIndices --
 # 
 # Loop through index inputs - returning required information for getting/setting
-# 
-# Returns a list - iDim then iArgs, where iArgs is a key-value list
+# Returns a list - iDims, iLims, then iArgs, where iArgs is a key-value list
 # iDims iLims iType iList iType iList ...
+#
+# Syntax:
+# ParseIndices $inputs $dims
+#
+# Arguments:
+# inputs        Index inputs (e.g. *, {0 3}, 0:10, end.)
+# dims          Shape to index into
 
 proc ::ndlist::ParseIndices {inputs dims} {
     set iDims ""; # dimensions of indexed region
     set iLims ""; # Maximum indices for indexed region
     set iArgs ""; # paired list of index type and index list (meaning varies)
     foreach input $inputs dim $dims {
-        lassign [ParseIndex $input $dim] iDim iLim iType iList 
+        # Parse index notation
+        lassign [ParseIndex $input $dim] iType iList 
+        # Determine size of indexed range and limit.
+        switch $iType {
+            A { # All indices
+                set iDim $dim
+                set iLim [expr {$dim - 1}]
+            }
+            R { # Range of indices
+                lassign $iList start stop
+                if {$start <= $stop} {
+                    set iDim [expr {$stop - $start + 1}]
+                    set iLim $stop
+                } else {
+                    set iDim [expr {$start - $stop + 1}]
+                    set iLim $start
+                }
+            }
+            L { # List of indices
+                set iDim [llength $iList]
+                set iLim [max $iList]
+            }
+            S { # Single index
+                set iDim 0
+                set iLim $iList
+            }
+        }
+        # Append to result
         lappend iDims $iDim
         lappend iLims $iLim
         lappend iArgs $iType $iList
@@ -470,128 +503,83 @@ proc ::ndlist::ParseIndices {inputs dims} {
 # ParseIndex --
 # 
 # Used for parsing index input (i.e. list of indices, range 0:10, etc)
-# Returns error if out of range
-
+#
 # Returns:
-# iDim:     Dimension of indexed range (e.g. number of indices)
-# iLim:     Largest index in indexed range
-# iType:    Type of index
-#   A:      All indices
-#   R:      Range of indices
+# iType:    Type of index (A, R, L, or S)
+# iList:    List of indices corresponding with type.
+#   A:      Empty
+#   R:      Range start and stop
 #   L:      List of indices 
-#   S:      Single index (flattens array, iDim = 0)
-# iList:    Depends on iType. For range, i1 and i2
+#   S:      Single index (flattens list)
 
 proc ::ndlist::ParseIndex {input n} {
     # Check length of input
-    if {[llength $input] == 1} {
-        # Single index, colon, or range notation
-        set index [lindex $input 0]
-        if {$index eq {:}} {
-            # All index notation (asterisk)
-            set iType A
-            set iList ""
-            set iDim $n
-            set iLim [expr {$n - 1}]
-        } elseif {[string index $index end] eq {*}} {
-            # Single index notation (flatten along this dimension)
-            set i [Index2Integer [string range $index 0 end-1] $n]
-            set iType S
-            set iList $i
-            set iDim 0; # flattens
-            set iLim $i
-        } elseif {[string match *:* $index]} {
-            # Range notation (slice)
-            set parts [split $index :]
-            if {[llength $parts] == 2} {
-                # Simple range
-                lassign $parts i1 i2
-                set i1 [Index2Integer $i1 $n]
-                set i2 [Index2Integer $i2 $n]
-                set iType R
-                set iList [list $i1 $i2]
-                if {$i2 >= $i1} {
-                    # Forward range
-                    set iDim [expr {$i2 - $i1 + 1}]
-                    set iLim $i2
-                } else {
-                    # Reverse range
-                    set iDim [expr {$i1 - $i2 + 1}]
-                    set iLim $i1
-                }
-            } elseif {[llength $parts] == 3} {
-                # Skipped range
-                lassign $parts i1 step i2
-                set i1 [Index2Integer $i1 $n]
-                set i2 [Index2Integer $i2 $n]
-                if {![string is integer -strict $step]} {
-                    return -code error "invalid range index notation"
-                }
-                # Deal with range case
-                if {$i2 >= $i1} {
-                    if {$step == 1} {
-                        # Forward range
-                        set iType R
-                        set iList [list $i1 $i2]
-                        set iDim [expr {$i2 - $i1 + 1}]
-                        set iLim $i2; # end of range
-                    } else {
-                        # Forward stepped range (list)
-                        set iType L
-                        set iList [range $i1 $i2 $step]
-                        set iDim [llength $iList]
-                        set iLim [lindex $iList end]; # end of list
-                    }
-                } else {
-                    if {$step == -1} {
-                        # Reverse range
-                        set iType R
-                        set iList [list $i1 $i2]
-                        set iDim [expr {$i1 - $i2 + 1}]
-                        set iLim $i1; # start of range
-                    } else {
-                        # Reverse stepped range (list)
-                        set iType L
-                        set iList [range $i1 $i2 $step]
-                        set iDim [llength $iList]
-                        set iLim [lindex $iList 0]; # start of list
-                    }
-                }
-            } else {
-                return -code error "invalid range index notation"
-            }
-        } else {
-            # Single index list (do not flatten)
-            set i [Index2Integer $index $n]
-            set iType L
-            set iList $i
-            set iDim 1
-            set iLim $i
-        }; # end parse single index
-    } else {
+    if {[llength $input] != 1} {
         # List of indices (user entered)
-        set iType L
-        set iList [lmap index $input {Index2Integer $index $n}]
-        set iDim [llength $iList]
-        set iLim 0
-        foreach i $iList {
-            if {$i > $iLim} {
-                set iLim $i
-            }
+        return [list L [lmap index $input {Index2Integer $index $n}]]
+    }
+    # Single index, colon, or range notation
+    set index [lindex $input 0]
+    # All index notation
+    if {$index in {* :}} {
+        return [list A ""]
+    }
+    # Single index notation
+    if {[string index $index end] eq {.}} {
+        # Single index notation (flatten along this dimension)
+        return [list S [Index2Integer [string range $index 0 end-1] $n]]
+    }
+    # Single index, not range notation
+    if {![string match *:* $index]} {
+        return [list L [Index2Integer $index $n]]
+    }
+    # Range index notation
+    set parts [split $index :]
+    # Simple range case ($start:$stop)
+    if {[llength $parts] == 2} {
+        lassign $parts start stop
+        set start [Index2Integer $start $n]
+        set stop [Index2Integer $stop $n]
+        if {$start == 0 && $stop == ($n - 1)} {
+            # 0:end case
+            return [list A ""]
         }
+        # Normal range
+        return [list R [list $start $stop]]               
     }
-    # Check if out of range
-    if {$iLim >= $n} {
-        return -code error "index out of range"
+    # Skipped range case ($start:$step:$stop)
+    if {[llength $parts] == 3} {
+        lassign $parts start step stop
+        set start [Index2Integer $start $n]
+        set stop [Index2Integer $stop $n]
+        if {![string is integer -strict $step]} {
+            return -code error "expected integer but got \"$step\""
+        }
+        # Special case for forward range with step of 1
+        if {$step == 1 && $start <= $stop} {
+            if {$start == 0 && $stop == ($n - 1)} {
+                # 0:1:end case
+                return [list A ""]
+            }
+            # Normal range
+            return [list R [list $start $stop]]
+        }
+        # Special case for reverse range with step of -1
+        if {$step == -1 && $start >= $stop} {
+            return [list R [list $start $stop]]
+        }
+        # Normal case (call range function)
+        return [list L [range $start $stop $step]]
     }
-    # Return list of results
-    return [list $iDim $iLim $iType $iList]
+    return -code error "invalid range index notation: should be \
+            \"start:stop\" or \"start:step:stop\""
 }
 
 # Index2Integer --
 #
 # Private function, converts end+-integer index format into integer
 # Negative indices get converted, such that -1 is end, -2 is end-1, etc.
+# Throws error if index is out of range.
 #
 # Arguments:
 # index:        Tcl index format (integer?[+-]integer? or end?[+-]integer?)
@@ -624,6 +612,10 @@ proc ::ndlist::Index2Integer {index n} {
     # Handle negative index (from end)
     if {$i < 0} {
         set i [expr {$i % $n}]
+    }
+    # Check if out of range
+    if {$i >= $n} {
+        return -code error "index out of range"
     }
     return $i
 }
