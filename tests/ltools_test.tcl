@@ -11,7 +11,7 @@ test range1_error {
     # Throw error for non-integer input
 } -body {
     range 1.5
-} -returnCodes {1} -result {n must be integer >= 0}
+} -returnCodes {1} -result {expected integer but got "1.5"}
 
 test range2 {
     # Second version of range syntax
@@ -40,14 +40,21 @@ test range3_reverse {
 test find {
     # Find non-zero elements of a list
 } -body {
-    find {1 0 0 1 0}
-} -result {0 3}
+    find {0 1 0 1 1 0}
+} -result {1 3 4}
 
-test find_mixed {
-    # Mixed real and ints
+test find_null {
+    # Return a blank list for no matches.
 } -body {
-    find {0.0 2.0 5 2 0 0 0.0 1}
-} -result {1 2 3 7}
+    find {0 0 0}
+} -result {}
+
+test find_filter {
+    # Filter with find and nget
+} -body {
+    set x {0.5 2.3 4.0 2.5 1.6 2.0 1.4 5.6}
+    nget $x [find $x > 2]
+} -result {2.3 4.0 2.5 5.6}
 
 # List generation
 test linspace {
@@ -98,14 +105,37 @@ test linterp_many_inputs {
     linterp 1.5 {0 1 2} {-1 1 4}
 } -result {2.5}
 
+test linterp_example {
+    # Example from documentation
+} -body {
+    # Exact interpolation
+    puts [linterp 2 {1 2 3} {4 5 6}]
+    # Intermediate interpolation
+    puts [linterp 8.2 {0 10 20} {2 -4 5}]
+} -output {5.0
+-2.92
+}
+
 test lapply {
     # Functional mapping of list
 } -body {
     lapply expr {1 2 3} + 10
 } -result {11 12 13}
 
+test lapply2 {
+    # Functional mapping over two lists
+} -body {
+    lapply2 {format "%s %s"} {hello goodbye} {world moon}
+} -result {{hello world} {goodbye moon}}
+
+test lapply2_error {
+    # lapply2 requires same list length
+} -body {
+    lapply2 {format "%s %s"} {hello} {world moon}
+} -returnCodes {1} -result {mismatched list lengths}
+
 test lexpr {
-    # Functional mapping of list
+    # Map a math command over a list
 } -body {
     set a 10
     lexpr x {1 2 3} {$x + $a}
@@ -117,3 +147,14 @@ test lop {
     lop {1 2 3} + 10
 } -result {11 12 13}
 
+test lop2 {
+    # Map mathops over two lists.
+} -body {
+    lop2 {1 2 3} + {2 3 2}
+} -result {3 5 5}
+
+test lop2_error {
+    # lop2 requires same list length
+} -body {
+    lop2 {1 2 3} + 1
+} -returnCodes {1} -result {mismatched list lengths}

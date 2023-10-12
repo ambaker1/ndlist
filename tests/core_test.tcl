@@ -415,6 +415,13 @@ test reduce1D_sum {
     nreduce 1D sum {1 2 3 4 5}
 } -result {15}
 
+test reduce1D_sigma {
+    # Add additional arguments after axis argument
+    # This example is taken from the stat_test.tcl file
+} -body {
+    nreduce 1D stdev {-5 3 4 0} 0 1
+} -result {3.5}
+
 test reduce1D_error {
     # Reduce a vector, along 1st dimension (returns error)
 } -body {
