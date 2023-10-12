@@ -18,11 +18,10 @@ namespace eval ::ndlist {
 
 # range --
 #
-# Utility to generate integer range, great for use with foreach or lmap.
+# Utility to generate integer range for indexing lists.
 # 
 # range $n
-# range $start $stop
-# range $start $stop $step
+# range $start $stop <$step>
 #
 # Arguments:
 # n         Number of integers
@@ -33,42 +32,28 @@ namespace eval ::ndlist {
 proc ::ndlist::range {args} {
     # Switch for arity
     if {[llength $args] == 1} {
-        # Basic case
-        set n [lindex $args 0]
-        if {![string is integer -strict $n] || $n < 0} {
-            return -code error "n must be integer >= 0"
-        }
-        set start 0
-        set stop [expr {$n - 1}]
-        set step 1
-    } elseif {[llength $args] == 2} {
-        lassign $args start stop
-        if {![string is integer -strict $start]} {
-            return -code error "start must be integer"
-        }
-        if {![string is integer -strict $stop]} {
-            return -code error "stop must be integer"
-        }
+        # range $n
+        return [lsearch -all [lrepeat [lindex $args 0] {}] *]
+    } elseif {[llength $args] == 0 || [llength $args] > 3} {
+        return -code error "wrong # args: should be\
+                \"range n\", \"range start stop\", or \"range start stop step\""
+    } 
+    # General case (stepped range)
+    # range $start $stop <$step>
+    lassign $args start stop step
+    # Auto-step
+    if {$step eq ""} {
         set step [expr {$stop > $start ? 1 : -1}]
-    } elseif {[llength $args] == 3} {
-        lassign $args start stop step
-        if {![string is integer -strict $start]} {
-            return -code error "start must be integer"
-        }
-        if {![string is integer -strict $stop]} {
-            return -code error "stop must be integer"
-        }
-        if {![string is integer -strict $step]} {
-            return -code error "step must be integer"
-        }
-    } else {
-        return -code error "wrong # args: should be \"range n\",\
-                \"range start stop\", or \"range start stop step\""
     }
-    # Compute range
-    # Avoid divide by zero
+    # Validate integer input
+    foreach value [list $start $stop $step] {
+        if {![string is integer -strict $value]} {
+            return -code error "expected integer but got \"$value\""
+        }
+    }
+    # Avoid dividing by zero
     if {$step == 0} {
-        return ""
+        return
     }
     # Get range length
     set n [expr {($stop - $start)/$step + 1}]
@@ -86,24 +71,36 @@ proc ::ndlist::range {args} {
 
 # find --
 #
-# Get indices of all non-zero elements
+# Get list of all non-zero elements for indexing lists.
+# Converts list to boolean, then performs lsearch to get all indices.
 #
 # Syntax:
-# find $list
+# find $list <$op $value>
 #
 # Arguments:
 # list          List to search for non-zero elements.
+# op            Comparison operator. Default !=
+# value         Value to compare with. Default 0
 
-proc ::ndlist::find {list} {
-    set i 0
-    set indices ""
-    foreach value $list {
-        if {$value != 0} {
-            lappend indices $i
+proc ::ndlist::find {list args} {
+    # Switch for arity and interpret input
+    if {[llength $args] == 0} {
+        # find $list
+        set op !=
+        set value 0
+    } elseif {[llength $args] == 2} {
+        # find $list $op $value
+        lassign $args op value
+        # Check comparison operator
+        if {$op ni {!= == <= >= < > eq ne in ni}} {
+            return -code error "expected comparison operator, got \"$op\""
         }
-        incr i
+    } else {
+        return -code error "wrong # args: should be\
+                \"find list ?op value?\""
     }
-    return $indices
+    # Perform search.
+    lsearch -exact -all [lop $list $op $value] 1
 }
 
 # linspace --
@@ -111,20 +108,20 @@ proc ::ndlist::find {list} {
 # Generate equally spaced list with specific number of points
 #
 # Syntax:
-# linspace $n $x1 $x2
+# linspace $n $start $stop
 #
 # Arguments:
 # n         Number of points
-# x1        First number 
-# x2        Last number
+# start     First number 
+# stop      Last number
 
-proc ::ndlist::linspace {n x1 x2} {
-    set x1 [expr {double($x1)}]
-    set x2 [expr {double($x2)}]
-    set gap [expr {$x2 - $x1}]
+proc ::ndlist::linspace {n start stop} {
+    set start [expr {double($start)}]
+    set stop [expr {double($stop)}]
+    set gap [expr {$stop - $start}]
     set values ""
     for {set i 0} {$i < $n} {incr i} {
-        lappend values [expr {$x1 + $gap*$i/($n - 1.0)}]
+        lappend values [expr {$start + $gap*$i/($n - 1.0)}]
     }
     return $values
 }
@@ -176,44 +173,44 @@ proc ::ndlist::linsteps {stepSize start args} {
 
 # linterp --
 # 
-# Simple linear interpolation, assuming ascending order on list xp
+# Simple linear interpolation, assuming ascending order on xList
 #
 # Syntax:
-# linterp $xq $xp $yp
+# linterp $x $xList $yList
 #
 # Arguments:
-# xq            x value to query
-# xp            x points (must be strictly increasing)
-# yp            y points (same length as xp)
+# x         x value to query
+# xList     x points (must be strictly increasing)
+# yList     y points (same length as xList)
 
-proc ::ndlist::linterp {xq xp yp} {
+proc ::ndlist::linterp {x xList yList} {
     # Error check size of input
-    if {[llength $xp] != [llength $yp]} {
-        return -code error "xp and yp must be same size"
+    if {[llength $xList] != [llength $yList]} {
+        return -code error "mismatched list lengths"
     }
     # Check bounds
-    if {$xq < [lindex $xp 0]} {
-        return -code error "xq value $x below bounds of xp"
+    if {$x < [lindex $xList 0]} {
+        return -code error "out of range: below min"
     }
-    if {$xq > [lindex $xp end]} {
-        return -code error "xq value $x above bounds of xp"
+    if {$x > [lindex $xList end]} {
+        return -code error "out of range: above max"
     }
     # Perform search
-    set i [lsearch -sorted -real -bisect $xp $xq]
+    set i [lsearch -sorted -real -bisect $xList $x]
     # Get bounding points
-    set x1 [lindex $xp $i]
-    set y1 [lindex $yp $i]
-    set x2 [lindex $xp $i+1]
-    set y2 [lindex $yp $i+1]
+    set x1 [lindex $xList $i]
+    set y1 [lindex $yList $i]
+    set x2 [lindex $xList $i+1]
+    set y2 [lindex $yList $i+1]
     # Edge cases
-    if {$xq == $x1} {
+    if {$x == $x1} {
         return [expr {double($y1)}]
     }
-    if {$xq == $x2} {
+    if {$x == $x2} {
         return [expr {double($y2)}]
     }
     # Straight-line interpolation
-    set r [expr {double($xq-$x1)/($x2-$x1)}]
+    set r [expr {double($x-$x1)/($x2-$x1)}]
     return [expr {$r*($y2-$y1)+$y1}]
 }
 
@@ -237,10 +234,10 @@ proc ::ndlist::lapply {command list args} {
 
 # lapply2 --
 #
-# Apply a simple command over multiple lists.
+# Apply a simple command over two lists.
 #
 # Syntax:
-# lapply $command $list1 $list2 $arg ...
+# lapply2 $command $list1 $list2 $arg ...
 #
 # Arguments:
 # command       Command to map over list
@@ -248,6 +245,9 @@ proc ::ndlist::lapply {command list args} {
 # arg ...       Additional arguments
 
 proc ::ndlist::lapply2 {command list1 list2 args} {
+    if {[llength $list1] != [llength $list2]} {
+        return -code error "mismatched list lengths"
+    }
     lmap value1 $list1 value2 $list2 {
         eval [linsert $command end $value1 $value2 {*}$args]
     }
@@ -273,10 +273,11 @@ proc ::ndlist::lop {list op args} {
 
 # lop2 --
 #
-# Math operations over multiple lists, using lmap.
+# Math operations over two lists, using lmap.
+# List lengths must be equal.
 #
 # Syntax:
-# lop $list1 $op $list2 $arg ...
+# lop2 $list1 $op $list2 $arg ...
 #
 # Arguments:
 # list1 list2   Lists to map over
@@ -284,6 +285,9 @@ proc ::ndlist::lop {list op args} {
 # arg ...       Additional arguments
 
 proc ::ndlist::lop2 {list1 op list2 args} {
+    if {[llength $list1] != [llength $list2]} {
+        return -code error "mismatched list lengths"
+    }
     lmap value1 $list1 value2 $list2 {
         ::tcl::mathop::$op $value1 $value2 {*}$args
     }
@@ -291,7 +295,7 @@ proc ::ndlist::lop2 {list1 op list2 args} {
 
 # lexpr --
 #
-# lmap, but with expr.
+# lmap, but with expr. Follows all rules of lmap.
 #
 # Syntax:
 # lexpr $varList $list <$varList $list ...> $expr
