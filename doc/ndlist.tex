@@ -15,14 +15,15 @@
 \maketitle
 \begin{abstract}
 \begin{center}
-The ``ndlist'' module provides tools for vector, matrix, and tensor manipulation and processing, where vectors are represented by Tcl lists, and matrices are represented by nested Tcl lists, and higher dimension lists represented by additional levels of nesting. 
+The ``ndlist'' package provides tools for vector, matrix, and tensor manipulation and processing, where vectors are represented by Tcl lists, matrices by nested Tcl lists, and higher dimension lists by additional levels of nesting. 
 \end{center}
 \end{abstract}
 \clearpage
-\section{List Utilities}
-Lists are foundational to Tcl, so in addition to providing n-dimensional list utilities, this package also provides utilities for working with 1-dimensional lists.
+\section{1-Dimensional Lists (Vectors)}
+Lists are foundational to Tcl, so in addition to providing utilities for ND lists, this package also provides utilities for working with 1D lists, or vectors.
 \subsection{Range Generator}
 The command \cmdlink{range} simply generates a range of integer values. 
+This can be used in conjunction with the Tcl \textit{foreach} loop to simplify writing ``for'' loops.
 There are two ways of calling this command, as shown below.
 \begin{syntax}
 \command{range} \$n \\
@@ -45,6 +46,17 @@ puts [range 10 3 -2]
 0 1 2
 0 1 2
 10 8 6 4
+\end{lstlisting}
+\end{example}
+\begin{example}{Simpler for-loop}
+\begin{lstlisting}
+foreach i [range 10] {
+    puts -nonewline $i
+}
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+0 1 2 3 4 5 6 7 8 9
 \end{lstlisting}
 \end{example}
 \clearpage
@@ -73,12 +85,12 @@ puts [nget $x [find $x > 2]]
 The command \cmdlink{linterp} performs linear 1D interpolation.
 Converts input to ``double''.
 \begin{syntax}
-\command{linterp} \$xq \$xp \$yp
+\command{linterp} \$x \$xList \$yList
 \end{syntax}
 \begin{args}
-\$xq & Value to query in \$xp \\
-\$xp & Vector of x points, strictly increasing \\
-\$yp & Vector of y points, same length as \texttt{\$xp}
+\$x & Value to query in \texttt{\$xList} \\
+\$xList & List of x points, strictly increasing \\
+\$yList & List of y points, same length as \texttt{\$xList}
 \end{args}
 \begin{example}{Linear interpolation}
 \begin{lstlisting}
@@ -92,27 +104,26 @@ puts [linterp 8.2 {0 10 20} {2 -4 5}]
 \end{lstlisting}
 \end{example}
 \clearpage
-\subsection{Generate Linearly Spaced Vector}
+\subsection{Vector Generation}
 The command \cmdlink{linspace} can be used to generate a vector of specified length and equal spacing between two specified values. 
 Converts input to ``double''
 \begin{syntax}
-\command{linspace} \$x1 \$x2 \$n
+\command{linspace} \$n \$start \$stop 
 \end{syntax}
 \begin{args}
-\$x1 & Starting value \\
-\$x2 & End value \\
-\$n & Number of points
+\$n & Number of points \\
+\$start & Starting value \\
+\$stop & End value
 \end{args}
 \begin{example}{Linearly spaced vector generation}
 \begin{lstlisting}
-puts [linspace 0 1 5]
+puts [linspace 5 0 1]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
 0.0 0.25 0.5 0.75 1.0
 \end{lstlisting}
 \end{example}
-\subsection{Generate Fixed-Spacing Vector}
 The command \cmdlink{linsteps} generates intermediate values given an increment size and a sequence of targets.
 Converts input to ``double''.
 \begin{syntax}
@@ -133,10 +144,9 @@ puts [linsteps 0.25 0 1 0]
 \end{example}
 
 \clearpage
-\subsection{Mapping Over a List}
+\subsection{Functional Mapping}
 The command \cmdlink{lapply} simply applies a command over each element of a list, and returns the result.
 Basic math operators can be mapped over a list with the command \cmdlink{lop}.
-These are effectively equivalent to the 1D versions of \cmdlink{napply} and \cmdlink{nop}.
 \begin{syntax}
 \command{lapply} \$command \$list \$arg ...
 \end{syntax}
@@ -202,75 +212,27 @@ puts [lop2 {1 2 3} + {2 3 2}]
 \end{example}
 
 \clearpage
-\subsection{Extreme Values}
-The commands \cmdlink{max} and \cmdlink{min} compute the maximum and minimum values of a list.
+\subsection{List Statistics}
+The commands \cmdlink{max}, \cmdlink{min}, \cmdlink{sum}, \cmdlink{product}, \cmdlink{mean}, \cmdlink{median}, \cmdlink{variance}, and \cmdlink{stdev} compute the maximum, minimum, sum, product, mean, median, variance, and standard deviation of values in a list.
+For more advanced statistics, check out the Tcllib math::statistics package.
 \begin{syntax}
 \command{max} \$list 
 \end{syntax}
 \begin{syntax}
 \command{min} \$list 
 \end{syntax}
-\begin{args}
-\$list & List (at least length 1) to compute statistic of. 
-\end{args}
-\begin{example}{Extreme values}
-\begin{lstlisting}
-puts [max {-5 3 4 0}]
-puts [min {-5 3 4 0}]
-\end{lstlisting}
-\tcblower
-\begin{lstlisting}
-4
--5
-\end{lstlisting}
-\end{example}
-\subsection{Sum and Product}
-The commands \cmdlink{sum} \& \cmdlink{product} compute the sum and product of a list.
 \begin{syntax}
 \command{sum} \$list
 \end{syntax}
 \begin{syntax}
 \command{product} \$list
 \end{syntax}
-\begin{args}
-\$list & List (at least length 1) to compute statistic of. 
-\end{args}
-\begin{example}{Sum and product of a list}
-\begin{lstlisting}
-puts [sum {-5 3 4 0}]
-puts [product {-5 3 4 0}]
-\end{lstlisting}
-\tcblower
-\begin{lstlisting}
-2
-0
-\end{lstlisting}
-\end{example}
-\clearpage
-\subsection{Average Values}
-The commands \cmdlink{mean} \& \cmdlink{median} calculate the mean and median of of a list.
 \begin{syntax}
 \command{mean} \$list 
 \end{syntax}
 \begin{syntax}
 \command{median} \$list 
 \end{syntax}
-\begin{args}
-\$vector & List (at least length 1) to compute statistic of. 
-\end{args}
-\begin{example}{Mean and median}
-\begin{lstlisting}
-puts [mean {-5 3 4 0}]
-puts [median {-5 3 4 0}]
-\end{lstlisting}
-\tcblower
-\begin{lstlisting}
-0.5
-1.5
-\end{lstlisting}
-\end{example}
-\subsection{Variance}
-The command \cmdlink{variance} calculates variance, and the command \cmdlink{stdev} calculates standard deviation. By default, they compute sample statistics.
 \begin{syntax}
 \command{variance} \$list <\$pop>
 \end{syntax}
@@ -278,25 +240,81 @@ The command \cmdlink{variance} calculates variance, and the command \cmdlink{std
 \command{stdev} \$list <\$pop>
 \end{syntax}
 \begin{args}
-\$vector & List (at least length 2) to compute statistic of.  \\
-\$pop & Compute population variance instead of sample variance. Default false.
+\$list & List (at least length 1) to compute statistic of. \\
+\$pop & Compute population statistic instead of sample statistic. Default false. 
 \end{args}
-\begin{example}{Variance and standard deviation}
+\begin{example}{List Statistics}
 \begin{lstlisting}
-puts [variance {-5 3 4 0}]
-puts [stdev {-5 3 4 0}]
+set list {-5 3 4 0}
+foreach stat {max min sum product mean median variance stdev} {
+    puts [list $stat [$stat $list]]
+}
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
-16.333333333333332
-4.041451884327381
+max 4 
+min -5 
+sum 2 
+product 0
+mean 0.5
+median 1.5
+variance 16.333333333333332
+stdev 4.041451884327381
 \end{lstlisting}
 \end{example}
 \clearpage
-\section{Vectors and Matrices}
-This package provides some basic linear algebra routines for manipulating vectors and matrices, where a matrix is a list of row vectors. 
+\subsection{Vector Algebra}
+The dot product of two equal length vectors can be computed with \cmdlink{dot}.
+The cross product of two vectors of length 3 can be computed with \cmdlink{cross}. 
+\begin{syntax}
+\command{dot} \$a \$b
+\end{syntax}
+\begin{syntax}
+\command{cross} \$a \$b
+\end{syntax}
+\begin{args}
+\$a & First vector. \\
+\$b & Second vector.
+\end{args}
+\begin{example}{Dot and cross product}
+\begin{lstlisting}
+set x {1 2 3}
+set y {-2 -4 6}
+puts [dot $x $y]
+puts [cross $x $y]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+8
+24 -12 0
+\end{lstlisting}
+\end{example}
+The norm, or magnitude, of a vector can be computed with \cmdlink{norm}.
+\begin{syntax}
+\command{norm} \$a <\$p>
+\end{syntax}
+\begin{args}
+\$a & Vector to compute norm of. \\
+\$p & Norm type. 1 is sum of absolute values, 2 is euclidean distance, and Inf is absolute maximum value. Default 2.
+\end{args}
+\begin{example}{Normalizing a vector}
+\begin{lstlisting}
+set x {3 4}
+set x [lop $x / [norm $x]]
+puts $x
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+0.6 0.8
+\end{lstlisting}
+\end{example}
+For more advanced vector algebra routines, check out the Tcllib math::linearalgebra package.
+
+\clearpage
+\section{2-Dimensional Lists (Matrices)}
+A matrix is a two-dimensional list, or a list of row vectors.
 This is consistent with the format used in the Tcllib math::linearalgebra package.
-See the example below for how matrices and vectors are interpreted.
+See the example below for how matrices are interpreted.
 \begin{equation*}\label{eq:matrix_AB}
 A=\begin{bmatrix}
 2 & 5 & 1 & 3 \\
@@ -318,93 +336,6 @@ set B {9 3 0 -3}
 set C {{3 7 -5 -2}}
 \end{lstlisting}
 \end{example}
-
-\subsection{Dot Product}
-The dot product of two vectors can be computed with \cmdlink{dot}.
-\begin{syntax}
-\command{dot} \$a \$b
-\end{syntax}
-\begin{args}
-\$a & First vector. \\
-\$b & Second vector. Must be same length as \texttt{\$a}.
-\end{args}
-
-\begin{example}{Dot product of two vectors}
-\begin{lstlisting}
-set x {1 2 3}
-set y {-2 -4 6}
-puts [dot $x $y]
-puts [sum [lop2 $x * $y]]; # alternative way to compute dot product
-\end{lstlisting}
-\tcblower
-\begin{lstlisting}
-8
-8
-\end{lstlisting}
-\end{example}
-\clearpage
-
-\subsection{Vector Norm}
-The norm of a vector can be computed with \cmdlink{norm}.
-\begin{syntax}
-\command{norm} \$a <\$p>
-\end{syntax}
-\begin{args}
-\$a & Vector to compute norm of. \\
-\$p & Norm type. 1 is sum of absolute values, 2 is euclidean distance, and Inf is absolute maximum value. Default 2.
-\end{args}
-
-\begin{example}{Normalizing a vector}
-\begin{lstlisting}
-set x {3 4}
-set x [lop $x / [norm $x]]
-puts $x
-\end{lstlisting}
-\tcblower
-\begin{lstlisting}
-0.6 0.8
-\end{lstlisting}
-\end{example}
-
-\subsection{Cross Product}
-The cross product of two vectors of length 3 can be computed with \cmdlink{cross}. 
-\begin{syntax}
-\command{cross} \$a \$b
-\end{syntax}
-\begin{args}
-\$a & First vector. Must be length 3.\\
-\$b & Second vector. Must be length 3.
-\end{args}
-
-\begin{example}{Compute area of plane}
-\begin{lstlisting}
-set a {3 -1 5}
-set b {2 8 2}
-set area [norm [cross $a $b]]
-puts $area
-\end{lstlisting}
-\tcblower
-\begin{lstlisting}
-49.558046773455466
-\end{lstlisting}
-\end{example}
-\clearpage
-\subsection{Matrix Generation}
-The commands \cmdlink{zeros} \cmdlink{ones} and \cmdlink{rand} generate matrices (or other ND lists) of a specified shape, filled with zeros, ones, and random numbers between 0 and 1, respectively.
-
-\begin{syntax}
-\command{zeros} \$n ...
-\end{syntax}
-\begin{syntax}
-\command{ones} \$n ...
-\end{syntax}
-\begin{syntax}
-\command{rand} \$n ...
-\end{syntax}
-\begin{args}
-\$n ... & Shape (list of dimensions) of ND list. 
-\end{args}
-
 \subsection{Identity Matrix}
 The command \cmdlink{eye} generates an identity matrix of a specified size.
 \begin{syntax}
@@ -413,20 +344,17 @@ The command \cmdlink{eye} generates an identity matrix of a specified size.
 \begin{args}
 \$n  & Size of identity matrix 
 \end{args}
-
-\begin{example}{Generating matrices}
+\begin{example}{Generating an identity matrix}
 \begin{lstlisting}
-puts [ones 2 3]
 puts [eye 3]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
-{1 1 1} {1 1 1}
 {1 0 0} {0 1 0} {0 0 1}
 \end{lstlisting}
 \end{example}
 \clearpage
-\subsection{Transposing}
+\subsection{Matrix Transpose}
 The command \cmdlink{transpose} simply swaps the rows and columns of a matrix. 
 \begin{syntax}
 \command{transpose} \$A
@@ -467,12 +395,10 @@ puts [matmul {{2 5 1 3} {4 1 7 9} {6 8 3 2} {7 8 1 4}} {9 3 0 -3}]
 \end{example}
 
 \clearpage
-\section{N-Dimensional Lists}
-
+\section{N-Dimensional Lists (Tensors)}
 A ND list is defined as a list of equal length (N-1)D lists, which are defined as equal length (N-2)D lists, and so on until (N-N)D lists, which are scalars of arbitrary size.
 This definition is flexible, and allows for different interpretations of the same data. 
 For example, the list ``1 2 3'' can be interpreted as a scalar with value ``1 2 3'', a vector with values ``1'', ``2'', and ``3'', or a matrix with row vectors ``1'', ``2'', and ``3''. 
-
 
 The command \cmdlink{ndlist} validates that the input is a valid ndlist. 
 If the input value is ``ragged'', as in it has inconsistent dimensions, it will throw an error. In general, if a value is a valid for N dimensions, it will also be valid for dimensions 0 to N-1.
@@ -511,22 +437,60 @@ puts [nsize 2D $A]
 \end{example}
 
 \clearpage
-\subsection{Repeating and Expanding}
-The command \cmdlink{nrepeat} initializes a valid ND list of any size filled with a single value.
+\subsection{Initialization}
+The command \cmdlink{nfull} initializes a valid ND list of any size filled with a single value.
 \begin{syntax}
-\command{nrepeat} \$value \$n ...
+\command{nfull} \$value \$n ...
 \end{syntax}
 \begin{args}
 \$value & Value to repeat \\
 \$n ... & Shape (list of dimensions) of ND list. 
 \end{args}
-\begin{example}{Create nested ND list with one value}
+\begin{example}{Generate ND list filled with one value}
 \begin{lstlisting}
-puts [nrepeat foo 1 2 3]
+puts [nfull foo 3 2]; # 3x2 matrix filled with "foo"
+puts [nfull 0 2 2 2]; # 2x2x2 tensor filled with zeros
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
-{{foo foo foo} {foo foo foo}}
+{foo foo} {foo foo} {foo foo}
+{{0 0} {0 0}} {{0 0} {0 0}}
+\end{lstlisting}
+\end{example}
+The command \cmdlink{nrand} initializes a valid ND list of any size filled with random values between 0 and 1.
+\begin{syntax}
+\command{nrand} \$n ...
+\end{syntax}
+\begin{args}
+\$n ... & Shape (list of dimensions) of ND list. 
+\end{args}
+\begin{example}{Generate random matrix}
+\begin{lstlisting}
+expr {srand(0)}; # resets the random number seed (for the example)
+puts [nrand 1 2]; # 1x2 matrix filled with random numbers
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+{0.013469574513598146 0.3831388500440581}
+\end{lstlisting}
+\end{example}
+\clearpage
+\subsection{Repeating and Expanding}
+The command \cmdlink{nrepeat} repeats portions of an ND list a specified number of times.
+\begin{syntax}
+\command{nrepeat} \$ndlist \$n ...
+\end{syntax}
+\begin{args}
+\$value & Value to repeat \\
+\$n ... & Repetitions at each level.
+\end{args}
+\begin{example}{Create nested ND list with one value}
+\begin{lstlisting}
+puts [nrepeat {{1 2} {3 4}} 1 2]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+{1 2 1 2} {3 4 3 4}
 \end{lstlisting}
 \end{example}
 The command \cmdlink{nexpand} repeats portions of an ND list to expand to new dimensions.
@@ -776,7 +740,7 @@ puts [nswapaxes $x 0 2]
 \end{example}
 
 \clearpage
-\subsection{Mapping Over an ND List}
+\subsection{ND Functional Mapping}
 The command \cmdlink{napply} simply applies a command over each element of an ND list, and returns the result.
 Basic math operators can be mapped over an ND list with the command \cmdlink{nop}, which is a special case of \cmdlink{napply}, using the ::tcl::mathop namespace.
 \begin{syntax}
