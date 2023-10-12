@@ -12,7 +12,7 @@
 # Define namespace and exported commands
 namespace eval ::ndlist {    
     namespace export ndlist nshape nsize; # Basics
-    namespace export nrepeat nreshape nexpand; # Creation
+    namespace export nfull nrand nreshape nrepeat nexpand; # Creation
     namespace export nget nset nreplace; # Access/modification
     namespace export ninsert nstack; # Combination
     namespace export nflatten nswapaxes; # Manipulation
@@ -185,23 +185,45 @@ proc ::ndlist::nsize {nd ndlist} {
 # NDLIST CREATION
 ################################################################################
 
-# nrepeat --
+# nfull --
 #
 # Create an ndlist filled with one value
 #
 # Syntax:
-# nrepeat $value $arg ...
+# nfull $value $n ...
 #
 # Arguments:
 # value         Value to repeat
-# arg ...       Shape of ndlist
+# n ...         Shape of ndlist
 
-proc ::ndlist::nrepeat {value args} {
+proc ::ndlist::nfull {value args} {
     set ndlist $value
     foreach n [lreverse $args] {
         set ndlist [lrepeat $n $ndlist]
     }
     return $ndlist
+}
+
+# nrand --
+# 
+# Generate an ndlist filled with random values between 0 and 1
+#
+# Syntax:
+# nrand $n ...
+#
+# Arguments:
+# n ...         Shape of resulting ndlist
+
+proc ::ndlist::nrand {args} {
+    # Base case
+    if {[llength $args] == 0} {
+        return [::tcl::mathfunc::rand]
+    }
+    # Recursion
+    set args [lassign $args n]
+    lmap x [lrepeat $n {}] {
+        nrand {*}$args
+    }
 }
 
 # nreshape --
@@ -269,6 +291,63 @@ proc ::ndlist::RecReshape {vector n m args} {
     }
 }
 
+# nrepeat --
+#
+# Repeat an ndlist multiple times along an axis
+#
+# Syntax:
+# nrepeat $ndlist $n ...
+#
+# Arguments:
+# ndlist        Value to repeat
+# n ...         Number of times to repeat ndlist along the axis.
+
+proc ::ndlist::nrepeat {ndlist args} {
+    foreach n $args {
+        if {![string is integer -strict $n]} {
+            return -code error "expected integer but got \"$n\""
+        }
+        if {$n <= 0} {
+            return -code error "bad count \"$n\": must be integer > 0"
+        }
+        if {$n != 1} {
+            return [RecRepeat $ndlist {*}$args]
+        }
+    }
+    # If no args, or if all n's are 1, return the ndlist.
+    return $ndlist
+}
+
+# RecRepeat --
+#
+# Recursive handler for nexpand. 
+#
+# Syntax:
+# RecRepeat $ndlist $n ...
+#
+# Arguments:
+# ndlist        ND list to expand
+# n ...         Number of times to repeat at each level.
+
+proc ::ndlist::RecRepeat {ndlist n args} {
+    # Base case
+    if {[llength $args] == 0} {
+        if {$n == 1} {
+            return $ndlist
+        }
+        return [lrepeat $n {*}$ndlist]
+    }
+    # Recursion
+    if {$n == 1} {
+        return [lmap ndrow $ndlist {
+            RecRepeat $ndrow {*}$args
+        }]
+    }
+    return [lrepeat $n {*}[lmap ndrow $ndlist {
+        RecRepeat $ndrow {*}$args
+    }]]
+}
+
 # nexpand --
 #
 # Expands an ndlist to new dimensions.
@@ -285,53 +364,15 @@ proc ::ndlist::RecReshape {vector n m args} {
 proc ::ndlist::nexpand {ndlist args} {    
     set dims1 $args
     set dims0 [GetShape [llength $dims1] $ndlist]
-    foreach dim0 $dims0 dim1 $dims1 {
-        if {$dim0 != $dim1} {
-            return [RecExpand $ndlist $dims0 $dims1]
+    # Get number of repetitions at every level
+    nrepeat $ndlist {*}[lmap dim0 $dims0 dim1 $dims1 {
+        # If remainder is not zero, cannot expand.
+        if {$dim1 % $dim0} {
+            return -code error "incompatible dimensions"
         }
-    }
-    return $ndlist
-}
-
-# RecExpand --
-#
-# Recursive handler for nexpand. 
-
-#
-# Syntax:
-# RecExpand $ndlist $dims0 $dims1
-#
-# Arguments:
-# ndlist        ND list to expand
-# dims0         Old dimensions list
-# dims1         New dimensions list
-
-proc ::ndlist::RecExpand {ndlist dims0 dims1} {
-    # Base case
-    if {[llength $dims0] == 0} {
-        return $ndlist
-    }
-    # Recursion
-    set dims0 [lassign $dims0 n0]
-    set dims1 [lassign $dims1 n1]
-    # Same dimension case
-    if {$n1 == $n0} {
-        return [lmap ndrow $ndlist {
-            RecExpand $ndrow $dims0 $dims1
-        }]
-    }
-    # Singleton dimension case
-    if {$n0 == 1} {
-        return [lrepeat $n1 [RecExpand [lindex $ndlist 0] $dims0 $dims1]]
-    }
-    # Stride dimension case
-    if {$n1 % $n0 == 0} {
-        return [lrepeat [expr {$n1/$n0}] {*}[lmap ndrow $ndlist {
-            RecExpand $ndrow $dims0 $dims1
-        }]]
-    }
-    # Error case
-    return -code error "incompatible dimensions"
+        # Compute number of repetitions by integer division.
+        expr {$dim1 / $dim0}
+    }]
 }
 
 # NDLIST ACCESS/MODIFICATION
