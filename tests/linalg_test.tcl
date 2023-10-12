@@ -45,14 +45,14 @@ test eye {
 test dot {
     # dot product
 } -body {
-    dot {1 2 3} {-2 -4 3}
-} -result {-1}
+    dot {1 2 3} {-2 -4 6}
+} -result {8}
 
 test cross {
     # cross product
 } -body {
-    cross {1 2 3} {-2 -4 3}
-} -result {18 -9 0}
+    cross {1 2 3} {-2 -4 6}
+} -result {24 -12 0}
 
 test norm {
     # Norm of vector (norm 2)
@@ -77,6 +77,16 @@ test norm4 {
 } -body {
     norm {-1 2 3} 4
 } -result [expr {pow((-1)**4 + 2**4 + 3**4,0.25)}]
+
+test vec_angle {
+    # Get angle between two vectors
+} -body {
+    set a {1 0 0}
+    set b {1 1 0}
+    set theta [expr {acos([norm [cross $a $b]]/([norm $a]*[norm $b]))}]
+    set pi [expr {2*asin(1.0)}]
+    format %.1f [expr {$theta*180/$pi}]
+} -result {45.0}
 
 test matmul {
     # Larger matrix multiplication
