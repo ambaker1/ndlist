@@ -54,12 +54,33 @@ test nsize3D {
 ################################################################################
 puts "ND list creation"
 
-# nrepeat
-test nrepeat {
+# nfull
+test nfull {
     # Assert that nrepeat works
 } -body {
-    nrepeat 0.0 1 2 3
+    nfull 0.0 1 2 3
 } -result {{{0.0 0.0 0.0} {0.0 0.0 0.0}}}
+
+test nrand0 {
+    # Random number generator function (no args)
+} -body {
+    expr {srand(0)}
+    nrand
+} -result {0.013469574513598146}
+
+test nrand1 {
+    # list of random numbers
+} -body {
+    expr {srand(0)}
+    nrand 2
+} -result {0.013469574513598146 0.3831388500440581}
+
+test nrand_2 {
+    # matrix of random numbers
+} -body {
+    expr {srand(0)}
+    nrand 1 2
+} -result {{0.013469574513598146 0.3831388500440581}}
 
 # nreshape
 test nreshape1 {
@@ -79,6 +100,16 @@ test nreshape2 {
 } -body {
     nreshape {1 2 3 4 5 6 7 8} 2 2 2
 } -result {{{1 2} {3 4}} {{5 6} {7 8}}}
+
+test nrepeat {
+    # Repeat along a dimension
+} -body {
+    nrepeat {{1 2} {3 4}} 1 2
+} -result {{1 2 1 2} {3 4 3 4}}
+
+test nrepeat0 {} {nrepeat {{1 2} {3 4}}} {{1 2} {3 4}}
+test nrepeat1 {} {nrepeat {{1 2} {3 4}} 2} {{1 2} {3 4} {1 2} {3 4}}
+test nrepeat3 {} {nrepeat {{1 2} {3 4}} 3 1 2} {{{1 1} {2 2}} {{3 3} {4 4}} {{1 1} {2 2}} {{3 3} {4 4}} {{1 1} {2 2}} {{3 3} {4 4}}}
 
 # nexpand
 test nexpand {

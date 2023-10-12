@@ -3,39 +3,6 @@
 
 puts "Linear algebra utilities"
 
-test ones {
-    # Generate nd list of ones
-} -body {
-    ones 2 3
-} -result {{1 1 1} {1 1 1}}
-
-test zeros {
-    # Generate nd list of zeros
-} -body {
-    zeros 2 3
-} -result {{0 0 0} {0 0 0}}
-
-test rand0 {
-    # Random number generator function (no args)
-} -body {
-    expr {srand(0)}
-    rand
-} -result {0.013469574513598146}
-
-test rand1 {
-    # list of random numbers
-} -body {
-    expr {srand(0)}
-    rand 2
-} -result {0.013469574513598146 0.3831388500440581}
-
-test rand_2 {
-    # matrix of random numbers
-} -body {
-    expr {srand(0)}
-    rand 1 2
-} -result {{0.013469574513598146 0.3831388500440581}}
-
 test eye {
     # Generate identity matrix
 } -body {
