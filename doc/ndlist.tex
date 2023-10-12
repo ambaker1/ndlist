@@ -212,6 +212,44 @@ puts [lop2 {1 2 3} + {2 3 2}]
 \end{example}
 
 \clearpage
+\subsection{Generalized List Mapping}
+The Tcl command \textit{lmap} allows you to loop over an arbitrary number of lists in parallel, evaluating a script at each iteration, and collecting the results of each loop iteration into a new list.
+The command \cmdlink{lexpr} is an extension of this concept, just calling \textit{lmap} and passing the input through the Tcl \textit{expr} command.
+
+\begin{syntax}
+\command{lexpr} \$varList \$list <\$varList \$list ...> \$expr
+\end{syntax}
+\begin{args}
+\$varList ... & List(s) of variables to iterate with. \\
+\$list ... & List(s) to iterate over. \\
+\$expr & Tcl expression to evaluate at every loop iteration.
+\end{args}
+\begin{example}{Filtering a list}
+\begin{lstlisting}
+set numbers [range 10]
+set odds [lexpr x $numbers {$x % 2 ? $x : [continue]}]; # only odd numbers
+puts $odds
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+1 3 5 7 9
+\end{lstlisting}
+\end{example}
+
+\begin{example}{Adding three lists together}
+\begin{lstlisting}
+set x {1 2 3}
+set y {2 9 2}
+set z {5 -2 0}
+puts [lexpr xi $x yi $y zi $z {$xi + $yi + $zi}]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+8 9 5
+\end{lstlisting}
+\end{example}
+
+\clearpage
 \subsection{List Statistics}
 The commands \cmdlink{max}, \cmdlink{min}, \cmdlink{sum}, \cmdlink{product}, \cmdlink{mean}, \cmdlink{median}, \cmdlink{variance}, and \cmdlink{stdev} compute the maximum, minimum, sum, product, mean, median, variance, and standard deviation of values in a list.
 For more advanced statistics, check out the Tcllib math::statistics package.
@@ -402,6 +440,7 @@ For example, the list ``1 2 3'' can be interpreted as a scalar with value ``1 2 
 
 The command \cmdlink{ndlist} validates that the input is a valid ndlist. 
 If the input value is ``ragged'', as in it has inconsistent dimensions, it will throw an error. In general, if a value is a valid for N dimensions, it will also be valid for dimensions 0 to N-1.
+All other ND list commands assume a valid ND list.
 \begin{syntax}
 \command{ndlist} \$nd \$value
 \end{syntax}
@@ -484,7 +523,7 @@ The command \cmdlink{nrepeat} repeats portions of an ND list a specified number 
 \$value & Value to repeat \\
 \$n ... & Repetitions at each level.
 \end{args}
-\begin{example}{Create nested ND list with one value}
+\begin{example}{Repeat elements of a matrix}
 \begin{lstlisting}
 puts [nrepeat {{1 2} {3 4}} 1 2]
 \end{lstlisting}
@@ -503,7 +542,7 @@ For example, 1x1, 2x1, 4x1, 1x3, 2x3 and 4x3 are compatible with 4x3.
 \$ndlist & ND list to expand. \\
 \$n ... & New dimensions of ND list.
 \end{args}
-\begin{example}{Expand an ND list}
+\begin{example}{Expand an ND list to new dimensions}
 \begin{lstlisting}
 puts [nexpand {1 2 3} 3 2]
 puts [nexpand {{1 2}} 2 4]
@@ -668,8 +707,8 @@ puts $a
 \clearpage
 \subsection{Combination}
 The command \cmdlink{ninsert} allows you to insert a sublist into an ND list at a specified index and axis. 
-The command \cmdlink{nstack} is a special case of \cmdlink{ninsert} for the index ``end''.
-Sublist must agree in dimension at all other axes.
+Lists must agree in dimension at all other axes.
+The command \cmdlink{nstack} is a special case of \cmdlink{ninsert} with index ``end''.
 \begin{syntax}
 \command{ninsert} \$nd \$ndlist1 \$index \$ndlist2 <\$axis>
 \end{syntax}
@@ -855,7 +894,7 @@ puts [nreduce 2D sum $x 1]; # sum of each row
 The command \cmdlink{nmap} is a general purpose mapping function for N-dimensional lists in Tcl, and the command \cmdlink{nexpr} a special case for math expressions.
 If multiple ND lists are provided for iteration, they must be expandable to their maximum dimensions.
 The actual implementation flattens all the ND lists and calls the Tcl \textit{lmap} command, and then reshapes the result to the target dimensions.
-So, if ``continue'' or ``break'' are used, it will return an error - it cannot be used for filtering.
+So, if ``continue'' or ``break'' are used, it will return an error; it cannot be used for filtering.
 
 \begin{syntax}
 \command{nmap} \$nd \$varName \$ndlist <\$varName \$ndlist ...> \$body
@@ -899,13 +938,7 @@ puts $z
 {5 3} {6 13}
 \end{lstlisting}
 \end{example}
-
-
-
-
-{\normalsize\printindex}
+\printindex
 \end{document}
-
-\clearpage
 
 
