@@ -228,7 +228,7 @@ proc ::ndlist::linterp {x xList yList} {
 
 proc ::ndlist::lapply {command list args} {
     lmap value $list {
-        eval [linsert $command end $value {*}$args]
+        uplevel 1 [linsert $command end $value {*}$args]
     }
 }
 
@@ -249,7 +249,7 @@ proc ::ndlist::lapply2 {command list1 list2 args} {
         return -code error "mismatched list lengths"
     }
     lmap value1 $list1 value2 $list2 {
-        eval [linsert $command end $value1 $value2 {*}$args]
+        uplevel 1 [linsert $command end $value1 $value2 {*}$args]
     }
 }
 

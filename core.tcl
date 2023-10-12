@@ -466,7 +466,7 @@ proc ::ndlist::ParseIndices {inputs dims} {
     set iArgs ""; # paired list of index type and index list (meaning varies)
     foreach input $inputs dim $dims {
         # Parse index notation
-        lassign [ParseIndex $input $dim] iType iList 
+        lassign [ParseIndex $input $dim] iType iList
         # Determine size of indexed range and limit.
         switch $iType {
             A { # All indices
@@ -503,14 +503,22 @@ proc ::ndlist::ParseIndices {inputs dims} {
 # ParseIndex --
 # 
 # Used for parsing index input (i.e. list of indices, range 0:10, etc)
+# Returns index type and corresponding values.
 #
+# Syntax:
+# lassign [ParseIndex $input $n] iType iList
+#
+# Arguments:
+# input         Index input (e.g. *, {0 3}, 0:10, end.)
+# n             Size of list
+# 
 # Returns:
-# iType:    Type of index (A, R, L, or S)
-# iList:    List of indices corresponding with type.
-#   A:      Empty
-#   R:      Range start and stop
-#   L:      List of indices 
-#   S:      Single index (flattens list)
+# iType     Type of index (A, R, L, or S)
+# iList     List of indices corresponding with type
+#   A:          Empty
+#   R:          Range start and stop
+#   L:          List of indices 
+#   S:          Single index (flattens list)
 
 proc ::ndlist::ParseIndex {input n} {
     # Check length of input
@@ -580,6 +588,9 @@ proc ::ndlist::ParseIndex {input n} {
 # Private function, converts end+-integer index format into integer
 # Negative indices get converted, such that -1 is end, -2 is end-1, etc.
 # Throws error if index is out of range.
+#
+# Syntax:
+# Index2Integer $index $n
 #
 # Arguments:
 # index:        Tcl index format (integer?[+-]integer? or end?[+-]integer?)
@@ -1060,7 +1071,7 @@ proc ::ndlist::RecSwapAxes {ndlist axis1 axis2} {
 # arg ...           Additional arguments to append to command.
 
 proc ::ndlist::napply {nd command ndlist args} {
-    RecApply [GetNDims $nd] $command $ndlist {*}$args
+    RecApply 1 [GetNDims $nd] $command $ndlist {*}$args
 }
 
 # RecApply --
@@ -1068,23 +1079,26 @@ proc ::ndlist::napply {nd command ndlist args} {
 # Recursive handler for napply
 #
 # Syntax:
-# RecApply $ndims $command $ndlist $arg...
+# RecApply $level $ndims $command $ndlist $arg...
 # 
 # Arguments:
+# level             Level to evaluate at
 # ndims             Number of dimensions at the current recursion level.
 # command           Command prefix
 # ndlist            ND list to iterate over
 # arg...            Additional arguments to append to command.
 
-proc ::ndlist::RecApply {ndims command ndlist args} {
+proc ::ndlist::RecApply {level ndims command ndlist args} {
+    incr level
     # Base case
     if {$ndims == 0} {
-        return [eval [linsert $command end $ndlist {*}$args]]
+        set command [linsert $command end $ndlist {*}$args]
+        return [uplevel $level $command]
     }
     # Recursion
     incr ndims -1
     lmap ndrow $ndlist {
-        RecApply $ndims $command $ndrow {*}$args
+        RecApply $level $ndims $command $ndrow {*}$args
     }
 }
 
@@ -1106,7 +1120,7 @@ proc ::ndlist::napply2 {nd command ndlist1 ndlist2 args} {
     set dims [GetMaxShape $ndims $ndlist1 $ndlist2]
     set ndlist1 [nexpand $ndlist1 {*}$dims]
     set ndlist2 [nexpand $ndlist2 {*}$dims]
-    RecApply2 $ndims $command $ndlist1 $ndlist2 {*}$args
+    RecApply2 1 $ndims $command $ndlist1 $ndlist2 {*}$args
 }
 
 # RecApply2 --
@@ -1114,23 +1128,26 @@ proc ::ndlist::napply2 {nd command ndlist1 ndlist2 args} {
 # Recursive handler for napply2
 #
 # Syntax:
-# RecApply2 $ndims $command $ndlist1 $ndlist2 $arg...
+# RecApply2 $level $ndims $command $ndlist1 $ndlist2 $arg...
 # 
 # Arguments:
+# level             Level to evaluate at
 # ndims             Number of dimensions at the current recursion level.
 # command           Command prefix
 # ndlist1 ndlist2   ND lists to iterate over
 # arg...            Additional arguments to append to command.
 
-proc ::ndlist::RecApply2 {ndims command ndlist1 ndlist2 args} {
+proc ::ndlist::RecApply2 {level ndims command ndlist1 ndlist2 args} {
+    incr level
     # Base case
     if {$ndims == 0} {
-        return [eval [linsert $command end $ndlist1 $ndlist2 {*}$args]]
+        set command [linsert $command end $ndlist1 $ndlist2 {*}$args]
+        return [uplevel $level $command]
     }
     # Recursion
     incr ndims -1
     lmap ndrow1 $ndlist1 ndrow2 $ndlist2 {
-        RecApply2 $ndims $command $ndrow1 $ndrow2 {*}$args
+        RecApply2 $level $ndims $command $ndrow1 $ndrow2 {*}$args
     }
 }
 
