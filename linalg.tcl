@@ -12,77 +12,8 @@
 
 # Define namespace and exported commands
 namespace eval ::ndlist {
-    namespace export ones zeros rand eye; # Matrix/tensor generation
     namespace export dot cross norm; # Vector algebra
-    namespace export matmul transpose; # Matrix algebra
-}
-
-# ones --
-#
-# Generate a tensor filled with ones
-#
-# Syntax:
-# ones $n ...
-# 
-# Arguments:
-# n ...         Dimensions of tensor    
-
-proc ::ndlist::ones {args} {
-    nrepeat 1 {*}$args
-}
-
-# zeros --
-# 
-# Generate a tensor filled with zeros
-#
-# Syntax:
-# zeros $n ...
-# 
-# Arguments:
-# n ...         Dimensions of tensor
-
-proc ::ndlist::zeros {args} {
-    nrepeat 0 {*}$args
-}
-
-# rand --
-# 
-# Generate a tensor filled with random values between 0 and 1
-#
-# Syntax:
-# rand $n ...
-#
-# Arguments:
-# n ...         Shape of resulting ndlist
-
-proc ::ndlist::rand {args} {
-    # Base case
-    if {[llength $args] == 0} {
-        return [::tcl::mathfunc::rand]
-    }
-    # Recursion
-    set args [lassign $args n]
-    lmap x [lrepeat $n {}] {
-        rand {*}$args
-    }
-}
-
-# eye --
-# 
-# Generate an identity matrix of specified size
-#
-# Syntax:
-# eye $n
-# 
-# Arguments:
-# n             Size of matrix (nxn)
-
-proc ::ndlist::eye {n} {
-    set x [zeros $n $n]
-    foreach i [range $n] {
-        lset x $i $i 1
-    }
-    return $x
+    namespace export eye matmul transpose; # Matrix algebra
 }
 
 # dot --
@@ -158,30 +89,22 @@ proc ::ndlist::norm {vector {p 2}} {
     }
 }
 
-# matmul --
-#
-# Multiplies two matrices. Must agree in dimension.
-# Returns a nxm matrix, by computing the dot-product of rows and columns
+# eye --
 # 
-# Syntax:
-# matmul $A $B
+# Generate an identity matrix of specified size
 #
+# Syntax:
+# eye $n
+# 
 # Arguments:
-# A B           Matrices, matching inner dimensions
+# n             Size of matrix (nxn)
 
-proc ::ndlist::matmul {A B} {
-    # Check dimensions
-    if {[llength [lindex $A 0]] != [llength $B]} {
-        return -code error "incompatible matrix dimensions"
+proc ::ndlist::eye {n} {
+    set x [nfull 0 $n $n]
+    foreach i [range $n] {
+        lset x $i $i 1
     }
-    # Transpose B matrix for easy multiplication
-    set BT [transpose $B]
-    # Perform dot-product of all rows and columns
-    lmap rowA $A {
-        lmap colB $BT {
-            dot $rowA $colB
-        }
-    }
+    return $x
 }
 
 # transpose --
@@ -212,6 +135,32 @@ proc ::ndlist::transpose {matrix} {
         lmap x [lindex $matrix 0] {
             incr i
             lmap row $matrix {lindex $row $i}
+        }
+    }
+}
+
+# matmul --
+#
+# Multiplies two matrices. Must agree in dimension.
+# Returns a nxm matrix, by computing the dot-product of rows and columns
+# 
+# Syntax:
+# matmul $A $B
+#
+# Arguments:
+# A B           Matrices, matching inner dimensions
+
+proc ::ndlist::matmul {A B} {
+    # Check dimensions
+    if {[llength [lindex $A 0]] != [llength $B]} {
+        return -code error "incompatible matrix dimensions"
+    }
+    # Transpose B matrix for easy multiplication
+    set BT [transpose $B]
+    # Perform dot-product of all rows and columns
+    lmap rowA $A {
+        lmap colB $BT {
+            dot $rowA $colB
         }
     }
 }
