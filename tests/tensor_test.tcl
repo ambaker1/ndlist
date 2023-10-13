@@ -56,7 +56,7 @@ puts "ND list creation"
 
 # nfull
 test nfull {
-    # Assert that nrepeat works
+    # Create a tensor filled with a value.
 } -body {
     nfull 0.0 1 2 3
 } -result {{{0.0 0.0 0.0} {0.0 0.0 0.0}}}
@@ -214,7 +214,6 @@ test nget {
     assert {[nget $testmat 0:2:end *] eq {{1 2 3} {7 8 9}}}
 } -result {}
 
-
 # nreplace
 test nset-nreplace {
     # Check all combinations of nreplace 
@@ -295,23 +294,43 @@ test nset-nreplace {
     assert {[nreplace $testmat 1:0 1:0 {{a b} {c d}}] eq {{d c 3} {b a 6} {7 8 9}}}
 }
 
-# nset (just calls nreplace)
-test nset_I_3D {
-    # Create "Identity tensor"
+test nget_blank {
+    # Assign a blank value to a cell (instead of deletion)
 } -body {
-    set I [nrepeat 0 3 3 3]
-    for {set i 0} {$i < 3} {incr i} {
-        nset I $i $i $i 1
-    }
-    set I
-} -result {{{1 0 0} {0 0 0} {0 0 0}} {{0 0 0} {0 1 0} {0 0 0}} {{0 0 0} {0 0 0} {0 0 1}}}
+    nreplace $testmat 0. 0. ""
+} -result {{{} 2 3} {4 5 6} {7 8 9}}
 
+# Various tests for 3D tensors 
+set x {{{1 2 3} {4 5 6}} {{7 8 9} {10 11 12}}}
+test nget3 {} {nget $x * * *} $x
+test nget3 {} {nget $x 0 * *} {{{1 2 3} {4 5 6}}}
+test nget3 {} {nget $x 0 * 0:1} {{{1 2} {4 5}}}
+test nget3 {} {nget $x 0 1. 0:1} {{4 5}}
+test nget3 {} {nget $x 0. * 2} {3 6}
+test nreplace3 {} {nreplace $x * * * 0} {{{0 0 0} {0 0 0}} {{0 0 0} {0 0 0}}}
+test nreplace3 {} {nreplace $x * * 0:1 0} {{{0 0 3} {0 0 6}} {{0 0 9} {0 0 12}}}
+test nreplace3 {} {nreplace $x * * {0 2} 0} {{{0 2 0} {0 5 0}} {{0 8 0} {0 11 0}}}
+test nreplace3 {} {nreplace $x * * 2. {{{}}}} {{{1 2 {}} {4 5 {}}} {{7 8 {}} {10 11 {}}}}
+test nreplace3 {} {nreplace $x 0. 0:end 0:1 {a b}} {{{a a 3} {b b 6}} {{7 8 9} {10 11 12}}}
+test nreplace3 {} {nreplace $x * * 0 ""} {{{2 3} {5 6}} {{8 9} {11 12}}}
+
+# nset (just calls nreplace)
 test nset2 {
     # Swap rows and columns (example)
 } -body {
     set a {{1 2} {3 4} {5 6}}
     nset a {1 0} * [nget $a {0 1} *]
 } -result {{3 4} {1 2} {5 6}}
+
+test nset_I_3D {
+    # Create "Identity tensor"
+} -body {
+    set I [nfull 0 3 3 3]
+    for {set i 0} {$i < 3} {incr i} {
+        nset I $i $i $i 1
+    }
+    set I
+} -result {{{1 0 0} {0 0 0} {0 0 0}} {{0 0 0} {0 1 0} {0 0 0}} {{0 0 0} {0 0 0} {0 0 1}}}
 
 # ninsert/nstack
 ################################################################################
@@ -435,6 +454,7 @@ test nswapaxes_02 {
     # transpose outer dimensions
 } -body {
     nswapaxes {{{1 2} {3 4}} {{5 6} {7 8}}} 0 2; # 2x2x2
+    # i,j,k -> k,j,i
     # 0,0,0: 1 -> 0,0,0
     # 0,0,1: 2 -> 1,0,0
     # 0,1,0: 3 -> 0,1,0
@@ -442,8 +462,53 @@ test nswapaxes_02 {
     # 1,0,0: 5 -> 0,0,1
     # 1,0,1: 6 -> 1,0,1
     # 1,1,0: 7 -> 0,1,1
-    # 1,1,1: 7 -> 1,1,1
+    # 1,1,1: 8 -> 1,1,1
 } -result {{{1 5} {3 7}} {{2 6} {4 8}}}
+
+test nmoveaxis_ftb {
+    # Move an axis (front to back)
+} -body {
+    nmoveaxis {{{1 2} {3 4}} {{5 6} {7 8}}} 0 2
+    # i,j,k -> j,k,i
+    # 0,0,0: 1 -> 0,0,0
+    # 0,0,1: 2 -> 0,1,0
+    # 0,1,0: 3 -> 1,0,0
+    # 0,1,1: 4 -> 1,1,0
+    # 1,0,0: 5 -> 0,0,1
+    # 1,0,1: 6 -> 0,1,1
+    # 1,1,0: 7 -> 1,0,1
+    # 1,1,1: 8 -> 1,1,1
+} -result {{{1 5} {2 6}} {{3 7} {4 8}}}
+
+test nmoveaxis_btf {
+    # Move an axis
+} -body {
+    nmoveaxis {{{1 2} {3 4}} {{5 6} {7 8}}} 2 0
+    # i,j,k: ? -> k,i,j
+    # 0,0,0: 1 -> 0,0,0
+    # 0,0,1: 2 -> 1,0,0
+    # 0,1,0: 3 -> 0,0,1
+    # 0,1,1: 4 -> 1,0,1
+    # 1,0,0: 5 -> 0,1,0
+    # 1,0,1: 6 -> 1,1,0
+    # 1,1,0: 7 -> 0,1,1
+    # 1,1,1: 8 -> 1,1,1
+} -result {{{1 3} {5 7}} {{2 4} {6 8}}}
+
+test npermute {
+    # Reorder axes, and show agreement with nswapaxes and nmoveaxis
+} -body {
+    # Verify with 4D tensor
+    set x [nrand 10 10 10 10]
+    set y1 [npermute $x 3 2 0 1]; # Reversed order
+    # i j k l; # swap 3 and 0
+    # l j k i; # move 1 to 3
+    # l k i j
+    set y2 [nmoveaxis [nswapaxes $x 0 3] 1 3]
+    assert $y1 eq $y2
+    # Perform same axis swap as example nmoveaxis_btf
+    npermute {{{1 2} {3 4}} {{5 6} {7 8}}} 2 0 1; # Same as move 2 0
+} -result {{{1 3} {5 7}} {{2 4} {6 8}}}
 
 # napply/nreduce/nmap/nexpr/nop
 ################################################################################
