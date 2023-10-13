@@ -1039,7 +1039,7 @@ proc ::ndlist::nstack {nd ndlist1 ndlist2 {axis 0}} {
 
 # nswapaxes --
 #
-# Swaps axes
+# Swaps two axes
 #
 # Syntax:
 # nswapaxes $ndlist $axis1 $axis2
@@ -1099,44 +1099,107 @@ proc ::ndlist::RecSwapAxes {ndlist axis1 axis2} {
 
 # nmoveaxis --
 #
-# Move an axis
+# Move an axis from a source axis to target axis.
+# e.g. 0 1 2 3 4 -> 4 0 1 2 3
+#
+# Syntax:
+# nmoveaxis $ndlist $source $target
+#
+# Arguments:
+# ndlist            ND list to iterate over
+# source            Source axis
+# target            Target axis
 
-proc ::ndlist::nmoveaxis {ndlist axis target} {
-    
+proc ::ndlist::nmoveaxis {ndlist source target} {
+    # Check for error
+    if {![string is integer -strict $source]} {
+        return -code error "expected integer but got \"$source\""
+    }
+    if {![string is integer -strict $target]} {
+        return -code error "expected integer but got \"$target\""
+    }
+    if {$source < 0 || $target < 0} {
+        return -code error "axis out of range"
+    }
+    # Null case
+    if {$source == $target} {
+        return $ndlist
+    }
+    RecMoveAxis $ndlist $source $target
 }
 
+# RecMoveAxis --
+#
+# Private recursive function for moving an axis.
+#
+# Syntax:
+# RecMoveAxis $ndlist $source $target
+#
+# Arguments:
+# ndlist            ND list to iterate over
+# source            Source axis
+# target            Target axis
 
-# MoveAxisToBack --
+proc ::ndlist::RecMoveAxis {ndlist source target} {
+    # Base cases
+    if {$source == 0} {
+        return [MoveFront2Back $ndlist $target]
+    }
+    if {$target == 0} {
+        return [MoveBack2Front $ndlist $source]
+    }
+    # Recursion
+    incr source -1
+    incr target -1
+    lmap ndrow $ndlist {
+        RecMoveAxis $ndrow $source $target
+    }
+}
+
+# MoveFront2Back --
 #
 # Private recursive function for moving an axis to the back of the ND list.
 #
 # Syntax:
-# MoveAxisToBack $ndims $ndlist $axis
+# MoveFront2Back $ndlist $axis
 #
 # Arguments:
-# ndims             Number of dimensions
 # ndlist            ND list to iterate over
-# axis              Axis to move to back
+# axis              Target axis
 
-proc ::ndlist::MoveAxisToBack {ndims ndlist axis} {
+proc ::ndlist::MoveFront2Back {ndlist axis} {
     # Base case
-    if {$ndims == 1} {
-        return $ndlist
+    if {$axis == 1} {
+        return [transpose $ndlist]
     }
     # Recursion
-    incr ndims -1
-    if {$axis == 0} {
-        set ndlist [transpose $ndlist]; # (ijk -> jik)
-    } else {
-        incr axis -1
-    }
-    lmap ndrow $ndlist {
-        MoveAxisToBack $ndims $ndrow $axis; # (jik -> jki)
+    incr axis -1
+    lmap ndrow [transpose $ndlist] {
+        MoveFront2Back $ndrow $axis
     }
 }
 
-proc ::ndlist::MoveAxisToFront {ndims ndlist axis} {
-    
+# MoveBack2Front --
+#
+# Private recursive function for moving an axis to the front of the ND list.
+#
+# Syntax:
+# MoveBack2Front $ndlist $axis
+#
+# Arguments:
+# ndlist            ND list to iterate over
+# axis              Source axis
+
+proc ::ndlist::MoveBack2Front {ndlist axis} {
+    # Base case
+    if {$axis == 1} {
+        return [transpose $ndlist]
+    }
+    # Recursion
+    incr axis -1
+    transpose [lmap ndrow $ndlist {
+        MoveAxisToFront $ndrow $axis
+    }]
 }
 
 # npermute --
@@ -1302,12 +1365,10 @@ proc ::ndlist::nreduce {nd command ndlist {axis 0} args} {
     if {$axis < 0 || $axis >= $ndims} {
         return -code error "axis out of range"
     }
-    # Move axis to reduce to back of ND list
-    set ndlist [MoveAxisToBack $ndims $ndlist $axis] 
-    # Reduce the ND list.
-    napply [incr ndims -1] $command $ndlist {*}$args
+    # Move axis to reduce to back of ND list, and reduce.
+    set ndlist [nmoveaxis $ndlist $axis [expr {$ndims - 1}]]
+    napply [expr {$ndims - 1}] $command $ndlist {*}$args
 }
-
 
 # nmap --
 # 
