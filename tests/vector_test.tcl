@@ -1,5 +1,5 @@
 
-puts "List tools"
+puts "Vector (1D list) utilities"
 
 test range1 {
     # Basic range syntax
@@ -158,3 +158,95 @@ test lop2_error {
 } -body {
     lop2 {1 2 3} + 1
 } -returnCodes {1} -result {mismatched list lengths}
+
+puts "Basic list statistics"
+
+test stats {
+    # Test out every stats function
+} -body {
+    set a {-5 3 4 0}
+    assert [max $a] == 4
+    assert [min $a] == -5
+    assert [sum $a] == 2
+    assert [product $a] == 0
+    assert [mean $a] == 0.5
+    assert [median $a] == 1.5
+    assert [stdev $a] == 4.041451884327381
+    assert [variance $a] == 16.333333333333332
+    assert [stdev $a 1] == 3.5
+    assert [variance $a 1] == 12.25
+} -result {}
+
+test stat_errors {
+    # Test out bounds of functions
+} -body {
+    set noArgs {}
+    set oneArg {1}
+    set twoArgs {1 2}
+    # Normal stats 
+    foreach func {max min sum product mean median} {
+        assert [catch {$func $noArgs}]
+        assert ![catch {$func $oneArg}]
+        assert ![catch {$func $twoArgs}]
+    }
+    # Sample variance
+    foreach func {stdev variance} {
+        assert [catch {$func $noArgs}]
+        assert [catch {$func $oneArg}]
+        assert ![catch {$func $twoArgs}]
+    }
+    # Population variance
+    foreach func {stdev variance} {
+        assert [catch {$func $noArgs 1}]
+        assert ![catch {$func $oneArg 1}]
+        assert ![catch {$func $twoArgs 1}]
+    }
+}
+
+puts "Vector algebra"
+
+test dot {
+    # dot product
+} -body {
+    dot {1 2 3} {-2 -4 6}
+} -result {8}
+
+test cross {
+    # cross product
+} -body {
+    cross {1 2 3} {-2 -4 6}
+} -result {24 -12 0}
+
+test norm {
+    # Norm of vector (norm 2)
+} -body {
+    norm {-1 2 3}
+} -result [expr {sqrt(14)}]
+
+test norm1 {
+    # Norm 1, sum of absolute values
+} -body {
+    norm {-1 2 3} 1
+} -result {6}
+
+test normInf {
+    # Infinite norm, absolute maximum
+} -body {
+    norm {-1 2 3} Inf
+} -result {3}
+
+test norm4 {
+    # Other norms
+} -body {
+    norm {-1 2 3} 4
+} -result [expr {pow((-1)**4 + 2**4 + 3**4,0.25)}]
+
+test vec_angle {
+    # Get angle between two vectors
+} -body {
+    set a {1 0 0}
+    set b {1 1 0}
+    set theta [expr {acos([norm [cross $a $b]]/([norm $a]*[norm $b]))}]
+    set pi [expr {2*asin(1.0)}]
+    format %.1f [expr {$theta*180/$pi}]
+} -result {45.0}

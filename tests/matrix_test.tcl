@@ -1,59 +1,13 @@
 # linalg_test.tcl
 # Integer range
 
-puts "Linear algebra utilities"
+puts "Matrix (2D list) utilities"
 
 test eye {
     # Generate identity matrix
 } -body {
     set I [eye 3]
 } -result {{1 0 0} {0 1 0} {0 0 1}}
-
-test dot {
-    # dot product
-} -body {
-    dot {1 2 3} {-2 -4 6}
-} -result {8}
-
-test cross {
-    # cross product
-} -body {
-    cross {1 2 3} {-2 -4 6}
-} -result {24 -12 0}
-
-test norm {
-    # Norm of vector (norm 2)
-} -body {
-    norm {-1 2 3}
-} -result [expr {sqrt(14)}]
-
-test norm1 {
-    # Norm 1, sum of absolute values
-} -body {
-    norm {-1 2 3} 1
-} -result {6}
-
-test normInf {
-    # Infinite norm, absolute maximum
-} -body {
-    norm {-1 2 3} Inf
-} -result {3}
-
-test norm4 {
-    # Other norms
-} -body {
-    norm {-1 2 3} 4
-} -result [expr {pow((-1)**4 + 2**4 + 3**4,0.25)}]
-
-test vec_angle {
-    # Get angle between two vectors
-} -body {
-    set a {1 0 0}
-    set b {1 1 0}
-    set theta [expr {acos([norm [cross $a $b]]/([norm $a]*[norm $b]))}]
-    set pi [expr {2*asin(1.0)}]
-    format %.1f [expr {$theta*180/$pi}]
-} -result {45.0}
 
 test matmul {
     # Larger matrix multiplication
@@ -102,3 +56,18 @@ test transpose_scalar {
 } -body {
     transpose {1}
 } -result {1}
+
+test zip {} {zip {A B C} {1 2 3}} {{A 1} {B 2} {C 3}}
+test zip3 {} {zip3 {Do Re Mi} {A B C} {1 2 3}} {{Do A 1} {Re B 2} {Mi C 3}}
+
+test cartprod_2 {
+    # Cartesian product of two vectors
+} -body {
+    cartprod {A B C} {1 2 3}    
+} -result {{A 1} {A 2} {A 3} {B 1} {B 2} {B 3} {C 1} {C 2} {C 3}}
+
+test cartprod_3 {
+    # Cartesian product of three vectors
+} -body {
+    cartprod {1 2} {A B} {foo bar}
+} -result {{1 A foo} {1 A bar} {1 B foo} {1 B bar} {2 A foo} {2 A bar} {2 B foo} {2 B bar}}
