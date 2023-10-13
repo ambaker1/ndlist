@@ -1,4 +1,4 @@
-# linalg.tcl
+# matrix.tcl
 ################################################################################
 # Basic linear algebra routines
 # Adapted from similar routines in math::linearalgebra package
@@ -163,4 +163,27 @@ proc ::ndlist::matmul {A B} {
             dot $rowA $colB
         }
     }
+}
+
+# cartprod --
+# 
+# Cartesian product of multiple vectors (can have duplicates)
+# Returns a list of all combinations
+# Modified from "cartesianNaryProduct", accessed on 12/15/2021 at 
+# https://rosettacode.org/wiki/Cartesian_product_of_two_or_more_lists
+#
+# Arguments:
+# args:         Vectors to take "cartesian product" of
+
+proc ::qvr::ndlist::cartprod {args} {
+    foreach vector [lassign $args matrix] { 
+        set newMatrix {}
+        foreach row $matrix {
+            foreach value $vector {
+                lappend newMatrix [linsert $row end $value]
+            }
+        }
+        set matrix $newMatrix
+    }
+    return $matrix
 }
