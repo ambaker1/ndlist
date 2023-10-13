@@ -1,6 +1,6 @@
-# ltools.tcl
+# vector.tcl
 ################################################################################
-# List utilities 
+# Utilities for vectors (1D lists)
 
 # Copyright (C) 2023 Alex Baker, ambaker1@mtu.edu
 # All rights reserved. 
@@ -14,7 +14,12 @@ namespace eval ::ndlist {
     namespace export range find; # List indexing utilities
     namespace export linspace linsteps linterp; # List generation
     namespace export lapply lapply2 lop lop2 lexpr; # Functional mapping
+    namespace export max min sum product mean median stdev variance; # Stats
+    namespace export dot cross norm; # Vector algebra
 }
+
+# List indexing
+################################################################################
 
 # range --
 #
@@ -102,6 +107,9 @@ proc ::ndlist::find {list args} {
     # Perform search.
     lsearch -exact -all [lop $list $op $value] 1
 }
+
+# List generation
+################################################################################
 
 # linspace --
 #
@@ -214,6 +222,9 @@ proc ::ndlist::linterp {x xList yList} {
     return [expr {$r*($y2-$y1)+$y1}]
 }
 
+# Functional mapping
+################################################################################
+
 # lapply --
 #
 # Apply a simple command over one list.
@@ -316,4 +327,260 @@ proc ::ndlist::lexpr {args} {
     set expr [lindex $args end]
     # Call modified lmap
     tailcall lmap {*}$varMap [list expr $expr]
+}
+
+# List statistics
+################################################################################
+
+# max --
+# 
+# Maximum value
+#
+# Syntax:
+# max $list
+# 
+# Arguments:
+# list          List of values (length > 0)
+
+proc ::ndlist::max {list} {
+    if {[llength $list] == 0} {
+        return -code error "max requires at least one value"
+    }
+    foreach value [lassign $list max] {
+        if {![string is double -strict $value]} {
+            return -code error "expected number but got \"$value\""
+        }
+        if {$value > $max} {
+            set max $value
+        }
+    }
+    return $max
+}
+
+# min --
+# 
+# Minimum value 
+#
+# Syntax:
+# min $list
+# 
+# Arguments:
+# list          List of values (length > 0)
+
+proc ::ndlist::min {list} {
+    if {[llength $list] == 0} {
+        return -code error "min requires at least one value"
+    }
+    foreach value [lassign $list min] {
+        if {![string is double -strict $value]} {
+            return -code error "expected number but got \"$value\""
+        }
+        if {$value < $min} {
+            set min $value
+        }
+    }
+    return $min
+}
+
+# sum --
+# 
+# Sum of values
+#
+# Syntax:
+# sum $list
+# 
+# Arguments:
+# list          List of values (length > 0)
+
+proc ::ndlist::sum {list} {
+    if {[llength $list] == 0} {
+        return -code error "sum requires at least one value"
+    }
+    foreach value [lassign $list sum] {
+        set sum [expr {$sum + $value}]
+    }
+    return $sum
+}
+
+# product --
+# 
+# Product of values
+#
+# Syntax:
+# product $list
+# 
+# Arguments:
+# list          List of values (length > 0)
+
+proc ::ndlist::product {list} {
+    if {[llength $list] == 0} {
+        return -code error "product requires at least one value"
+    }
+    foreach value [lassign $list product] {
+        set product [expr {$product * $value}]
+    }
+    return $product
+}
+
+# mean --
+# 
+# Mean value
+#
+# Syntax:
+# mean $list
+# 
+# Arguments:
+# list         List of values (length > 0)
+
+proc ::ndlist::mean {list} {
+    if {[llength $list] == 0} {
+        return -code error "mean requires at least one value"
+    }
+    return [expr {double([sum $list])/[llength $list]}]
+}
+
+# median --
+# 
+# Median value (sorts, then takes middle values)
+#
+# Syntax:
+# median $list
+# 
+# Arguments:
+# list          List of values (length > 0)
+
+proc ::ndlist::median {list} {
+    set n [llength $list]
+    if {$n == 0} {
+        return -code error "median requires at least one value"
+    }
+    set sorted [lsort -real $list]
+    if {$n%2 == 1} {
+        set i [expr {($n-1)/2}]
+        set median [lindex $sorted $i]
+    } else {
+        set i [expr {$n/2}]
+        set j [expr {$n/2 - 1}]
+        set median [expr {([lindex $sorted $i] + [lindex $sorted $j])/2.0}]
+    }; # end if
+    return $median
+}
+
+# stdev -- 
+#
+# Sample or population standard deviation (sqrt of variance)
+#
+# Syntax:
+# stdev $list <$pop>
+# 
+# Arguments:
+# list      List of values (length > 0 or 1)
+# pop       Whether to compute population standard deviation (default 0)
+
+proc ::ndlist::stdev {list {pop 0}} {
+    # Variance function checks list length 
+    expr {sqrt([variance $list $pop])}
+}
+
+# variance -- 
+#
+# Sample or population variance
+#
+# Syntax:
+# variance $list <$pop>
+# 
+# Arguments:
+# list      List of values (length > 0 or 1)
+# pop       Whether to compute population variance (default 0)
+
+proc ::ndlist::variance {list {pop 0}} {
+    # Check list length
+    set n [llength $list]
+    set pop [expr {bool($pop)}]
+    if {$pop && $n == 0} {
+        return -code error "population variance requires at least 1 value"
+    }
+    if {!$pop && $n < 2} {
+        return -code error "sample variance requires at least 2 values"
+    }
+    # Perform variance calculation
+    set mean [mean $list]
+    set squares [lmap x $list {expr {($x - $mean)**2}}]
+    return [expr {double([sum $squares])/($n + $pop - 1)}]
+}
+
+# Vector algebra
+################################################################################
+
+# dot --
+#
+# Dot product of two vectors.
+#
+# Syntax:
+# dot $a $b
+#
+# Arguments:
+# a b           Vectors, same length (length > 0)
+
+proc ::ndlist::dot {a b} {
+    # Check dimensions
+    if {[llength $a] != [llength $b]} {
+        return -code error "incompatible vector lengths"
+    }
+    sum [lmap ai $a bi $b {expr {$ai * $bi}}]
+}
+
+# cross --
+# 
+# Cross product of two 3D vectors
+#
+# Syntax:
+# cross $a $b
+#
+# Arguments:
+# a b        Vectors, length 3
+
+proc ::ndlist::cross {a b} {
+    # Check dimensions
+    if {[llength $a] != 3 || [llength $b] != 3} {
+        return -code error "cross-product only defined for 3D vectors"
+    }
+    lassign $a a1 a2 a3
+    lassign $b b1 b2 b3
+    set c1 [expr {$a2*$b3 - $a3*$b2}]
+    set c2 [expr {$a3*$b1 - $a1*$b3}]
+    set c3 [expr {$a1*$b2 - $a2*$b1}]
+    return [list $c1 $c2 $c3]
+}
+
+# norm --
+# 
+# Norm of vector (returns double)
+#
+# Arguments:
+# vector        Vector
+# p             Norm type. Default 2 (euclidean distance).
+
+proc ::ndlist::norm {vector {p 2}} {
+    switch $p {
+        1 { # Sum of absolute values
+            return [sum [lexpr value $vector {abs($value)}]]
+        }
+        2 { # Euclidean (use hypot function to avoid overflow)
+            set norm 0.0
+            foreach value $vector {
+                set norm [expr {hypot($value,$norm)}]
+            }
+            return $norm
+        }
+        Inf { # Absolute maximum of the vector
+            return [max [lexpr value $vector {abs($value)}]]
+        }
+        default { # Arbitrary integer norm
+            if {![string is integer -strict $p] || $p <= 0} {
+                return -code error "p must be integer > 0"
+            }
+            return [expr {pow([sum [lop $vector ** $p]],1.0/$p)}]
+        }
+    }
 }
