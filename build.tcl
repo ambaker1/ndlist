@@ -12,10 +12,9 @@ source build/ndlist.tcl
 namespace import ndlist::*
 tin import flytrap
 # Source all test files
-source tests/core_test.tcl
-source tests/stat_test.tcl
-source tests/linalg_test.tcl
-source tests/ltools_test.tcl
+source tests/vector_test.tcl
+source tests/matrix_test.tcl
+source tests/tensor_test.tcl
 
 # Check number of failed tests
 set nFailed $::tcltest::numTests(Failed)
