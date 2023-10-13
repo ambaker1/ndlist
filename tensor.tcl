@@ -1,6 +1,6 @@
-# core.tcl
+# tensor.tcl
 ################################################################################
-# Core procedures for ND list creation, metadata, and indexing/modification
+# Tensor (ND list) implementation
 
 # Copyright (C) 2023 Alex Baker, ambaker1@mtu.edu
 # All rights reserved. 
@@ -11,11 +11,13 @@
 
 # Define namespace and exported commands
 namespace eval ::ndlist {    
-    namespace export ndlist nshape nsize; # Basics
-    namespace export nfull nrand nreshape nrepeat nexpand; # Creation
+    namespace export ndlist nshape nsize; # ND list basics
+    namespace export nfull nrand; # ND list initialization
+    namespace export nflatten nreshape; # Reshaping an ND list
+    namespace export nrepeat nexpand; # Expanding an ND list
     namespace export nget nset nreplace; # Access/modification
     namespace export ninsert nstack; # Combination
-    namespace export nflatten nswapaxes; # Manipulation
+    namespace export nswapaxes nmoveaxis npermute; # Axis reordering
     namespace export napply napply2 nop nop2 nreduce; # Functional mapping
     namespace export nmap nexpr; # Generalized mapping
 }
@@ -291,6 +293,34 @@ proc ::ndlist::RecReshape {vector n m args} {
     }
 }
 
+# nflatten --
+#
+# Flatten an ndlist to a vector (1D)
+# If nd is 0D, it creates a 1D list.
+#
+# Syntax:
+# nflatten $nd $ndlist
+#
+# Arguments:
+# nd            Number of dimensions (e.g. 1D, 2D, etc.)
+# ndlist        ND list to reshape dimensions of
+
+proc ::ndlist::nflatten {nd ndlist} {
+    # Interpret input and get dimensionality
+    set ndims [GetNDims $nd]
+    # Handle scalar case
+    if {$ndims == 0} {
+        # Create a one-element list
+        return [list $ndlist]
+    }
+    # Flatten the ndlist
+    set vector $ndlist
+    for {set i 1} {$i < $ndims} {incr i} {
+        set vector [concat {*}$vector]
+    }
+    return $vector
+}
+
 # nrepeat --
 #
 # Repeat an ndlist multiple times along an axis
@@ -366,12 +396,15 @@ proc ::ndlist::nexpand {ndlist args} {
     set dims0 [GetShape [llength $dims1] $ndlist]
     # Get number of repetitions at every level
     nrepeat $ndlist {*}[lmap dim0 $dims0 dim1 $dims1 {
-        # If remainder is not zero, cannot expand.
-        if {$dim1 % $dim0} {
+        if {$dim0 == $dim1} {
+            # Trivial case
+            expr 1
+        } elseif {$dim0 != 0 && $dim1 % $dim0 == 0} {
+            # Compute number of repetitions by integer division.
+            expr {$dim1 / $dim0}
+        } else {
             return -code error "incompatible dimensions"
         }
-        # Compute number of repetitions by integer division.
-        expr {$dim1 / $dim0}
     }]
 }
 
@@ -399,13 +432,7 @@ proc ::ndlist::nget {ndlist args} {
     }
     # Parse indices
     set dims [GetShape $ndims $ndlist]
-    set iArgs [lassign [ParseIndices $indices $dims] iDims iLims]
-    # Process limits and dimensions
-    foreach dim $dims iLim $iLims iDim $iDims {
-        if {$iLim >= $dim} {
-            return -code error "index out of range"
-        }
-    }
+    lassign [ParseIndices $indices $dims] iDims iArgs
     # Return ndims and the sublist
     return [RecGet $ndlist {*}$iArgs]
 }
@@ -491,54 +518,49 @@ proc ::ndlist::GetNewNDims {indices} {
 # ParseIndices --
 # 
 # Loop through index inputs - returning required information for getting/setting
-# Returns a list - iDims, iLims, then iArgs, where iArgs is a key-value list
-# iDims iLims iType iList iType iList ...
+# Returns a list - iDims, then iArgs, where iArgs is a key-value list
+# iDims iType iList iType iList ...
 #
 # Syntax:
-# ParseIndices $inputs $dims
+# lassign [ParseIndices $inputs $dims] iDims iArgs
 #
 # Arguments:
 # inputs        Index inputs (e.g. *, {0 3}, 0:10, end.)
 # dims          Shape to index into
+#
+# Returns:
+# iDims         New dimensions (blank for flattened axis)
+# iArgs         Paired list, iType iList ... (see ParseIndex)
 
 proc ::ndlist::ParseIndices {inputs dims} {
     set iDims ""; # dimensions of indexed region
-    set iLims ""; # Maximum indices for indexed region
     set iArgs ""; # paired list of index type and index list (meaning varies)
     foreach input $inputs dim $dims {
         # Parse index notation
         lassign [ParseIndex $input $dim] iType iList
+        lappend iArgs $iType $iList
         # Determine size of indexed range and limit.
         switch $iType {
             A { # All indices
-                set iDim $dim
-                set iLim [expr {$dim - 1}]
+                lappend iDims $dim
             }
             R { # Range of indices
                 lassign $iList start stop
                 if {$start <= $stop} {
-                    set iDim [expr {$stop - $start + 1}]
-                    set iLim $stop
+                    lappend iDims [expr {$stop - $start + 1}]
                 } else {
-                    set iDim [expr {$start - $stop + 1}]
-                    set iLim $start
+                    lappend iDims [expr {$start - $stop + 1}]
                 }
             }
             L { # List of indices
-                set iDim [llength $iList]
-                set iLim [max $iList]
+                lappend iDims [llength $iList]
             }
             S { # Single index
-                set iDim 0
-                set iLim $iList
+                lappend iDims {}
             }
         }
-        # Append to result
-        lappend iDims $iDim
-        lappend iLims $iLim
-        lappend iArgs $iType $iList
     }
-    return [list $iDims $iLims {*}$iArgs]
+    return [list $iDims $iArgs]
 }
 
 # ParseIndex --
@@ -727,32 +749,37 @@ proc ::ndlist::nreplace {ndlist args} {
     }
     # Parse indices
     set dims [GetShape $ndims $ndlist]
-    set iArgs [lassign [ParseIndices $indices $dims] iDims iLims]
-    # Switch for replacement type (removal or substitution)
+    lassign [ParseIndices $indices $dims] iDims iArgs
+    # Get index types and lists
+    set iTypes ""
+    set iLists ""
+    foreach {iType iList} $iArgs {
+        lappend iTypes $iType
+        lappend iLists $iList
+    }
+    # Check for basic lset case.
+    if {[lsearch -exact -not $iTypes S] == -1} {
+        lset ndlist {*}$iLists $sublist
+        return $ndlist
+    }
+    # Removal case
     if {[llength $sublist] == 0} {
         # Removal/deletion    
-        # Get axis to delete along
-        set axis -1
-        set i 0
-        foreach {iType iList} $iArgs {
-            if {$iType ne "A"} {
-                if {$axis != -1} {
-                    return -code error "can only delete along one axis"
-                }
-                set axis $i
-            }
-            incr i
+        set axes [lsearch -exact -all -not $iTypes A]
+        # Trivial case (remove all)
+        if {[llength $axes] == 0} {
+            return
         }
-        # Trivial case (removal of all)
-        if {$axis == -1} {
-            return ""
+        # Error case (can only delete along one axis)
+        if {[llength $axes] > 1} {
+            return -code error "can only delete along one axis"
         }
-        # Get axis information
-        set dim [lindex $dims $axis]
-        set iDim [lindex $iDims $axis]
-        set iLim [lindex $iLims $axis]
-        set iType [lindex $iArgs [expr {$axis * 2}]]
-        set iList [lindex $iArgs [expr {$axis * 2 + 1}]]
+        # Get axis to delete along, and information about the axis
+        set axis [lindex $axes 0]
+        set dim [lindex $dims $axis]; # source dimension
+        set iDim [lindex $iDims $axis]; # index dimension
+        set iType [lindex $iTypes $axis]; # type of deletion
+        set iList [lindex $iLists $axis]; # list corresponding to type
         # Handle "L" case, indices must be sorted and unique.
         if {$iType eq "L"} {
             set iList [lsort -integer -decreasing -unique $iList]
@@ -762,30 +789,18 @@ proc ::ndlist::nreplace {ndlist args} {
         }
         # Get new dimension along removal axis
         set subdim [expr {$dim - $iDim}]
-        # Check for null case
+        # Null case
         if {$subdim == 0} {
-            return ""
+            return
         }
-        # Get new dimensions
-        set subdims [lreplace $dims $axis $axis $subdim]
-        # Call recursive removal handler and return with new dimensions
-        set ndlist [RecRemove $ndlist $axis $iType $iList]
-    } else {
-        # Substitution/replacement
-        # Process input dimensions
-        set subdims ""
-        foreach iDim $iDims {
-            if {$iDim > 0} {
-                lappend subdims $iDim
-            }
-        }
-        # Expand sublist if needed based on index dimensions.
-        set sublist [nexpand $sublist {*}$subdims]
-        # Call recursive replacement handler
-        set ndlist [RecReplace $ndlist $sublist {*}$iArgs]
+        # Call recursive removal handler
+        return [RecRemove $ndlist $axis $iType $iList]
     }
-    # Return updated list
-    return $ndlist
+    # Substitution/replacement
+    # Expand sublist if needed based on index dimensions.
+    set sublist [nexpand $sublist {*}[concat {*}$iDims]]
+    # Call recursive replacement handler
+    RecReplace $ndlist $sublist {*}$iArgs
 }
 
 # RecRemove --
@@ -1004,40 +1019,12 @@ proc ::ndlist::nstack {nd ndlist1 ndlist2 {axis 0}} {
     ninsert $nd $ndlist1 end $ndlist2 $axis
 }
 
-# NDLIST MANIPULATION
+# NDLIST AXIS MANIPULATION
 ################################################################################
-
-# nflatten --
-#
-# Flatten an ndlist to a vector (1D)
-# If nd is 0D, it creates a 1D list.
-#
-# Syntax:
-# nflatten $nd $ndlist
-#
-# Arguments:
-# nd            Number of dimensions (e.g. 1D, 2D, etc.)
-# ndlist        ND list to reshape dimensions of
-
-proc ::ndlist::nflatten {nd ndlist} {
-    # Interpret input and get dimensionality
-    set ndims [GetNDims $nd]
-    # Handle scalar case
-    if {$ndims == 0} {
-        # Create a one-element list
-        return [list $ndlist]
-    }
-    # Flatten the ndlist
-    set vector $ndlist
-    for {set i 1} {$i < $ndims} {incr i} {
-        set vector [concat {*}$vector]
-    }
-    return $vector
-}
 
 # nswapaxes --
 #
-# Swaps axes
+# Swaps two axes
 #
 # Syntax:
 # nswapaxes $ndlist $axis1 $axis2
@@ -1093,6 +1080,147 @@ proc ::ndlist::RecSwapAxes {ndlist axis1 axis2} {
     lmap ndrow $ndlist {
         RecSwapAxes $ndrow $axis1 $axis2
     }
+}
+
+# nmoveaxis --
+#
+# Move an axis from a source axis to target axis.
+# e.g. 0 1 2 3 4 -> 4 0 1 2 3
+#
+# Syntax:
+# nmoveaxis $ndlist $source $target
+#
+# Arguments:
+# ndlist            ND list to iterate over
+# source            Source axis
+# target            Target axis
+
+proc ::ndlist::nmoveaxis {ndlist source target} {
+    # Check for error
+    if {![string is integer -strict $source]} {
+        return -code error "expected integer but got \"$source\""
+    }
+    if {![string is integer -strict $target]} {
+        return -code error "expected integer but got \"$target\""
+    }
+    if {$source < 0 || $target < 0} {
+        return -code error "axis out of range"
+    }
+    # Null case
+    if {$source == $target} {
+        return $ndlist
+    }
+    RecMoveAxis $ndlist $source $target
+}
+
+# RecMoveAxis --
+#
+# Private recursive function for moving an axis.
+#
+# Syntax:
+# RecMoveAxis $ndlist $source $target
+#
+# Arguments:
+# ndlist            ND list to iterate over
+# source            Source axis
+# target            Target axis
+
+proc ::ndlist::RecMoveAxis {ndlist source target} {
+    # Base cases
+    if {$source == 0} {
+        return [MoveFront2Back $ndlist $target]
+    }
+    if {$target == 0} {
+        return [MoveBack2Front $ndlist $source]
+    }
+    # Recursion
+    incr source -1
+    incr target -1
+    lmap ndrow $ndlist {
+        RecMoveAxis $ndrow $source $target
+    }
+}
+
+# MoveFront2Back --
+#
+# Private recursive function for moving an axis to the back of the ND list.
+#
+# Syntax:
+# MoveFront2Back $ndlist $axis
+#
+# Arguments:
+# ndlist            ND list to iterate over
+# axis              Target axis
+
+proc ::ndlist::MoveFront2Back {ndlist axis} {
+    # Base case
+    if {$axis == 1} {
+        return [transpose $ndlist]
+    }
+    # Recursion
+    incr axis -1
+    lmap ndrow [transpose $ndlist] {
+        MoveFront2Back $ndrow $axis
+    }
+}
+
+# MoveBack2Front --
+#
+# Private recursive function for moving an axis to the front of the ND list.
+#
+# Syntax:
+# MoveBack2Front $ndlist $axis
+#
+# Arguments:
+# ndlist            ND list to iterate over
+# axis              Source axis
+
+proc ::ndlist::MoveBack2Front {ndlist axis} {
+    # Base case
+    if {$axis == 1} {
+        return [transpose $ndlist]
+    }
+    # Recursion
+    incr axis -1
+    transpose [lmap ndrow $ndlist {
+        MoveBack2Front $ndrow $axis
+    }]
+}
+
+# npermute --
+#
+# Reorders the ND list according to list of axes.
+#
+# Syntax:
+# npermute $ndlist $axis ...
+#
+# Arguments:
+# ndlist        ND list to manipulate
+# axis ...      New order of axes. e.g. 2 0 1, or 2 3 0 1
+
+proc ::ndlist::npermute {ndlist args} {
+    # Get dimensionality and check validity of axes list
+    set ndims [llength $args]
+    set axes [range $ndims]
+    # Check validity of input
+    if {[lsort -integer $args] ne $axes} {
+        return -code error "invalid axes list"
+    }
+    # Null case
+    if {$args eq $axes} {
+        return $ndlist
+    }
+    # Get index lists for axis swap.
+    set dims [GetShape $ndims $ndlist]
+    set indicesList [cartprod {*}[lmap dim $dims {range $dim}]]
+    # Initialize new ND list
+    set newList [nfull {} {*}[lmap axis $args {lindex $dims $axis}]]
+    # Fill new ND list
+    foreach indices $indicesList {
+        set newIndices [lmap axis $args {lindex $indices $axis}]
+        lset newList {*}$newIndices [lindex $ndlist {*}$indices]
+    }
+    return $newList
 }
 
 # NDLIST MAPPING
@@ -1223,39 +1351,9 @@ proc ::ndlist::nreduce {nd command ndlist {axis 0} args} {
     if {$axis < 0 || $axis >= $ndims} {
         return -code error "axis out of range"
     }
-    # Move axis to reduce to back of ND list
-    set ndlist [MoveAxisToBack $ndims $ndlist $axis] 
-    # Reduce the ND list.
-    napply [incr ndims -1] $command $ndlist {*}$args
-}
-
-# MoveAxisToBack --
-#
-# Private recursive function for moving an axis to the back of the ND list.
-#
-# Syntax:
-# MoveAxisToBack $ndims $ndlist $axis
-#
-# Arguments:
-# ndims             Number of dimensions
-# ndlist            ND list to iterate over
-# axis              Axis to move to back
-
-proc ::ndlist::MoveAxisToBack {ndims ndlist axis} {
-    # Base case
-    if {$ndims == 1} {
-        return $ndlist
-    }
-    # Recursion
-    incr ndims -1
-    if {$axis == 0} {
-        set ndlist [transpose $ndlist]; # (ijk -> jik)
-    } else {
-        incr axis -1
-    }
-    lmap ndrow $ndlist {
-        MoveAxisToBack $ndims $ndrow $axis; # (jik -> jki)
-    }
+    # Move axis to reduce to back of ND list, and reduce.
+    set ndlist [nmoveaxis $ndlist $axis [expr {$ndims - 1}]]
+    napply [expr {$ndims - 1}] $command $ndlist {*}$args
 }
 
 # nmap --
