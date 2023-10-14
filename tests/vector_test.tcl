@@ -1,5 +1,4 @@
-
-puts "Vector (1D list) utilities"
+# Vector (1D-list) tests
 
 test range1 {
     # Basic range syntax
@@ -159,8 +158,6 @@ test lop2_error {
     lop2 {1 2 3} + 1
 } -returnCodes {1} -result {mismatched list lengths}
 
-puts "Basic list statistics"
-
 test stats {
     # Test out every stats function
 } -body {
@@ -202,8 +199,6 @@ test stat_errors {
         assert ![catch {$func $twoArgs 1}]
     }
 }
-
-puts "Vector algebra"
 
 test dot {
     # dot product

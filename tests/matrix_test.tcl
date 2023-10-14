@@ -1,7 +1,4 @@
-# linalg_test.tcl
-# Integer range
-
-puts "Matrix (2D list) utilities"
+# Matrix (2D-list) tests
 
 test eye {
     # Generate identity matrix

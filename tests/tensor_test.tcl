@@ -1,10 +1,10 @@
+# Tensor (ND-list) tests
 
 # Matrix for testing (DO NOT CHANGE)
 set testmat {{1 2 3} {4 5 6} {7 8 9}}
 
 # ndlist/nshape/nsize 
 ################################################################################
-puts "ND list definition"
 # ndlist
 test ndlist {
     # Create an ndlist (validates)
@@ -16,7 +16,7 @@ test ndlist_error {
     # Throws error if ragged.
 } -body {
     ndlist 2D {1 {2 3}}
-} -returnCodes {1} -result {not a valid 2D list}
+} -returnCodes {1} -result {not a valid 2D-list}
 
 # nshape
 test nshape {
@@ -57,7 +57,6 @@ test nsize3D {
 
 # nrepeat/nreshape/nexpand
 ################################################################################
-puts "ND list creation"
 
 # nfull
 test nfull {
@@ -148,7 +147,6 @@ test nexpand_error {
 
 # nget/nset/nreplace (ndlist access/modification)
 ################################################################################
-puts "Accessing/modifying ND lists"
 
 test ParseIndex {
     # Test index parser
@@ -364,7 +362,6 @@ test nset_I_3D {
 
 # ninsert/nstack
 ################################################################################
-puts "Combining ND lists"
 
 # ninsert
 test ninsert0D {
@@ -416,7 +413,6 @@ test nstack {
 
 # nflatten/nswapaxes
 ################################################################################
-puts "Manipulating ND lists"
 
 # nflatten
 test nflatten0D {
@@ -546,9 +542,22 @@ test npermute {
     npermute {{{1 2} {3 4}} {{5 6} {7 8}}} 2 0 1; # Same as move 2 0
 } -result {{{1 3} {5 7}} {{2 4} {6 8}}}
 
+test npermute5 {
+    # Permute a 5D tensor
+} -body {
+    set x [nrand 10 10 10 10 10]
+    set y1 [npermute $x 4 3 0 2 1]
+    # 0 1 2 3 4; # swap 0 and 4
+    # 4 1 2 3 0; # swap 1 and 3
+    # 4 3 2 1 0; # swap 2 and 3
+    # 4 3 1 2 0; # swap 2 and 4
+    # 4 3 0 2 1;
+    set y2 [nswapaxes [nswapaxes [nswapaxes [nswapaxes $x 0 4] 1 3] 2 3] 2 4]
+    assert $y1 eq $y2
+}
+
 # napply/nreduce/nmap/nexpr/nop
 ################################################################################
-puts "Mapping over ND lists"
 
 # napply
 test napply0D {
