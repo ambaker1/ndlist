@@ -749,28 +749,25 @@ proc ::ndlist::nreplace {ndlist args} {
     # Parse indices
     set dims [GetShape $ndims $ndlist]
     set iArgs [lassign [ParseIndices $dims {*}$indices] iDims]
-    set iTypes ""
-    set iLists ""
-    foreach {iType iList} $iArgs {
-        lappend iTypes $iType
-        lappend iLists $iList
-    }
-    # Check for lset (scalar subdims) case
+    set iTypes [lmap {iType iList} $iArgs {set iType}]
+    # Check for simple lset case
     if {[lsearch -exact -not $iTypes S] == -1} {
-        return [lset ndlist {*}$iLists $sublist]
+        set indices [lmap {iType iList} $iArgs {set iList}]
+        return [lset ndlist {*}$indices $sublist]
     }
-    # Check for nremove case
+    # Check for removal case
     if {[llength $sublist] == 0} {
-        # Removal case
         set axes [lsearch -all -exact -not $iTypes A]
-        # Trivial case
         if {[llength $axes] == 0} {
+            # Trivial case
             return
-        } elseif {[llength $axes] > 1} {
-            return -code error "can only delete along one axis"
+        } elseif {[llength $axes] == 1} {
+            # Call nremove
+            set axis [lindex $axes 0]
+            return [nremove $ndlist [lindex $indices $axis] $axis]
+        } else {
+            return -code error "can only remove along one axis"
         }
-        set axis [lindex $axes 0]
-        return [nremove $ndlist [lindex $indices $axis] $axis]
     }
     # Expand sublist if needed based on index dimensions.
     set sublist [nexpand $sublist {*}[concat {*}$iDims]]
