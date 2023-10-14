@@ -43,8 +43,9 @@ close $fid
 # Write examples file
 set fid [open tests/examples.tcl w]
 puts $fid "# Documentation examples"
+set count 1
 dict for {name data} $examples {
-    puts $fid "\ntest {$name} Example -body \{"
+    puts $fid "\ntest {Example $count} {$name} -body \{"
     puts $fid "puts {}"; # For first line of output
     foreach line [dict get $data body] {
         puts $fid $line
@@ -55,5 +56,6 @@ dict for {name data} $examples {
         puts $fid $line
     }
     puts $fid "\}"
+    incr count
 }
 close $fid
