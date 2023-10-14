@@ -1414,7 +1414,7 @@ proc ::ndlist::GetMaxShape {ndims args} {
     lmap dims [transpose $shapes] {max $dims}
 }
 
-# ND-list MATH MAPPING
+# ND-LIST MATH MAPPING
 ################################################################################
 
 # nop --
