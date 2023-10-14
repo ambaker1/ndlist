@@ -212,7 +212,7 @@ puts [lop2 {1 2 3} + {2 3 2}]
 \end{example}
 
 \clearpage
-\subsection{Generalized List Mapping}
+\subsection{List Math}
 The Tcl command \textit{lmap} allows you to loop over an arbitrary number of lists in parallel, evaluating a script at each iteration, and collecting the results of each loop iteration into a new list.
 The command \cmdlink{lexpr} is an extension of this concept, just calling \textit{lmap} and passing the input through the Tcl \textit{expr} command.
 
@@ -433,6 +433,48 @@ puts [matmul {{2 5 1 3} {4 1 7 9} {6 8 3 2} {7 8 1 4}} {9 3 0 -3}]
 \end{example}
 
 \clearpage
+\subsection{Iteration Tools}
+The commands \cmdlink{zip} zips two lists into a list of tuples, and \cmdlink{zip3} zip three lists into a list of triples.
+Lists must be the same length.
+\begin{syntax}
+\command{zip} \$a \$b
+\end{syntax}
+\begin{syntax}
+\command{zip3} \$a \$b \$c
+\end{syntax}
+\begin{args}
+\$a \$b \$c & Lists to zip together.
+\end{args}
+\begin{example}{Zipping lists}
+\begin{lstlisting}
+puts [zip {A B C} {1 2 3}]
+puts [zip3 {Do Re Mi} {A B C} {1 2 3}]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+{A 1} {B 2} {C 3}
+{Do A 1} {Re B 2} {Mi C 3}
+\end{lstlisting}
+\end{example}
+The command \cmdlink{cartprod} computes the Cartesian product of an arbitrary number of vectors, returning a matrix where the columns correspond to the input vectors and the rows correspond to all the combinations of the vector elements.
+\begin{syntax}
+\command{cartprod} \$list1 \$list2 ...
+\end{syntax}
+\begin{args}
+\$list1 \$list2 ... & Lists, or vectors, to take Cartesian product of.
+\end{args}
+
+\begin{example}{Cartesian product}
+\begin{lstlisting}
+puts [cartprod {A B C} {1 2 3}]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+{A 1} {A 2} {A 3} {B 1} {B 2} {B 3} {C 1} {C 2} {C 3}
+\end{lstlisting}
+\end{example}
+
+\clearpage
 \section{N-Dimensional Lists (Tensors)}
 A ND list is defined as a list of equal length (N-1)D lists, which are defined as equal length (N-2)D lists, and so on until (N-N)D lists, which are scalars of arbitrary size.
 This definition is flexible, and allows for different interpretations of the same data. 
@@ -596,7 +638,7 @@ puts [nreshape $x 2 2 2]
 \subsection{Index Notation}
 This package provides generalized n-dimensional list access/modification commands, using an index notation parsed by the command \cmdlink{::ndlist::ParseIndex}, which returns the index type and an index list for the type.
 \begin{syntax}
-\command{::ndlist::ParseIndex} \$input \$n
+\command{::ndlist::ParseIndex} \$n \$input
 \end{syntax}
 \begin{args}
 \$input & Index input. Options are shown below: \\
@@ -607,10 +649,10 @@ This package provides generalized n-dimensional list access/modification command
 \quad \$i. & Single index with a dot, ``flattens'' the ndlist (e.g. 0. or end-3.). \\
 \$n & Number of elements in list.
 \end{args}
-Additionally, indices get passed through the \cmdlink{::ndlist::Index2Integer} command, which converts \texttt{end}$\pm$\textit{integer}, \textit{integer}$\pm$\textit{integer} and negative wrap-around indexing (where -1 is equivalent to ``end'') into normal integer indices. 
-This command will return error if the index is out of range.
+Additionally, indices get passed through the \cmdlink{::ndlist::Index2Integer} command, which converts the inputs ``end'', ``end-integer'', ``integer$\pm$integer'' and negative wrap-around indexing (where -1 is equivalent to ``end'') into normal integer indices.
+Note that this command will return an error if the index is out of range.
 \begin{syntax}
-\command{::ndlist::Index2Integer} \$index \$n
+\command{::ndlist::Index2Integer} \$n \$index
 \end{syntax}
 \begin{args}
 \$index & Single index. \\
@@ -620,11 +662,11 @@ This command will return error if the index is out of range.
 \begin{example}{Index Notation}
 \begin{lstlisting}
 set n 10
-puts [::ndlist::ParseIndex * $n]
-puts [::ndlist::ParseIndex 1:8 $n]
-puts [::ndlist::ParseIndex 0:2:6 $n]
-puts [::ndlist::ParseIndex {0 5 end-1} $n]
-puts [::ndlist::ParseIndex end. $n]
+puts [::ndlist::ParseIndex $n * $n]
+puts [::ndlist::ParseIndex $n 1:8]
+puts [::ndlist::ParseIndex $n 0:2:6]
+puts [::ndlist::ParseIndex $n {0 5 end-1}]
+puts [::ndlist::ParseIndex $n end.]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
@@ -646,7 +688,7 @@ Note that unlike the Tcl \textit{lindex} and \textit{lrange} commands, \cmdlink{
 \end{syntax}
 \begin{args}
 \$ndlist & ND list value. \\
-\$i ... & Index arguments, parsed with \cmdlink{::ndlist::ParseIndex}. 
+\$i ... & Index inputs, parsed with \cmdlink{::ndlist::ParseIndex}. 
 The number of index arguments determines the interpreted dimensions.
 \end{args}
 \begin{example}{ND list access}
@@ -672,8 +714,7 @@ puts [nget $A {0 0 0} 1.]; # can repeat indices
 \subsection{Modification}
 A ND list can be modified by reference with \cmdlink{nset}, and by value with \cmdlink{nreplace}, using the index parser \cmdlink{::ndlist::ParseIndex} for each dimension being indexed.
 Note that unlike the Tcl \textit{lset} and \textit{lreplace} commands, the commands \cmdlink{nset} and \cmdlink{nreplace} will return an error if the indices are out of range.
-
-If the blank string is used as a replacement value, it will remove values from the ND lists, as long as it is only removing along one dimension. 
+If all the index inputs are ``*'' except for one, and the replacement list is blank, it will delete values along that axis by calling \cmdlink{nremove}.
 Otherwise, the replacement ND list must be expandable to the target index dimensions. 
 \begin{syntax}
 \command{nset} \$varName \$i ... \$sublist
@@ -684,58 +725,94 @@ Otherwise, the replacement ND list must be expandable to the target index dimens
 \begin{args}
 \$varName & Name of ND list to modify. \\
 \$ndlist & ND list to modify. \\
-\$i ... & Index arguments, parsed with \cmdlink{::ndlist::ParseIndex}.
-The number of index arguments determines the interpreted dimensions. \\
+\$i ... & Index inputs, parsed with \cmdlink{::ndlist::ParseIndex}.
+The number of index inputs determines the interpreted dimensions. \\
 \$sublist & Replacement list, or blank to delete values.
 \end{args}
 \begin{example}{Swapping rows in a matrix}
 \begin{lstlisting}
 # ND List Value Modification
 set a {{1 2} {3 4} {5 6}}
-puts [nreplace $a * 1 ""]; # Delete a column (modify in-place)
 nset a {1 0} * [nget $a {0 1} *]; # Swap rows and columns (modify by reference)
 puts $a
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
-1 3 5
 {3 4} {1 2} {5 6}
+\end{lstlisting}
+\end{example}
+
+\clearpage
+\subsection{Removal}
+The command \cmdlink{nremove} removes portions of an ND list at a specified axis.
+\begin{syntax}
+\command{nremove} \$nd \$ndlist \$i <\$axis>
+\end{syntax}
+\begin{args}
+\$nd & Dimensionality of ND list (e.g. 2D, 2d, or 2 for a matrix).  \\
+\$ndlist & ND list to modify. \\
+\$i & Index input, parsed with \cmdlink{::ndlist::ParseIndex}. \\
+\$axis & Axis to remove at. Default 0.
+\end{args}
+
+\begin{example}{Deleting a column from a matrix}
+\begin{lstlisting}
+set a {{1 2 3} {4 5 6} {7 8 9}}
+puts [nremove $a 2 1]; # Delete column 2
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+{1 2} {4 5} {7 8}
+\end{lstlisting}
+\end{example}
+
+\begin{example}{Removing list elements that satisfy criteria}
+\begin{lstlisting}
+set x [range 10]
+puts [nremove $x [find $x > 4]]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+0 1 2 3 4
 \end{lstlisting}
 \end{example}
 
 
 \clearpage
-\subsection{Combination}
-The command \cmdlink{ninsert} allows you to insert a sublist into an ND list at a specified index and axis. 
-Lists must agree in dimension at all other axes.
-The command \cmdlink{nstack} is a special case of \cmdlink{ninsert} with index ``end''.
+\subsection{Insertion and Concatenation}
+The command \cmdlink{ninsert} allows you to insert an ND list into another ND list at a specified index and axis, as long as the ND lists agree in dimension at all other axes.
+If ``end'' or ``end-integer'' is used for the index, it will insert after the index. 
+Otherwise, it will insert before the index.
 \begin{syntax}
 \command{ninsert} \$nd \$ndlist1 \$index \$ndlist2 <\$axis>
 \end{syntax}
+\begin{args}
+\$nd & Dimensionality of ND list (e.g. 2D, 2d, or 2 for a matrix).  \\
+\$ndlist1 \$ndlist2 & ND lists to combine. \\
+\$index & Index to insert at. \\
+\$axis & Axis to insert at (default 0).
+\end{args}
+The command \cmdlink{nstack} is shorthand for inserting at ``end'', and concatenates two ND lists.
 \begin{syntax}
 \command{nstack} \$nd \$ndlist1 \$ndlist2 <\$axis>
 \end{syntax}
 \begin{args}
 \$nd & Dimensionality of ND list (e.g. 2D, 2d, or 2 for a matrix).  \\
-\$ndlist1 & ND list to modify. \\
-\$index & Index to insert at. \\
-\$ndlist2 & ND list to insert. \\
-\$axis & Axis to insert at (default 0).
+\$ndlist1 \$ndlist2 & ND lists to concatenate. \\
+\$axis & Axis to concatenate at (default 0).
 \end{args}
-
-\begin{example}{Inserting rows and columns in a matrix}
+\begin{example}{Inserting a column into a matrix}
 \begin{lstlisting}
-puts [ninsert 2D {{1 2 3} {4 5 6} {7 8 9}} 0 {{A B C}}]
-puts [ninsert 2D {1 2 3} end {4 5 6} 1]; # same as [nstack 2D {1 2 3} {4 5 6} 1]
+set matrix {{1 2} {3 4} {5 6}}
+set column {A B C}
+puts [ninsert 2D $matrix 1 $column 1]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
-{A B C} {1 2 3} {4 5 6} {7 8 9}
-{1 4} {2 5} {3 6}
+{1 A 2} {3 B 4} {5 C 6}
 \end{lstlisting}
 \end{example}
-
-\begin{example}{Stack tensors}
+\begin{example}{Concatenate tensors}
 \begin{lstlisting}
 set x [nreshape {1 2 3 4 5 6 7 8 9} 3 3 1]
 set y [nreshape {A B C D E F G H I} 3 3 1]
@@ -746,8 +823,9 @@ puts [nstack 3D $x $y 2]
 {{1 A} {2 B} {3 C}} {{4 D} {5 E} {6 F}} {{7 G} {8 H} {9 I}}
 \end{lstlisting}
 \end{example}
+
 \clearpage
-\subsection{Swapping Axes}
+\subsection{Changing Order of Axes}
 The command \cmdlink{nswapaxes} is a general purpose transposing function that swaps the axes of an ND list.
 For simple matrix transposing, the command \cmdlink{transpose} can be used instead.
 \begin{syntax}
@@ -757,24 +835,39 @@ For simple matrix transposing, the command \cmdlink{transpose} can be used inste
 \$ndlist & ND list to manipulate. \\
 \$axis1 \$axis2 & Axes to swap.
 \end{args}
-\begin{example}{Transposing a matrix}
-\begin{lstlisting}
-set x {{1 2} {3 4}}
-puts [nswapaxes $x 0 1]; # same as [transpose $x]
-\end{lstlisting}
-\tcblower
-\begin{lstlisting}
-{1 3} {2 4}
-\end{lstlisting}
-\end{example}
-\begin{example}{Swapping axes of a tensor}
+The command \cmdlink{nmoveaxis} moves a specified source axis to a target position. 
+For example, moving axis 0 to position 2 would change ``i,j,k'' to ``j,k,i''.
+\begin{syntax}
+\command{nmoveaxis} \$ndlist \$source \$target
+\end{syntax}
+\begin{args}
+\$ndlist & ND list to manipulate. \\
+\$source & Source axis. \\
+\$target & Target position.
+\end{args}
+The command \cmdlink{npermute} is more general purpose, and defines a new order for the axes of an ND list.
+For example, the axis list ``1 0 2'' would change ``i,j,k'' to ``j,i,k''. 
+\begin{syntax}
+\command{npermute} \$ndlist \$axis ...
+\end{syntax}
+\begin{args}
+\$ndlist & ND list to manipulate. \\
+\$axis ... & List of axes defining new order.
+\end{args}
+\begin{example}{Changing tensor axes}
 \begin{lstlisting}
 set x {{{1 2} {3 4}} {{5 6} {7 8}}}
-puts [nswapaxes $x 0 2]
+set y [nswapaxes $x 0 2]
+set z [nmoveaxis $x 0 2]
+puts [lindex $x 0 0 1]
+puts [lindex $y 1 0 0]
+puts [lindex $z 0 1 0]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
-{{1 5} {3 7}} {{2 6} {4 8}}
+2
+2
+2
 \end{lstlisting}
 \end{example}
 
@@ -862,7 +955,7 @@ puts [nop2 2D $A + $B]
 \end{example}
 \clearpage
 \subsection{Reducing an ND List}
-The command \cmdlink{nreduce} combines \cmdlink{nswapaxes} and \cmdlink{napply} to reduce an axis of an ND list with a function that reduces a vector to a scalar, like \cmdlink{max} or \cmdlink{sum}.
+The command \cmdlink{nreduce} combines \cmdlink{nmoveaxis} and \cmdlink{napply} to reduce an axis of an ND list with a function that reduces a vector to a scalar, like \cmdlink{max} or \cmdlink{sum}.
 \begin{syntax}
 \command{nreduce} \$nd \$command \$ndlist <\$axis>
 \end{syntax}
