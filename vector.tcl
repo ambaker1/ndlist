@@ -105,7 +105,7 @@ proc ::ndlist::find {list args} {
                 \"find list ?op value?\""
     }
     # Perform search.
-    lsearch -exact -all [lop $list $op $value] 1
+    lsearch -exact -integer -all [lop $list $op $value] 1
 }
 
 # List generation
@@ -219,7 +219,7 @@ proc ::ndlist::linterp {x xList yList} {
     }
     # Straight-line interpolation
     set r [expr {double($x-$x1)/($x2-$x1)}]
-    return [expr {$r*($y2-$y1)+$y1}]
+    expr {$r*($y2-$y1)+$y1}
 }
 
 # Functional mapping
@@ -436,7 +436,7 @@ proc ::ndlist::mean {list} {
     if {[llength $list] == 0} {
         return -code error "mean requires at least one value"
     }
-    return [expr {double([sum $list])/[llength $list]}]
+    expr {double([sum $list])/[llength $list]}
 }
 
 # median --
@@ -506,7 +506,7 @@ proc ::ndlist::variance {list {pop 0}} {
     # Perform variance calculation
     set mean [mean $list]
     set squares [lmap x $list {expr {($x - $mean)**2}}]
-    return [expr {double([sum $squares])/($n + $pop - 1)}]
+    expr {double([sum $squares])/($n + $pop - 1)}
 }
 
 # Vector algebra
@@ -550,7 +550,7 @@ proc ::ndlist::cross {a b} {
     set c1 [expr {$a2*$b3 - $a3*$b2}]
     set c2 [expr {$a3*$b1 - $a1*$b3}]
     set c3 [expr {$a1*$b2 - $a2*$b1}]
-    return [list $c1 $c2 $c3]
+    list $c1 $c2 $c3
 }
 
 # norm --
@@ -564,7 +564,7 @@ proc ::ndlist::cross {a b} {
 proc ::ndlist::norm {vector {p 2}} {
     switch $p {
         1 { # Sum of absolute values
-            return [sum [lexpr value $vector {abs($value)}]]
+            sum [lexpr value $vector {abs($value)}]
         }
         2 { # Euclidean (use hypot function to avoid overflow)
             set norm 0.0
@@ -574,13 +574,13 @@ proc ::ndlist::norm {vector {p 2}} {
             return $norm
         }
         Inf { # Absolute maximum of the vector
-            return [max [lexpr value $vector {abs($value)}]]
+            max [lexpr value $vector {abs($value)}]
         }
         default { # Arbitrary integer norm
             if {![string is integer -strict $p] || $p <= 0} {
                 return -code error "p must be integer > 0"
             }
-            return [expr {pow([sum [lop $vector ** $p]],1.0/$p)}]
+            expr {pow([sum [lop $vector ** $p]],1.0/$p)}
         }
     }
 }
