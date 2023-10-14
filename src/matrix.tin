@@ -36,7 +36,7 @@ proc ::ndlist::eye {n} {
 # transpose --
 # 
 # Transpose a matrix
-# Adapted from math::linearalgebra::transpose and lsearch example on Tcl wiki
+# Similar to math::linearalgebra::transpose and lsearch example on Tcl wiki
 # written by MJ (https://wiki.tcl-lang.org/page/Transposing+a+matrix)
 # 
 # Arguments:
@@ -67,14 +67,15 @@ proc ::ndlist::transpose {matrix} {
 
 # matmul --
 #
-# Multiplies two matrices. Must agree in dimension.
+# Multiplies two matrices. Inner dimensions must agree.
+# Similar to math::linearalgebra::matmul. 
 # Returns a nxm matrix, by computing the dot-product of rows and columns
 # 
 # Syntax:
 # matmul $A $B
 #
 # Arguments:
-# A B           Matrices, matching inner dimensions
+# A B           Matrices, matching inner dimensions (e.g. nxq and qxm)
 
 proc ::ndlist::matmul {A B} {
     # Check dimensions
