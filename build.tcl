@@ -1,7 +1,7 @@
 package require tin 1.0
 tin import assert from tin
 tin import tcltest
-set version 0.3
+set version 0.3.1
 set config ""
 dict set config VERSION $version
 
@@ -19,7 +19,7 @@ puts "Running all tests..."
 source tests/vector_test.tcl
 source tests/matrix_test.tcl
 source tests/tensor_test.tcl
-source tests/examples.tcl 
+source tests/examples.tcl
 
 # Check number of failed tests
 set nFailed $::tcltest::numTests(Failed)

@@ -115,7 +115,7 @@ proc ::ndlist::IsShape {ndlist args} {
 # GetShape --
 #
 # Private procedure to get list of dimensions of an ND-list along first index
-# Returns error if there is a null dimension along an axis.
+# Returns error if there is a null dimension along a non-zero axis.
 #
 # Syntax:
 # GetShape $ndims $ndlist
@@ -125,11 +125,15 @@ proc ::ndlist::IsShape {ndlist args} {
 # ndlist        ND-list to get dimensions from
 
 proc ::ndlist::GetShape {ndims ndlist} {
+    # Null case
+    if {[llength $ndlist] == 0} {
+        return [lrepeat $ndims 0]
+    }
     # Get list of dimensions (along first index)
     set dims ""
     foreach axis [range $ndims] {
         if {[llength $ndlist] == 0} {
-            return -code error "null dimension along axis $axis"
+            return -code error "null dimension along non-zero axis"
         }
         lappend dims [llength $ndlist]
         set ndlist [lindex $ndlist 0]
