@@ -448,3 +448,18 @@ puts -nonewline {}
 } -output {
 {5 3} {6 13}
 }
+
+test {Example 44} {Finding index tuples that match criteria} -body {
+puts {}
+set x {{1 2 3} {4 5 6} {7 8 9}}
+set indices {}
+nforeach 2D xi $x {
+    if {$xi > 4} {
+        lappend indices [list [i] [j]]
+    }
+}
+puts $indices
+puts -nonewline {}
+} -output {
+{1 1} {1 2} {2 0} {2 1} {2 2}
+}
