@@ -25,9 +25,9 @@ test nshape {
     nshape 2D {{1 2} {3 4} {5 6}}
 } -result {3 2}
 
-# Blanks must be contained within a list.
-test nshape_blank0 {} -body {nshape 2D ""} -returnCodes {1} -result {null dimension along axis 0}
-test nshape_blank1 {} -body {nshape 2D {{}}} -returnCodes {1} -result {null dimension along axis 1}
+# Blanks must be contained within a list, unless if entire ndlist is blank.
+test nshape_blank0 {} -body {nshape 2D ""} -result {0 0}
+test nshape_blank1 {} -body {nshape 2D {{}}} -returnCodes {1} -result {null dimension along non-zero axis}
 test nshape_blank2 {} {nshape 2D {{{}}}} {1 1}
 
 # nsize
