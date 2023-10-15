@@ -444,7 +444,7 @@ test nswapaxes_error {
     # Error, axes must be positive
 } -body {
     nswapaxes {hello world} -1 0
-} -returnCodes {1} -result {axes out of range}
+} -returnCodes {1} -result {axis out of range}
 
 test nswapaxes_error {
     # Transpose vector just returns self
@@ -662,6 +662,18 @@ test nmap2 {
     nmap 2D x $testmat {format %.2f $x}
 } -result {{1.00 2.00 3.00} {4.00 5.00 6.00} {7.00 8.00 9.00}}
 
+test nforeach {
+    # nforeach doesn't return a value, but performs loop.
+} -body {
+    set values ""
+    assert [nforeach 2D x {{1 2 3} {4 5 6} {7 8 9}} {
+        if {$x >= 3} {
+            lappend values $x
+        }
+    }] eq ""
+    set values
+} -result {3 4 5 6 7 8 9}
+
 # nexpr
 test nexpr {
     # nexpr is just a special case of nmap.
@@ -674,6 +686,55 @@ test nexpr {
     assert {[nexpr 2D x $testmat y {{.1 .2 .3}} {$x + $y}] eq {{1.1 2.2 3.3} {4.1 5.2 6.3} {7.1 8.2 9.3}}}
     assert {[nexpr 2D x $testmat y {{.1 .2 .3} {.4 .5 .6} {.7 .8 .9}} {$x + $y}] eq {{1.1 2.2 3.3} {4.4 5.5 6.6} {7.7 8.8 9.9}}}
     assert {[nexpr 2D x $testmat {double($x)}] eq {{1.0 2.0 3.0} {4.0 5.0 6.0} {7.0 8.0 9.0}}}
+} -result {}
+
+test nexpr_index2 {
+    # Test out indices
+} -body {
+    nexpr 2D x $testmat {$x*([i]%2 + [j]%2 == 1?-1:1)}
+} -result {{1 -2 3} {-4 5 -6} {7 -8 9}}
+
+test nexpr_index3 {
+    # Test out all features.
+} -body {
+    set y ""
+    lappend y ""
+    nmap 3D x [nfull {} 2 3 2] {
+        lappend y [list [i -1] [i] [j] [k]]
+    }
+    lappend y ""
+    join $y \n
+} -result {
+0 0 0 0
+1 0 0 1
+2 0 1 0
+3 0 1 1
+4 0 2 0
+5 0 2 1
+6 1 0 0
+7 1 0 1
+8 1 1 0
+9 1 1 1
+10 1 2 0
+11 1 2 1
+}
+
+test nexpr_index_nested {
+   # Verify that the nexpr indices can be nested.
+} -body {
+    nmap 1D x {{1 2} {1 2 3} {1 2 3 4}} {
+        list [i] [nexpr 1D xi $x {[i] * $xi}]
+    }
+} -result {{0 {0 2}} {1 {0 2 6}} {2 {0 2 6 12}}}
+
+test nexpr_index_blank {
+    # Verify that the index is reset, even if error occurs.
+} -body {
+    assert $::ndlist::map_index eq ""
+    assert $::ndlist::map_shape eq ""
+    catch {nmap 1D x {1 2 3} {expr 1/0}}
+    assert $::ndlist::map_index eq ""
+    assert $::ndlist::map_shape eq ""
 } -result {}
 
 # nop
