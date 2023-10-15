@@ -1,7 +1,7 @@
 package require tin 1.0
 tin import assert from tin
 tin import tcltest
-set version 0.3.1
+set version 0.4
 set config ""
 dict set config VERSION $version
 
