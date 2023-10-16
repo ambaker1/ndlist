@@ -14,7 +14,7 @@ namespace eval ::ndlist {
     namespace export range find; # List indexing utilities
     namespace export linspace linsteps linterp; # List generation
     namespace export lapply lapply2 lop lop2 lexpr; # Functional mapping
-    namespace export max min sum product mean median stdev variance; # Stats
+    namespace export max min sum product mean median stdev pstdev; # Stats
     namespace export dot cross norm; # Vector algebra
 }
 
@@ -468,41 +468,55 @@ proc ::ndlist::median {list} {
 
 # stdev -- 
 #
-# Sample or population standard deviation (sqrt of variance)
+# Sample standard deviation
 #
 # Syntax:
-# stdev $list <$pop>
+# stdev $list
 # 
 # Arguments:
-# list      List of values (length > 0 or 1)
-# pop       Whether to compute population standard deviation (default 0)
+# list      List of values (length > 1)
 
-proc ::ndlist::stdev {list {pop 0}} {
+proc ::ndlist::stdev {list} {
+    if {[llength $list] < 2} {
+        return -code error "stdev requires at least two values"
+    }
     # Variance function checks list length 
-    expr {sqrt([variance $list $pop])}
+    expr {sqrt([Variance $list 0])}
 }
 
-# variance -- 
+# pstdev -- 
+#
+# Population standard deviation
+#
+# Syntax:
+# pstdev $list
+# 
+# Arguments:
+# list      List of values (length > 0)
+
+proc ::ndlist::pstdev {list} {
+    if {[llength $list] == 0} {
+        return -code error "pstdev requires at least one value"
+    }
+    # Variance function checks list length 
+    expr {sqrt([Variance $list 1])}
+}
+
+# Variance -- 
 #
 # Sample or population variance
 #
 # Syntax:
-# variance $list <$pop>
+# Variance $list $pop
 # 
 # Arguments:
 # list      List of values (length > 0 or 1)
-# pop       Whether to compute population variance (default 0)
+# pop       Whether to compute population variance.
 
-proc ::ndlist::variance {list {pop 0}} {
+proc ::ndlist::Variance {list pop} {
     # Check list length
     set n [llength $list]
     set pop [expr {bool($pop)}]
-    if {$pop && $n == 0} {
-        return -code error "population variance requires at least 1 value"
-    }
-    if {!$pop && $n < 2} {
-        return -code error "sample variance requires at least 2 values"
-    }
     # Perform variance calculation
     set mean [mean $list]
     set squares [lmap x $list {expr {($x - $mean)**2}}]
