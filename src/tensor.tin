@@ -541,7 +541,7 @@ proc ::ndlist::Get {list iType iList} {
 #
 # Arguments:
 # dims          Shape to index into
-# indices       Index inputs (e.g. *, {0 3}, 0:10, end.)
+# indices       Index inputs (e.g. :, {0 3}, 0:10, end*)
 #
 # Returns:
 # iDims         New dimensions (blank for flattened axis)
@@ -588,7 +588,7 @@ proc ::ndlist::ParseIndices {dims args} {
 #
 # Arguments:
 # n             Size of list
-# index         Index input (e.g. *, {0 3}, 0:10, end.)
+# index         Index input (e.g. :, {0 3}, 0:10, end*)
 # 
 # Returns:
 # iType     Type of index (A, R, L, or S)
@@ -605,11 +605,11 @@ proc ::ndlist::ParseIndex {n index} {
         return [list L [lmap index $index {Index2Integer $n $index}]]
     }
     # All index notation
-    if {$index in {* :}} {
+    if {$index eq {:}} {
         return [list A ""]
     }
     # Single index notation
-    if {[string index $index end] eq {.}} {
+    if {[string index $index end] eq {*}} {
         # Single index notation (flatten along this dimension)
         return [list S [Index2Integer $n [string range $index 0 end-1]]]
     }
