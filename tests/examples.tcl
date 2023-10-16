@@ -266,11 +266,11 @@ puts -nonewline {}
 test {Example 28} {Index Notation} -body {
 puts {}
 set n 10
-puts [::ndlist::ParseIndex $n *]
+puts [::ndlist::ParseIndex $n :]
 puts [::ndlist::ParseIndex $n 1:8]
 puts [::ndlist::ParseIndex $n 0:2:6]
 puts [::ndlist::ParseIndex $n {0 5 end-1}]
-puts [::ndlist::ParseIndex $n end.]
+puts [::ndlist::ParseIndex $n end*]
 puts -nonewline {}
 } -output {
 A {}
@@ -283,11 +283,11 @@ S 9
 test {Example 29} {ND-list access} -body {
 puts {}
 set A {{1 2 3} {4 5 6} {7 8 9}}
-puts [nget $A 0 *]; # get row matrix
-puts [nget $A 0. *]; # flatten row matrix to a vector
+puts [nget $A 0 :]; # get row matrix
+puts [nget $A 0* :]; # flatten row matrix to a vector
 puts [nget $A 0:1 0:1]; # get matrix subset
 puts [nget $A end:0 end:0]; # can have reverse ranges
-puts [nget $A {0 0 0} 1.]; # can repeat indices
+puts [nget $A {0 0 0} 1*]; # can repeat indices
 puts -nonewline {}
 } -output {
 {1 2 3}
@@ -308,7 +308,7 @@ puts -nonewline {}
 test {Example 31} {Swapping matrix rows} -body {
 puts {}
 set a {{1 2 3} {4 5 6} {7 8 9}}
-nset a {1 0} * [nget $a {0 1} *]; # Swap rows and columns (modify by reference)
+nset a {1 0} : [nget $a {0 1} :]; # Swap rows and columns (modify by reference)
 puts $a
 puts -nonewline {}
 } -output {
