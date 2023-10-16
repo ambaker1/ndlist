@@ -110,7 +110,7 @@ puts -nonewline {}
 test {Example 12} {List Statistics} -body {
 puts {}
 set list {-5 3 4 0}
-foreach stat {max min sum product mean median variance stdev} {
+foreach stat {max min sum product mean median stdev pstdev} {
     puts [list $stat [$stat $list]]
 }
 puts -nonewline {}
@@ -121,8 +121,8 @@ sum 2
 product 0
 mean 0.5
 median 1.5
-variance 16.333333333333332
 stdev 4.041451884327381
+pstdev 3.5
 }
 
 test {Example 13} {Dot and cross product} -body {

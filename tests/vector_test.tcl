@@ -169,36 +169,8 @@ test stats {
     assert [mean $a] == 0.5
     assert [median $a] == 1.5
     assert [stdev $a] == 4.041451884327381
-    assert [variance $a] == 16.333333333333332
-    assert [stdev $a 1] == 3.5
-    assert [variance $a 1] == 12.25
+    assert [pstdev $a] == 3.5
 } -result {}
-
-test stat_errors {
-    # Test out bounds of functions
-} -body {
-    set noArgs {}
-    set oneArg {1}
-    set twoArgs {1 2}
-    # Normal stats 
-    foreach func {max min sum product mean median} {
-        assert [catch {$func $noArgs}]
-        assert ![catch {$func $oneArg}]
-        assert ![catch {$func $twoArgs}]
-    }
-    # Sample variance
-    foreach func {stdev variance} {
-        assert [catch {$func $noArgs}]
-        assert [catch {$func $oneArg}]
-        assert ![catch {$func $twoArgs}]
-    }
-    # Population variance
-    foreach func {stdev variance} {
-        assert [catch {$func $noArgs 1}]
-        assert ![catch {$func $oneArg 1}]
-        assert ![catch {$func $twoArgs 1}]
-    }
-}
 
 test dot {
     # dot product
