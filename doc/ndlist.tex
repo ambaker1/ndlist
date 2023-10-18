@@ -427,6 +427,7 @@ puts [augment {1 2} {3 4}]
 {1 3} {2 4}
 \end{lstlisting}
 \end{example}
+\clearpage
 \subsection{Identity Matrix}
 The command \cmdlink{eye} generates an identity matrix of a specified size.
 \begin{syntax}
@@ -444,7 +445,6 @@ puts [eye 3]
 {1 0 0} {0 1 0} {0 0 1}
 \end{lstlisting}
 \end{example}
-\clearpage
 
 \subsection{Matrix Multiplication}
 The command \cmdlink{matmul} performs matrix multiplication for two matrices.
@@ -619,17 +619,57 @@ For example, 1x1, 2x1, 4x1, 1x3, 2x3 and 4x3 are compatible with 4x3.
 \end{syntax}
 \begin{args}
 \$ndlist & ND-list to expand. \\
-\$n ... & New dimensions of ND-list.
+\$n ... & New shape of ND-list. If -1 is used, it keeps that axis the same.
 \end{args}
 \begin{example}{Expand an ND-list to new dimensions}
 \begin{lstlisting}
-puts [nexpand {1 2 3} 3 2]
+puts [nexpand {1 2 3} -1 2]
 puts [nexpand {{1 2}} 2 4]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
 {1 1} {2 2} {3 3}
 {1 2 1 2} {1 2 1 2}
+\end{lstlisting}
+\end{example}
+\clearpage
+\subsection{Padding and Extending}
+The command \cmdlink{npad} pads an ND-list along its axes by a specified number of elements.
+\begin{syntax}
+\command{npad} \$ndlist \$value \$n ...
+\end{syntax}
+\begin{args}
+\$ndlist & ND-list to pad. \\
+\$value & Value to pad with. \\
+\$n ... & Number of elements to pad.
+\end{args}
+\begin{example}{Padding an ND-list with zeros}
+\begin{lstlisting}
+set a {{1 2 3} {4 5 6} {7 8 9}}
+puts [npad $a 0 2 1]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+{1 2 3 0} {4 5 6 0} {7 8 9 0} {0 0 0 0} {0 0 0 0}
+\end{lstlisting}
+\end{example}
+The command \cmdlink{nextend} extends an ND-list to a new shape by padding.
+\begin{syntax}
+\command{nextend} \$ndlist \$value \$n ...
+\end{syntax}
+\begin{args}
+\$ndlist & ND-list to extend. \\
+\$value & Value to pad with. \\
+\$n ... & New shape of ND-list.
+\end{args}
+\begin{example}{Extending an ND-list to a new shape with a filler value}
+\begin{lstlisting}
+set a {hello hi hey howdy}
+puts [nextend $a world -1 2]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+{hello world} {hi world} {hey world} {howdy world}
 \end{lstlisting}
 \end{example}
 \clearpage
@@ -751,7 +791,7 @@ puts [nget $A {0 0 0} 1*]; # can repeat indices
 \subsection{Modification}
 A ND-list can be modified by reference with \cmdlink{nset}, and by value with \cmdlink{nreplace}, using the index parser \cmdlink{::ndlist::ParseIndex} for each dimension being indexed.
 Note that unlike the Tcl \textit{lset} and \textit{lreplace} commands, the commands \cmdlink{nset} and \cmdlink{nreplace} will return an error if the indices are out of range.
-If all the index inputs are ``*'' except for one, and the replacement list is blank, it will delete values along that axis by calling \cmdlink{nremove}.
+If all the index inputs are ``\texttt{:}'' except for one, and the replacement list is blank, it will delete values along that axis by calling \cmdlink{nremove}.
 Otherwise, the replacement ND-list must be expandable to the target index dimensions. 
 \begin{syntax}
 \command{nset} \$varName \$i ... \$sublist
@@ -760,7 +800,7 @@ Otherwise, the replacement ND-list must be expandable to the target index dimens
 \command{nreplace} \$ndlist \$i ... \$sublist
 \end{syntax}
 \begin{args}
-\$varName & Variable that contains an ND-list (must exist). \\
+\$varName & Variable that contains an ND-list. \\
 \$ndlist & ND-list to modify. \\
 \$i ... & Index inputs, parsed with \cmdlink{::ndlist::ParseIndex}.
 The number of index inputs determines the interpreted dimensions. \\
@@ -821,30 +861,68 @@ puts [nremove $a 2 1]
 {1 2} {4 5} {7 8}
 \end{lstlisting}
 \end{example}
+\clearpage
+\subsection{Appending}
+The command \cmdlink{nappend} is a generalized append for Tcl.
+For 0D, it just calls the Tcl \textit{append} command.
+For 1D, it just calls the Tcl \textit{lappend} command.
+For ND, it verifies that the (N-1)D inputs have the same shape as the elements of the ND-list, and then calls the Tcl \textit{lappend} command, appending along axis 0.
+For example, for 2D, it verifies that the list lengths match the number of columns of the matrix.
+\begin{syntax}
+\command{nappend} \$nd \$varName \$arg ...
+\end{syntax}
+\begin{args}
+\$nd & Rank of ND-list (e.g. 2D, 2d, or 2 for a matrix).  \\
+\$varName & Variable that contains an ND-list. \\
+\$arg ... & (N-1)D lists (or strings for 0D) to append to ND-list.
+\end{args}
 
+\begin{example}{Scalar and list append}
+\begin{lstlisting}
+set a {}
+nappend 0D a foo
+nappend 0D a bar
+nappend 1D a {hello world}
+puts $a
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+foobar {hello world}
+\end{lstlisting}
+\end{example}
+
+\begin{example}{Adding rows to a matrix (checks dimensions)}
+\begin{lstlisting}
+set a {}
+nappend 2D a {1 2 3}
+nappend 2D a {4 5 6}
+nappend 2D a {7 8 9}
+puts $a
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+{1 2 3} {4 5 6} {7 8 9}
+\end{lstlisting}
+\end{example}
 \clearpage
 \subsection{Insertion and Concatenation}
 The command \cmdlink{ninsert} allows you to insert an ND-list into another ND-list at a specified index and axis, as long as the ND-lists agree in dimension at all other axes.
 If ``end'' or ``end-integer'' is used for the index, it will insert after the index. 
 Otherwise, it will insert before the index.
+The command \cmdlink{ncat} is shorthand for inserting at ``end'', and concatenates two ND-lists.
 \begin{syntax}
 \command{ninsert} \$nd \$ndlist1 \$index \$ndlist2 <\$axis>
 \end{syntax}
-\begin{args}
-\$nd & Rank of ND-list (e.g. 2D, 2d, or 2 for a matrix).  \\
-\$ndlist1 \$ndlist2 & ND-lists to combine. \\
-\$index & Index to insert at. \\
-\$axis & Axis to insert at (default 0).
-\end{args}
-The command \cmdlink{ncat} is shorthand for inserting at ``end'', and concatenates two ND-lists.
 \begin{syntax}
 \command{ncat} \$nd \$ndlist1 \$ndlist2 <\$axis>
 \end{syntax}
 \begin{args}
 \$nd & Rank of ND-list (e.g. 2D, 2d, or 2 for a matrix).  \\
-\$ndlist1 \$ndlist2 & ND-lists to concatenate. \\
-\$axis & Axis to concatenate at (default 0).
+\$ndlist1 \$ndlist2 & ND-lists to combine. \\
+\$index & Index to insert at. \\
+\$axis & Axis to insert/concatenate at (default 0).
 \end{args}
+
 \begin{example}{Inserting a column into a matrix}
 \begin{lstlisting}
 set matrix {{1 2} {3 4} {5 6}}
@@ -1123,7 +1201,7 @@ puts $indices
 \end{lstlisting}
 \end{example}
 \clearpage
-{\small\printindex}
+{\footnotesize\printindex}
 \end{document}
 
 

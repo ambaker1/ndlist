@@ -16,7 +16,7 @@ namespace eval ::ndlist {
     namespace export ndlist nshape nsize; # ND-list basics
     namespace export nfull nrand; # ND-list initialization
     namespace export nflatten nreshape; # Reshaping an ND-list
-    namespace export nrepeat nexpand nextend; # Expanding an ND-list
+    namespace export nrepeat nexpand npad nextend; # Expanding an ND-list
     namespace export nget nset nreplace; # Access/modification
     namespace export nremove ninsert ncat nappend; # Deletion/Combination
     namespace export nswapaxes nmoveaxis npermute; # Axis reordering
@@ -112,6 +112,9 @@ proc ::ndlist::nsize {nd ndlist} {
 proc ::ndlist::nfull {value args} {
     set ndlist $value
     foreach n [lreverse $args] {
+        if {$n == 0} {
+            return
+        }
         set ndlist [lrepeat $n $ndlist]
     }
     return $ndlist
@@ -324,6 +327,68 @@ proc ::ndlist::nexpand {ndlist args} {
     }]
 }
 
+# npad --
+# 
+# Pad an ND-list with a value.
+# 
+# Syntax:
+# npad $ndlist $value $n ...
+#
+# Arguments:
+# ndlist        ND-list to expand
+# n ...         Amount to pad. 0 for none. 
+
+proc ::ndlist::npad {ndlist value args} {
+    # Check input
+    foreach arg $args {
+        if {![string is integer -strict $arg] || $arg < 0} {
+            return -code error "bad count \"$arg\": must be >= 0"
+        }
+    }
+    # Null case
+    if {[llength $ndlist] == 0} {
+        return [nfull $value {*}$args]
+    }
+    # Get dimensions
+    set dims [GetShape [llength $args] $ndlist]
+    # Call recursive handler
+    RecPad $ndlist $value $dims {*}$args
+}
+
+# RecPad --
+# 
+# Recursive function that pads an ND-list to a new shape.
+# Assumes that inputs are non-negative.
+#
+# Syntax:
+# RecPad $ndlist $value $n ...
+#
+# Arguments:
+# ndlist        ND-list to pad
+# value         Value to pad with
+# dims          Shape of ND-list
+# n ...         Amount to pad.
+
+proc ::ndlist::RecPad {ndlist value dims n args} {
+    # Base case
+    if {[llength $args] == 0} {
+        if {$n == 0} {
+            return $ndlist
+        } else {
+            return [concat $ndlist [lrepeat $n $value]]
+        }
+    }
+    # Recursion case
+    set dims [lrange $dims 1 end]; # trim dims
+    # Skip case
+    if {$n > 0} {
+        set ndlist [concat $ndlist [nfull $value $n {*}$dims]]
+    }
+    lmap ndrow $ndlist {
+        RecPad $ndrow $value $dims {*}$args
+    }
+}
+
 # nextend --
 #
 # Extend an ND-list to a new shape, filling with a single value.
@@ -333,59 +398,18 @@ proc ::ndlist::nexpand {ndlist args} {
 #
 # Arguments:
 # ndlist        ND-list to expand
-# arg ...       New shape. -1 to maintain shape at axis.
+# arg ...       New shape, greater than or equal to old.
+#               -1 to maintain shape at axis.
 
 proc ::ndlist::nextend {ndlist value args} {
     # Get dimensions
     set dims [GetShape [llength $args] $ndlist]
-    # Check for error
-    set args [lmap dim $dims arg $args {expr {$arg == -1 ? $dim : $arg}}]
-    foreach dim $dims arg $args {
-        if {$arg < $dim} {
-            return -code error "incompatible dimensions"
-        }
-    }
-    # Null case
-    if {[llength $ndlist] == 0} {
-        return [nfull $value {*}$args]
-    }
-    # Call recursive handler
-    RecExtend $ndlist $value $dims {*}$args
+    # Pad the ndlist based on the difference between new and old.
+    npad $ndlist $value {*}[lmap dim $dims arg $args {
+        expr {$arg == -1 ? 0 : $arg - $dim}
+    }]
 }
 
-# RecExtend --
-# 
-# Recursive function that extends an ND-list to a new shape.
-# Assumes that args are greater than or equal to dims.
-#
-# Syntax:
-# RecExtend $ndlist $value $dims $arg ...
-#
-# Arguments:
-# ndlist        ND-list to extend
-# value         Value to extend with
-# dims          Dimensions of ndlist
-# arg ...       New dimensions
-
-proc ::ndlist::RecExtend {ndlist value dims args} {
-    # Base case
-    if {[llength $args] == 0} {
-        return $ndlist
-    }
-    # Recursion
-    set dims [lassign $dims n0]
-    set args [lassign $args n1]
-    # Skip case
-    if {$n1 == $n0} {
-        return [lmap ndrow $ndlist {
-            RecExtend $ndrow $value $dims {*}$args
-        }]
-    }
-    # Extension case
-    lmap ndrow [concat $ndlist [nfull $value [expr {$n1 - $n0}] {*}$dims]] {
-        RecExtend $ndrow $value $dims {*}$args
-    }
-}
 
 # ND-LIST ACCESS/MODIFICATION
 ################################################################################
@@ -843,18 +867,26 @@ proc ::ndlist::nappend {nd varName args} {
     if {![info exists ndlist]} {
         set ndlist ""
     }
+    # No element case
+    if {[llength $args] == 0} {
+        return $ndlist
+    }
     # Scalar case (call append)
     if {$ndims == 0} {
         return [append ndlist {*}$args]
     } 
-    # Vector case (just call lappend)
+    # Vector case (call lappend)
     if {$ndims == 1} {
         return [lappend ndlist {*}$args]
     }
     # Matrix and Tensor case
     # Get subshape (shape of axes 1 to N-1)
     set subrank [expr {$ndims - 1}]
-    set subshape [GetShape $subrank [lindex $ndlist 0]]
+    if {[llength $ndlist] == 0} {
+        set subshape [GetShape $subrank [lindex $args 0]]
+    } else {
+        set subshape [GetShape $subrank [lindex $ndlist 0]]
+    }
     # Ensure shape of each sublist is compatible with the subshape.
     foreach sublist $args {
         if {[GetShape $subrank $sublist] ne $subshape} {

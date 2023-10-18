@@ -118,7 +118,6 @@ test nrepeat_blank1 {} {nrepeat {} 2 2} {}
 test nrepeat_blank2 {} {nrepeat {{}} 2 2} {{} {}}
 test nrepeat_blank2 {} {nrepeat {{{}}} 2 2} {{{} {}} {{} {}}}
 
-
 # nexpand
 test nexpand {
     # Expand an ndlist
@@ -149,6 +148,25 @@ test nexpand_error {
 } -body {
     nexpand {1 2 3} 4 2
 } -returnCodes {1} -result {incompatible dimensions}
+
+test npad0 {
+    # Padding an empty list just calls nfull
+} -body {
+    set a ""
+    set a [npad $a 0 3 3]
+} -result {{0 0 0} {0 0 0} {0 0 0}}
+
+test npad1 {
+    # Extend an ND list with values
+} -body {
+    set a [npad $a 1 1 1]
+} -result {{0 0 0 1} {0 0 0 1} {0 0 0 1} {1 1 1 1}}
+
+test npad2 {
+    # Only extend along one axis (keep the other dimension the same)
+} -body {
+    set a [npad $a 2 1 0]
+} -result {{0 0 0 1} {0 0 0 1} {0 0 0 1} {1 1 1 1} {2 2 2 2}}
 
 # nextend 
 test nextend0 {
