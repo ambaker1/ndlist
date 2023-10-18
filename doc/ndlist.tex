@@ -811,9 +811,9 @@ Otherwise, it will insert before the index.
 \$index & Index to insert at. \\
 \$axis & Axis to insert at (default 0).
 \end{args}
-The command \cmdlink{nstack} is shorthand for inserting at ``end'', and concatenates two ND-lists.
+The command \cmdlink{ncat} is shorthand for inserting at ``end'', and concatenates two ND-lists.
 \begin{syntax}
-\command{nstack} \$nd \$ndlist1 \$ndlist2 <\$axis>
+\command{ncat} \$nd \$ndlist1 \$ndlist2 <\$axis>
 \end{syntax}
 \begin{args}
 \$nd & Rank of ND-list (e.g. 2D, 2d, or 2 for a matrix).  \\
@@ -835,7 +835,7 @@ puts [ninsert 2D $matrix 1 $column 1]
 \begin{lstlisting}
 set x [nreshape {1 2 3 4 5 6 7 8 9} 3 3 1]
 set y [nreshape {A B C D E F G H I} 3 3 1]
-puts [nstack 3D $x $y 2]
+puts [ncat 3D $x $y 2]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
