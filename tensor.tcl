@@ -16,9 +16,9 @@ namespace eval ::ndlist {
     namespace export ndlist nshape nsize; # ND-list basics
     namespace export nfull nrand; # ND-list initialization
     namespace export nflatten nreshape; # Reshaping an ND-list
-    namespace export nrepeat nexpand; # Expanding an ND-list
+    namespace export nrepeat nexpand npad nextend; # Expanding an ND-list
     namespace export nget nset nreplace; # Access/modification
-    namespace export nremove ninsert nstack; # Deletion/Combination
+    namespace export nremove ninsert ncat nappend; # Deletion/Combination
     namespace export nswapaxes nmoveaxis npermute; # Axis reordering
     namespace export napply napply2 nop nop2 nreduce; # Functional mapping
     namespace export nmap nforeach nexpr i j k; # Generalized mapping/looping
@@ -49,100 +49,6 @@ proc ::ndlist::ndlist {nd value} {
     return $ndlist
 }
 
-# GetNDims --
-#
-# Get dimensionality from ND string (uses regex pattern).
-# Either a single digit or with a "D" after.
-# e.g. "0" or "0D", or "3" or "3d"
-# Returns error if invalid syntax
-#
-# Syntax:
-# GetNDims $nd
-#
-# Arguments:
-# nd        Number of dimensions (e.g. 1D, 2D, etc.)
-
-proc ::ndlist::GetNDims {nd} {
-    if {![IsNDType $nd]} {
-        return -code error "invalid ND syntax"
-    }
-    string trimright $nd {dD}
-}
-
-# IsNDType --
-#
-# Returns whether an input is an ND string
-#
-# Syntax:
-# IsNDType $arg
-#
-# Arguments:
-# arg:          Argument to check
-
-proc ::ndlist::IsNDType {arg} {
-    regexp {^(0|[1-9]\d*)[dD]?$} $arg
-}
-
-# IsShape --
-#
-# Verify that the ND-list is of the specified shape
-#
-# Syntax:
-# IsShape $ndlist $n ...
-#
-# Arguments:
-# ndlist        ND-list to check
-# n ...       Shape of ND-list
-
-proc ::ndlist::IsShape {ndlist args} {
-    # Scalar base case
-    if {[llength $args] == 0} {
-        return 1
-    }
-    # Interpret input
-    set args [lassign $args n]
-    # Vector base case
-    if {[llength $ndlist] != $n} {
-        return 0
-    }
-    # Recursion
-    foreach ndrow $ndlist {
-        if {![IsShape $ndrow {*}$args]} {
-            return 0
-        }
-    }
-    return 1
-}
-
-# GetShape --
-#
-# Private procedure to get list of dimensions of an ND-list along first index
-# Returns error if there is a null dimension along a non-zero axis.
-#
-# Syntax:
-# GetShape $ndims $ndlist
-#
-# Arguments:
-# ndims         Number of dimensions
-# ndlist        ND-list to get dimensions from
-
-proc ::ndlist::GetShape {ndims ndlist} {
-    # Null case
-    if {[llength $ndlist] == 0} {
-        return [lrepeat $ndims 0]
-    }
-    # Get list of dimensions (along first index)
-    set dims ""
-    foreach axis [range $ndims] {
-        if {[llength $ndlist] == 0} {
-            return -code error "null dimension along non-zero axis"
-        }
-        lappend dims [llength $ndlist]
-        set ndlist [lindex $ndlist 0]
-    }
-    return $dims
-}
-
 # nshape --
 # 
 # Get shape of ND-list
@@ -167,26 +73,6 @@ proc ::ndlist::nshape {nd ndlist {axis ""}} {
     llength [lindex $ndlist {*}[lrepeat $axis 0]]
 }
 
-# ValidateAxis --
-#
-# Validates axis input
-#
-# Syntax:
-# ValidateAxis $ndims $axis
-# 
-# Arguments:
-# ndims             Number of dimensions (Inf for arbitrary dimensions)
-# axis              Axis integer (must be 0-(N-1))
-
-proc ::ndlist::ValidateAxis {ndims axis} {
-    if {![string is integer -strict $axis]} {
-        return -code error "expected integer, but got \"$axis\""
-    }
-    if {$axis < 0 || $axis >= $ndims} {
-        return -code error "axis out of range"
-    }
-}
-
 # nsize --
 #
 # Get the size of an ND-list (number of elements, product of the shape)
@@ -209,7 +95,7 @@ proc ::ndlist::nsize {nd ndlist} {
     product [GetShape $ndims $ndlist]
 }
 
-# ND-LIST CREATION
+# ND-LIST CREATION/EXPANSION
 ################################################################################
 
 # nfull --
@@ -226,6 +112,9 @@ proc ::ndlist::nsize {nd ndlist} {
 proc ::ndlist::nfull {value args} {
     set ndlist $value
     foreach n [lreverse $args] {
+        if {$n == 0} {
+            return
+        }
         set ndlist [lrepeat $n $ndlist]
     }
     return $ndlist
@@ -421,22 +310,106 @@ proc ::ndlist::RecRepeat {ndlist n args} {
 #
 # Arguments:
 # ndlist        ND-list to expand
-# arg ...       New shape (and dimensions)
+# arg ...       New shape. -1 to keep shape at that dimension.
 
 proc ::ndlist::nexpand {ndlist args} {    
     # Get dimensions
-    set dims1 $args
-    set dims0 [GetShape [llength $dims1] $ndlist]
+    set dims [GetShape [llength $args] $ndlist]
+    set args [lmap dim $dims arg $args {expr {$arg == -1 ? $dim : $arg}}]
     # Get number of repetitions at every level
-    nrepeat $ndlist {*}[lmap dim0 $dims0 dim1 $dims1 {
-        if {$dim1 % $dim0} {
+    nrepeat $ndlist {*}[lmap dim $dims arg $args {
+        if {$arg % $dim} {
             return -code error "incompatible dimensions"
         } else {
             # Compute number of repetitions by integer division.
-            expr {$dim1 / $dim0}
+            expr {$arg / $dim}
         }
     }]
 }
+
+# npad --
+# 
+# Pad an ND-list with a value.
+# 
+# Syntax:
+# npad $ndlist $value $n ...
+#
+# Arguments:
+# ndlist        ND-list to expand
+# n ...         Amount to pad. 0 for none. 
+
+proc ::ndlist::npad {ndlist value args} {
+    # Check input
+    foreach arg $args {
+        if {![string is integer -strict $arg] || $arg < 0} {
+            return -code error "bad count \"$arg\": must be >= 0"
+        }
+    }
+    # Null case
+    if {[llength $ndlist] == 0} {
+        return [nfull $value {*}$args]
+    }
+    # Get dimensions
+    set dims [GetShape [llength $args] $ndlist]
+    # Call recursive handler
+    RecPad $ndlist $value $dims {*}$args
+}
+
+# RecPad --
+# 
+# Recursive function that pads an ND-list to a new shape.
+# Assumes that inputs are non-negative.
+#
+# Syntax:
+# RecPad $ndlist $value $n ...
+#
+# Arguments:
+# ndlist        ND-list to pad
+# value         Value to pad with
+# dims          Shape of ND-list
+# n ...         Amount to pad.
+
+proc ::ndlist::RecPad {ndlist value dims n args} {
+    # Base case
+    if {[llength $args] == 0} {
+        if {$n == 0} {
+            return $ndlist
+        } else {
+            return [concat $ndlist [lrepeat $n $value]]
+        }
+    }
+    # Recursion case
+    set dims [lrange $dims 1 end]; # trim dims
+    # Skip case
+    if {$n > 0} {
+        set ndlist [concat $ndlist [nfull $value $n {*}$dims]]
+    }
+    lmap ndrow $ndlist {
+        RecPad $ndrow $value $dims {*}$args
+    }
+}
+
+# nextend --
+#
+# Extend an ND-list to a new shape, filling with a single value.
+# 
+# Syntax:
+# nextend $ndlist $value $arg ...
+#
+# Arguments:
+# ndlist        ND-list to expand
+# arg ...       New shape, greater than or equal to old.
+#               -1 to maintain shape at axis.
+
+proc ::ndlist::nextend {ndlist value args} {
+    # Get dimensions
+    set dims [GetShape [llength $args] $ndlist]
+    # Pad the ndlist based on the difference between new and old.
+    npad $ndlist $value {*}[lmap dim $dims arg $args {
+        expr {$arg == -1 ? 0 : $arg - $dim}
+    }]
+}
+
 
 # ND-LIST ACCESS/MODIFICATION
 ################################################################################
@@ -461,8 +434,8 @@ proc ::ndlist::nget {ndlist args} {
     }
     # Parse indices
     set dims [GetShape $ndims $ndlist]
-    set iArgs [lassign [ParseIndices $dims {*}$args] iDims]
-    # Return ndims and the sublist
+    set iArgs [ParseIndices $dims {*}$args]
+    # Call recursive handler
     RecGet $ndlist {*}$iArgs
 }
 
@@ -530,183 +503,6 @@ proc ::ndlist::Get {list iType iList} {
     }
 }
 
-# ParseIndices --
-# 
-# Loop through index inputs - returning required information for getting/setting
-# Returns a list - iDims, then iArgs, where iArgs is a key-value list
-# iDims iType iList iType iList ...
-#
-# Syntax:
-# set iArgs [lassign [ParseIndices $dims {*}$indices] iDims]
-#
-# Arguments:
-# dims          Shape to index into
-# indices       Index inputs (e.g. :, {0 3}, 0:10, end*)
-#
-# Returns:
-# iDims         New dimensions (blank for flattened axis)
-# iArgs         Paired list, iType iList ... (see ParseIndex)
-
-proc ::ndlist::ParseIndices {dims args} {
-    set iDims ""; # dimensions of indexed region
-    set iArgs ""; # paired list of index type and index list (meaning varies)
-    foreach dim $dims index $args {
-        # Parse index notation
-        lassign [ParseIndex $dim $index] iType iList
-        lappend iArgs $iType $iList
-        # Determine size of indexed range and limit.
-        switch $iType {
-            A { # All indices
-                lappend iDims $dim
-            }
-            R { # Range of indices
-                lassign $iList start stop
-                if {$start <= $stop} {
-                    lappend iDims [expr {$stop - $start + 1}]
-                } else {
-                    lappend iDims [expr {$start - $stop + 1}]
-                }
-            }
-            L { # List of indices
-                lappend iDims [llength $iList]
-            }
-            S { # Single index
-                lappend iDims {}
-            }
-        }
-    }
-    list $iDims {*}$iArgs
-}
-
-# ParseIndex --
-# 
-# Used for parsing index input (i.e. list of indices, range 0:10, etc)
-# Returns index type and corresponding values.
-#
-# Syntax:
-# lassign [ParseIndex $n $index] iType iList
-#
-# Arguments:
-# n             Size of list
-# index         Index input (e.g. :, {0 3}, 0:10, end*)
-# 
-# Returns:
-# iType     Type of index (A, R, L, or S)
-# iList     List of indices corresponding with type
-#   A:          Empty
-#   R:          Range start and stop
-#   L:          List of indices 
-#   S:          Single index (flattens list)
-
-proc ::ndlist::ParseIndex {n index} {
-    # Check length of input
-    if {[llength $index] != 1} {
-        # List of indices (user entered)
-        return [list L [lmap index $index {Index2Integer $n $index}]]
-    }
-    # All index notation
-    if {$index eq {:}} {
-        return [list A ""]
-    }
-    # Single index notation
-    if {[string index $index end] eq {*}} {
-        # Single index notation (flatten along this dimension)
-        return [list S [Index2Integer $n [string range $index 0 end-1]]]
-    }
-    # Single index, not range notation
-    if {![string match *:* $index]} {
-        return [list L [Index2Integer $n $index]]
-    }
-    # Range index notation
-    set parts [split $index :]
-    # Simple range case ($start:$stop)
-    if {[llength $parts] == 2} {
-        lassign $parts start stop
-        set start [Index2Integer $n $start]
-        set stop [Index2Integer $n $stop]
-        if {$start == 0 && $stop == ($n - 1)} {
-            # 0:end case
-            return [list A ""]
-        }
-        # Normal range
-        return [list R [list $start $stop]]               
-    }
-    # Skipped range case ($start:$step:$stop)
-    if {[llength $parts] == 3} {
-        lassign $parts start step stop
-        set start [Index2Integer $n $start]
-        set stop [Index2Integer $n $stop]
-        if {![string is integer -strict $step]} {
-            return -code error "expected integer but got \"$step\""
-        }
-        # Special case for forward range with step of 1
-        if {$step == 1 && $start <= $stop} {
-            if {$start == 0 && $stop == ($n - 1)} {
-                # 0:1:end case
-                return [list A ""]
-            }
-            # Normal range
-            return [list R [list $start $stop]]
-        }
-        # Special case for reverse range with step of -1
-        if {$step == -1 && $start >= $stop} {
-            return [list R [list $start $stop]]
-        }
-        # Normal case (call range function)
-        return [list L [range $start $stop $step]]
-    }
-    return -code error "invalid range index notation: should be \
-            \"start:stop\" or \"start:step:stop\""
-}
-
-# Index2Integer --
-#
-# Private function, converts end+-integer index format into integer
-# Negative indices get converted, such that -1 is end, -2 is end-1, etc.
-# Throws error if index is out of range.
-#
-# Syntax:
-# Index2Integer $n $index
-#
-# Arguments:
-# n:            Length of list to index
-# index:        Index notation (integer?[+-]integer? or end?[+-]integer?)
-
-proc ::ndlist::Index2Integer {n index} {
-    # Default case (skip regexp, much faster)
-    if {[string is integer -strict $index]} {
-        set i $index
-    } else {
-        # Check if index is valid format
-        set match [regexp -inline {^(end|[+-]?[0-9]+)([+-][0-9]+)?$} $index]
-        if {[llength $match] == 0} {
-            return -code error "bad index \"$index\": must be\
-                    integer?\[+-\]integer? or end?\[+-\]integer?"
-        }
-        # Convert end to n-1 if needed
-        set base [lindex $match 1]
-        if {$base eq {end}} {
-            set base [expr {$n - 1}]
-        }
-        # Handle offset
-        set offset [lindex $match 2]
-        if {$offset eq {}} {
-            set i $base
-        } else {
-            set i [expr {$base + $offset}]
-        }
-    }
-    # Handle negative index (from end)
-    if {$i < 0} {
-        set i [expr {$i % $n}]
-    }
-    # Check if out of range
-    if {$i >= $n} {
-        return -code error "index out of range"
-    }
-    return $i
-}
-
 # nset --
 # 
 # Set portion of ND-list using index notation.
@@ -728,6 +524,9 @@ proc ::ndlist::Index2Integer {n index} {
 
 proc ::ndlist::nset {varName args} {
     upvar 1 $varName ndlist
+    if {![info exists ndlist]} {
+        set ndlist ""
+    }
     set ndlist [nreplace $ndlist {*}$args]
 }
 
@@ -757,11 +556,17 @@ proc ::ndlist::nreplace {ndlist args} {
     }
     # Parse indices
     set dims [GetShape $ndims $ndlist]
-    set iArgs [lassign [ParseIndices $dims {*}$indices] iDims]
+    set iArgs [ParseIndices $dims {*}$indices]
     set iTypes [lmap {iType iList} $iArgs {set iType}]
+    
     # Check for simple lset case
     if {[lsearch -exact -not $iTypes S] == -1} {
-        set indices [lmap {iType iList} $iArgs {set iList}]
+        # Linear case (just lset)
+        if {$ndims == 1} {
+            return [lset ndlist $iLists $sublist]
+        }
+        # Higher dimension case (ensure that indices are in range)
+        set indices [lmap {iType iList} $iArgs {lindex $iList 0}]
         return [lset ndlist {*}$indices $sublist]
     }
     # Check for removal case
@@ -779,8 +584,9 @@ proc ::ndlist::nreplace {ndlist args} {
         }
     }
     # Expand sublist if needed based on index dimensions.
+    set iDims [GetIndexShape $dims {*}$iArgs]
     set sublist [nexpand $sublist {*}[concat {*}$iDims]]
-    # Call recursive replacement handler
+    # Call recursive handler
     RecReplace $ndlist $sublist {*}$iArgs
 }
 
@@ -874,7 +680,8 @@ proc ::ndlist::Replace {list sublist iType iList} {
 proc ::ndlist::nremove {ndlist index {axis 0}} {
     # Get removal type
     set dim [nshape [expr {$axis + 1}] $ndlist $axis]
-    lassign [ParseIndices $dim $index] iDim iType iList
+    lassign [ParseIndex $dim $index] iType iList
+    
     # Trivial case (remove all)
     if {$iType eq "A"} {
         return
@@ -885,6 +692,9 @@ proc ::ndlist::nremove {ndlist index {axis 0}} {
         set iDim [llength $iList]
     } elseif {$iType eq "S"} {
         set iDim 1; # Single removal
+    } else {
+        # Default case (call normal index parser)
+        set iDim [GetIndexDim $dim $iType $iList]
     }
     # Null case
     if {$dim == $iDim} {
@@ -973,17 +783,20 @@ proc ::ndlist::Remove {list iType iList} {
 # axis          Axis to insert along. Default 0.
 
 proc ::ndlist::ninsert {nd ndlist index sublist {axis 0}} {
-    # Get number of dimensions and ndlist shape
+    # Get number of dimensions, axis, shape, and insertion index.
     set ndims [GetNDims $nd]
     ValidateAxis $ndims $axis
-    # Verify that dimensions agree on all axes except for the insert axis
     set dims [GetShape $ndims $ndlist]
+    set i [Index2Integer [expr {[lindex $dims $axis] + 1}] $index]
+    # Null tensor case (inserting null D-list does nothing)
+    if {[llength $sublist] == 0} {
+        return $ndlist
+    }
+    # Verify that dimensions agree on all axes except for the insert axis
     set subdims [GetShape $ndims $sublist]
     if {[lreplace $dims $axis $axis] ne [lreplace $subdims $axis $axis]} {
         return -code error "incompatible dimensions"
     }
-    # Convert index to integer
-    set i [Index2Integer [expr {[lindex $dims $axis] + 1}] $index]
     # Perform recursive insertion
     RecInsert $ndlist $i $sublist $axis
 }
@@ -1013,21 +826,75 @@ proc ::ndlist::RecInsert {ndlist i sublist axis} {
     }
 }
 
-# nstack --
+# ncat --
 #
-# Combine ndlists by concatenation.
+# Combine ND-lists by concatenation.
 # Special case of ninsert.
 #
 # Syntax:
-# nstack $nd $ndlist1 $ndlist2 <$axis>
+# ncat $nd $ndlist1 $ndlist2 <$axis>
 #
 # Arguments:
 # nd                Number of dimensions
 # ndlist1 ndlist2   ND-lists to stack
 # axis              Axis to stack along. Default 0.
 
-proc ::ndlist::nstack {nd ndlist1 ndlist2 {axis 0}} {
+proc ::ndlist::ncat {nd ndlist1 ndlist2 {axis 0}} {
     ninsert $nd $ndlist1 end $ndlist2 $axis
+}
+
+# nappend --
+#
+# Append an ND-list along dimension 0.
+# For 0D, simply append (string). 
+# For 1D, simply lappend.
+# For higher dimensions, check subshapes, then call lappend.
+#
+# Syntax:
+# nappend $nd $varName $arg ...
+#
+# Arguments:
+# nd                Number of dimensions
+# varName           Variable containing ND-list.
+# arg ...           For 0D: strings to append. For 1D, list elements.
+#                   For 2D: row vectors. Etc.
+
+proc ::ndlist::nappend {nd varName args} {
+    # Get number of dimensions
+    set ndims [GetNDims $nd]
+    # Create link to ndlist, initialize if needed.
+    upvar 1 $varName ndlist
+    if {![info exists ndlist]} {
+        set ndlist ""
+    }
+    # No element case
+    if {[llength $args] == 0} {
+        return $ndlist
+    }
+    # Scalar case (call append)
+    if {$ndims == 0} {
+        return [append ndlist {*}$args]
+    } 
+    # Vector case (call lappend)
+    if {$ndims == 1} {
+        return [lappend ndlist {*}$args]
+    }
+    # Matrix and Tensor case
+    # Get subshape (shape of axes 1 to N-1)
+    set subrank [expr {$ndims - 1}]
+    if {[llength $ndlist] == 0} {
+        set subshape [GetShape $subrank [lindex $args 0]]
+    } else {
+        set subshape [GetShape $subrank [lindex $ndlist 0]]
+    }
+    # Ensure shape of each sublist is compatible with the subshape.
+    foreach sublist $args {
+        if {[GetShape $subrank $sublist] ne $subshape} {
+            return -code error "incompatible dimensions"
+        }
+    }
+    # Call lappend after checking subshapes.
+    lappend ndlist {*}$args
 }
 
 # NDLIST AXIS MANIPULATION
@@ -1300,22 +1167,6 @@ proc ::ndlist::napply2 {nd command ndlist1 ndlist2 args} {
     RecApply2 1 $ndims $command $ndlist1 $ndlist2 {*}$args
 }
 
-# GetMaxShape --
-#
-# Get maximum dimensions of multiple ND-lists (for expanding)
-#
-# Syntax:
-# GetMaxShape $ndims $arg ...
-#
-# Arguments:
-# ndims         Number of dimensions (e.g. 1D, 2D, etc.)
-# arg ...       ND-lists to get max shape from
-
-proc ::ndlist::GetMaxShape {ndims args} {
-    set shapes [lmap ndlist $args {GetShape $ndims $ndlist}]
-    lmap dims [transpose $shapes] {max $dims}
-}
-
 # RecApply2 --
 #
 # Recursive handler for napply2
@@ -1566,24 +1417,3 @@ proc ::ndlist::i {{axis 0}} {
 }
 proc ::ndlist::j {} {i 1}
 proc ::ndlist::k {} {i 2}
-
-# UnravelIndex --
-#
-# Unravel an index to its coordinates
-#
-# Syntax:
-# UnravelIndex $i $n ...
-#
-# Arguments:
-# i             Flat index into ND list
-# n ...         Shape of ND list
-
-proc ::ndlist::UnravelIndex {i n args} {
-    # Base case
-    if {[llength $args] == 0} {
-        return [expr {$i % $n}]
-    }
-    # Recursion
-    set N [product $args]
-    concat [expr {$i / $N}] [UnravelIndex [expr {$i % $N}] {*}$args]
-}

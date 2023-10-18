@@ -13,6 +13,7 @@
 namespace eval ::ndlist {
     # Source all required files
     set dir [file dirname [file normalize [info script]]]
+    source [file join $dir ndapi.tcl]
     source [file join $dir vector.tcl]
     source [file join $dir matrix.tcl]
     source [file join $dir tensor.tcl]

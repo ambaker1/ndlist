@@ -6,6 +6,17 @@ test eye {
     set I [eye 3]
 } -result {{1 0 0} {0 1 0} {0 0 1}}
 
+test stack_augment {
+    # Stack and augment matrices
+} -body {
+    assert [stack {1 2 3} {4 5 6} {7 8} 9] eq {1 2 3 4 5 6 7 8 9}
+    assert [stack {{1 2 3} {4 5 6}} {{7 8 9}}] eq {{1 2 3} {4 5 6} {7 8 9}}
+    assert [catch {stack {{1 2 3}} {{4 5}}}]
+    assert [augment {1 2 3} {4 5 6}] eq {{1 4} {2 5} {3 6}}
+    assert [augment {{1 2} {3 4}} {5 6} {7 8}] eq {{1 2 5 7} {3 4 6 8}}
+    assert [catch {augment {1 2 3} {{4 5} {6 7}}}]
+}
+
 test matmul {
     # Larger matrix multiplication
 } -body {
@@ -22,7 +33,7 @@ test matmul_error {
     # Incompatible inner dimensions
 } -body {
     matmul [eye 3] {{1 2 3}}
-} -returnCodes {1} -result {incompatible matrix dimensions}
+} -returnCodes {1} -result {incompatible inner matrix dimensions}
 
 test matmul_dot {
     # Multiply a row vector times a column vector

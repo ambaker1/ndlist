@@ -118,7 +118,6 @@ test nrepeat_blank1 {} {nrepeat {} 2 2} {}
 test nrepeat_blank2 {} {nrepeat {{}} 2 2} {{} {}}
 test nrepeat_blank2 {} {nrepeat {{{}}} 2 2} {{{} {}} {{} {}}}
 
-
 # nexpand
 test nexpand {
     # Expand an ndlist
@@ -138,12 +137,56 @@ test nexpand_stride {
     nexpand {{1 2}} 2 4
 } -result {{1 2 1 2} {1 2 1 2}}
 
-# nexpand
+test nexpand_-1 {
+    # Use "-1" to say "same shape"
+} -body {
+    nexpand {{1 2}} -1 4
+} -result {{1 2 1 2}}
+
 test nexpand_error {
     # Cannot expand if dimensions don't match.
 } -body {
     nexpand {1 2 3} 4 2
 } -returnCodes {1} -result {incompatible dimensions}
+
+test npad0 {
+    # Padding an empty list just calls nfull
+} -body {
+    set a ""
+    set a [npad $a 0 3 3]
+} -result {{0 0 0} {0 0 0} {0 0 0}}
+
+test npad1 {
+    # Extend an ND list with values
+} -body {
+    set a [npad $a 1 1 1]
+} -result {{0 0 0 1} {0 0 0 1} {0 0 0 1} {1 1 1 1}}
+
+test npad2 {
+    # Only extend along one axis (keep the other dimension the same)
+} -body {
+    set a [npad $a 2 1 0]
+} -result {{0 0 0 1} {0 0 0 1} {0 0 0 1} {1 1 1 1} {2 2 2 2}}
+
+# nextend 
+test nextend0 {
+    # Extending an empty list just calls nfull
+} -body {
+    set a ""
+    set a [nextend $a 0 3 3]
+} -result {{0 0 0} {0 0 0} {0 0 0}}
+
+test nextend1 {
+    # Extend an ND list with values
+} -body {
+    set a [nextend $a 1 4 4]
+} -result {{0 0 0 1} {0 0 0 1} {0 0 0 1} {1 1 1 1}}
+
+test nextend2 {
+    # Only extend along one axis (keep the other dimension the same)
+} -body {
+    set a [nextend $a 2 5 -1]
+} -result {{0 0 0 1} {0 0 0 1} {0 0 0 1} {1 1 1 1} {2 2 2 2}}
 
 # nget/nset/nreplace (ndlist access/modification)
 ################################################################################
@@ -151,41 +194,32 @@ test nexpand_error {
 test ParseIndex {
     # Test index parser
 } -body {
-    puts ""
     set n 10
     # All indices
-    puts [::ndlist::ParseIndex $n :]
-    puts [::ndlist::ParseIndex $n 0:end]
-    puts [::ndlist::ParseIndex $n 0:1:end]
+    assert [::ndlist::ParseIndex $n :] eq {A {}}
+    assert [::ndlist::ParseIndex $n 0:end] eq {A {}}
+    assert [::ndlist::ParseIndex $n 0:1:end] eq {A {}}
     # Range of indices
-    puts [::ndlist::ParseIndex $n 1:8]
-    puts [::ndlist::ParseIndex $n 1:1:8]
-    puts [::ndlist::ParseIndex $n end:4]
-    puts [::ndlist::ParseIndex $n end:-1:4]
+    assert [::ndlist::ParseIndex $n 1:8] eq {R {1 8}}
+    assert [::ndlist::ParseIndex $n 1:1:8] eq {R {1 8}}
+    assert [::ndlist::ParseIndex $n end:4] eq {R {9 4}}
+    assert [::ndlist::ParseIndex $n end:-1:4] eq {R {9 4}}
+    assert [catch {::ndlist::ParseIndex $n 0:end+1}]
+    assert [catch {::ndlist::ParseIndex $n end+1:0}]
     # Stepped range of indices (list)
-    puts [::ndlist::ParseIndex $n 0:2:6]
-    puts [::ndlist::ParseIndex $n 6:-2:0]
+    assert [::ndlist::ParseIndex $n 0:2:6] eq {L {0 2 4 6}}
+    assert [::ndlist::ParseIndex $n 6:-2:0] eq {L {6 4 2 0}}
+    assert [catch {::ndlist::ParseIndex $n 0:2:10}]
+    assert [catch {::ndlist::ParseIndex $n 10:2:0}]
     # List of indices 
-    puts [::ndlist::ParseIndex $n {0 end end-1}]
-    puts [::ndlist::ParseIndex $n {-1 -2 5+2}]
-    puts [::ndlist::ParseIndex $n {end-3}]
+    assert [::ndlist::ParseIndex $n {0 end end-1}] eq {L {0 9 8}}
+    assert [::ndlist::ParseIndex $n {-1 -2 5+2}] eq {L {9 8 7}}
+    assert [::ndlist::ParseIndex $n {end-3}] eq {L 6}
+    assert [catch {::ndlist::ParseIndex $n {0 1 2 10}}]
     # Single index
-    puts [::ndlist::ParseIndex $n end*]
-} -output {
-A {}
-A {}
-A {}
-R {1 8}
-R {1 8}
-R {9 4}
-R {9 4}
-L {0 2 4 6}
-L {6 4 2 0}
-L {0 9 8}
-L {9 8 7}
-L 6
-S 9
-}
+    assert [::ndlist::ParseIndex $n end*] eq {S 9}
+    assert [catch {::ndlist::ParseIndex $n {end+1*}}]
+} 
 
 # nget
 test nget {
@@ -400,14 +434,50 @@ test ninsert3D_2 {
     ninsert 3D $x end $y 2
 } -result {{{1 A} {2 B} {3 C}} {{4 D} {5 E} {6 F}} {{7 G} {8 H} {9 I}}}
 
-# nstack
-test nstack {
-    # nstack is simply a special case of ninsert.
+# ncat
+test ncat {
+    # ncat is simply a special case of ninsert.
 } -body {
-    assert [ninsert 1D {1 2 3} end {4 5 6} 0] eq [nstack 1D {1 2 3} {4 5 6} 0]
-    assert [ninsert 2D {1 2 3} end {4 5 6} 1] eq [nstack 2D {1 2 3} {4 5 6} 1]
-    assert [ninsert 3D $x end $y 2] eq [nstack 3D $x $y 2]
+    assert [ninsert 1D {1 2 3} end {4 5 6} 0] eq [ncat 1D {1 2 3} {4 5 6} 0]
+    assert [ninsert 2D {1 2 3} end {4 5 6} 1] eq [ncat 2D {1 2 3} {4 5 6} 1]
+    assert [ninsert 3D $x end $y 2] eq [ncat 3D $x $y 2]
 } -result {}
+
+test nappend0D {
+    # nappend 0D is "append"
+} -body {
+    set a {hello}
+    nappend 0D a { world}
+} -result {hello world}
+
+test nappend1D {
+    # nappend 1D is "lappend"
+} -body {
+    set a {hello}
+    nappend 1D a {world}
+} -result {hello world}
+
+test nappend2D {
+    # Append row vectors
+} -body {
+    set a {{1 2 3} {4 5 6}}
+    nappend 2D a {7 8 9} {10 11 12}
+} -result {{1 2 3} {4 5 6} {7 8 9} {10 11 12}}
+
+test nappend2D_error {
+    # Sublists must match dimension with source ndlist.
+} -body {
+    set a {{1 2 3} {4 5 6}}
+    nappend 2D a {foo bar}
+} -returnCodes 1 -result {incompatible dimensions}
+
+test nappend3D {
+    # Append matrices
+} -body {
+    set a {{{1 2 3} {4 5 6}} {{10 20 30} {40 50 60}}}
+    nappend 2D a {{100 200 300} {400 500 600}}
+} -result {{{1 2 3} {4 5 6}} {{10 20 30} {40 50 60}} {{100 200 300} {400 500 600}}}
+
 
 # nflatten/nswapaxes
 ################################################################################

@@ -56,22 +56,8 @@ proc ::ndlist::range {args} {
             return -code error "expected integer but got \"$value\""
         }
     }
-    # Avoid dividing by zero
-    if {$step == 0} {
-        return
-    }
-    # Get range length
-    set n [expr {($stop - $start)/$step + 1}]
-    # Basic cases
-    if {$n <= 0} {
-        return
-    }
-    if {$n == 1} {
-        return $start
-    }
-    # General case (generate list)
-    set i [expr {$start - $step}]
-    lmap x [lrepeat $n {}] {incr i $step}
+    # Call integer range generator
+    IntegerRange $start $stop $step
 }
 
 # find --
