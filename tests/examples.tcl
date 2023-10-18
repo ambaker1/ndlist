@@ -347,7 +347,7 @@ test {Example 35} {Concatenate tensors} -body {
 puts {}
 set x [nreshape {1 2 3 4 5 6 7 8 9} 3 3 1]
 set y [nreshape {A B C D E F G H I} 3 3 1]
-puts [nstack 3D $x $y 2]
+puts [ncat 3D $x $y 2]
 puts -nonewline {}
 } -output {
 {{1 A} {2 B} {3 C}} {{4 D} {5 E} {6 F}} {{7 G} {8 H} {9 I}}
