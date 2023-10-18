@@ -12,6 +12,7 @@
 # Define namespace and exported commands
 namespace eval ::ndlist {
     namespace export eye matmul transpose; # Matrix algebra
+    namespace export stack augment; # Combine matrices
     namespace export zip zip3 cartprod; # Iteration tools (e.g. tuples)
 }
 
@@ -38,6 +39,9 @@ proc ::ndlist::eye {n} {
 # Transpose a matrix
 # Similar to math::linearalgebra::transpose and lsearch example on Tcl wiki
 # written by MJ (https://wiki.tcl-lang.org/page/Transposing+a+matrix)
+#
+# Syntax:
+# transpose $matrix
 # 
 # Arguments:
 # matrix:           Matrix to transpose
@@ -80,7 +84,7 @@ proc ::ndlist::transpose {matrix} {
 proc ::ndlist::matmul {A B} {
     # Check dimensions
     if {[llength [lindex $A 0]] != [llength $B]} {
-        return -code error "incompatible matrix dimensions"
+        return -code error "incompatible inner matrix dimensions"
     }
     # Transpose B matrix for easy multiplication
     set BT [transpose $B]
@@ -90,6 +94,52 @@ proc ::ndlist::matmul {A B} {
             dot $rowA $colB
         }
     }
+}
+
+# stack --
+# 
+# Combines matrices (row-wise)
+#
+# Syntax:
+# stack $mat1 $mat2 ...
+# 
+# Arguments:
+# $mat1 $mat2 ...       Arbitrary number of matrices
+
+proc ::ndlist::stack {args} {
+    set Matrix [lindex $args 0]
+    set M [llength [lindex $Matrix 0]]
+    foreach matrix [lrange $args 1 end] {
+        set m [llength [lindex $matrix 0]]
+        if {$m != $M} {
+            return -code error "incompatible number of columns"
+        }
+        set Matrix [concat $Matrix $matrix]
+    }
+    return $Matrix
+}
+
+# augment --
+# 
+# Combines matrices (column-wise)
+#
+# Syntax:
+# augment $mat1 $mat2 ...
+# 
+# Arguments:
+# mat1 mat2 ...         Arbitrary number of matrices
+
+proc ::ndlist::augment {args} {
+    set Matrix [lindex $args 0]
+    set N [llength $Matrix]
+    foreach matrix [lrange $args 1 end] {
+        set n [llength $matrix]
+        if {$n != $N} {
+            return -code error "incompatible number of rows"
+        }
+        set Matrix [lmap Row $Matrix row $matrix {concat $Row $row}]
+    }
+    return $Matrix
 }
 
 # zip --
