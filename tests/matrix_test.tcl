@@ -1,5 +1,11 @@
 # Matrix (2D-list) tests
 
+
+test zeros {} {zeros 3 2} {{0 0} {0 0} {0 0}}
+test zeros_0 {} {zeros 3 0} {}
+test ones {} {ones 2 3} {{1 1 1} {1 1 1}}
+test ones_0 {} {ones 3 0} {}
+
 test eye {
     # Generate identity matrix
 } -body {
@@ -16,6 +22,26 @@ test stack_augment {
     assert [augment {{1 2} {3 4}} {5 6} {7 8}] eq {{1 2 5 7} {3 4 6 8}}
     assert [catch {augment {1 2 3} {{4 5} {6 7}}}]
 }
+
+test block {
+    # Combine a matrix of matrices
+} -body {
+    set A [ones 4 3]
+    set B [zeros 4 2]
+    set C [zeros 1 3]
+    set D [ones 1 2]
+    join [block [list [list $A $B] [list $C $D]]] \n
+} -result {1 1 1 0 0
+1 1 1 0 0
+1 1 1 0 0
+1 1 1 0 0
+0 0 0 1 1}
+
+test block_error {
+    # Cannot combine if cannot stack/augment
+} -body {
+    block {{{{1 2} {3 4}}} {{1 2 3}}} 
+} -returnCodes 1 -result {incompatible number of columns}
 
 test matmul {
     # Larger matrix multiplication
@@ -79,3 +105,6 @@ test cartprod_3 {
 } -body {
     cartprod {1 2} {A B} {foo bar}
 } -result {{1 A foo} {1 A bar} {1 B foo} {1 B bar} {2 A foo} {2 A bar} {2 B foo} {2 B bar}}
+
+test outerprod {} {outerprod {0 1 2} {3 4}} {{0 0} {3 4} {6 8}}
+test kronprod {} {kronprod {{1 1} {2 2}} {{1 2} {3 4}}} {{1 2 1 2} {3 4 3 4} {2 4 2 4} {6 8 6 8}}
