@@ -234,7 +234,7 @@ proc ::ndlist::ParseIndex {n index} {
             return [list R [list $start $stop]]
         }
         # Normal case
-        return [list L [IntegerRange $start $stop $step]]
+        return [list L [range $start $stop $step]]
     }
     return -code error "invalid range index notation: should be \
             \"start:stop\" or \"start:step:stop\""
@@ -285,36 +285,6 @@ proc ::ndlist::Index2Integer {n index} {
         return -code error "index out of range"
     }
     return $i
-}
-
-# IntegerRange --
-#
-# Generate an integer range from start to stop at a step
-#
-# Syntax:
-# IntegerRange $start $stop $step
-# 
-# start     Start of resultant range.
-# stop      End limit of resultant range.
-# step      Step size. 
-
-proc ::ndlist::IntegerRange {start stop step} {
-    # Avoid dividing by zero
-    if {$step == 0} {
-        return
-    }
-    # Get range length
-    set n [expr {($stop - $start)/$step + 1}]
-    # Basic cases
-    if {$n <= 0} {
-        return
-    }
-    if {$n == 1} {
-        return $start
-    }
-    # General case (generate list)
-    set i [expr {$start - $step}]
-    lmap x [lrepeat $n {}] {incr i $step}
 }
 
 # GetIndexShape --
