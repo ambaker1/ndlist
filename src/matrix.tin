@@ -11,9 +11,42 @@
 
 # Define namespace and exported commands
 namespace eval ::ndlist {
-    namespace export eye matmul transpose; # Matrix algebra
-    namespace export stack augment; # Combine matrices
-    namespace export zip zip3 cartprod; # Iteration tools (e.g. tuples)
+    namespace export zeros ones eye; # Generate matrices
+    namespace export stack augment block; # Combine matrices
+    namespace export transpose matmul outerprod kronprod; # Linear algebra
+    namespace export zip zip3 cartprod; # Iteration tools
+}
+
+# zeros --
+# 
+# Generate a matrix filled with zeros.
+#
+# Syntax:
+# zeros $n $m
+# 
+# Arguments:
+# n             Number of rows
+# m             Number of columns
+
+proc ::ndlist::zeros {n m} {
+    if {$m == 0} {return}
+    lrepeat $n [lrepeat $m 0]
+}
+
+# ones --
+#
+# Generate a matrix filled with ones.
+#
+# Syntax:
+# ones $n $m
+# 
+# Arguments:
+# n             Number of rows
+# m             Number of columns
+
+proc ::ndlist::ones {n m} {
+    if {$m == 0} {return}
+    lrepeat $n [lrepeat $m 1]
 }
 
 # eye --
@@ -27,11 +60,71 @@ namespace eval ::ndlist {
 # n             Size of matrix (nxn)
 
 proc ::ndlist::eye {n} {
-    set x [nfull 0 $n $n]
+    set x [zeros $n $n]
     foreach i [range $n] {
         lset x $i $i 1
     }
     return $x
+}
+
+# stack --
+# 
+# Combines matrices (row-wise)
+#
+# Syntax:
+# stack $mat1 $mat2 ...
+# 
+# Arguments:
+# $mat1 $mat2 ...       Arbitrary number of matrices
+
+proc ::ndlist::stack {args} {
+    set Matrix [lindex $args 0]
+    set M [llength [lindex $Matrix 0]]
+    foreach matrix [lrange $args 1 end] {
+        set m [llength [lindex $matrix 0]]
+        if {$m != $M} {
+            return -code error "incompatible number of columns"
+        }
+        set Matrix [concat $Matrix $matrix]
+    }
+    return $Matrix
+}
+
+# augment --
+# 
+# Combines matrices (column-wise)
+#
+# Syntax:
+# augment $mat1 $mat2 ...
+# 
+# Arguments:
+# mat1 mat2 ...         Arbitrary number of matrices
+
+proc ::ndlist::augment {args} {
+    set Matrix [lindex $args 0]
+    set N [llength $Matrix]
+    foreach matrix [lrange $args 1 end] {
+        set n [llength $matrix]
+        if {$n != $N} {
+            return -code error "incompatible number of rows"
+        }
+        set Matrix [lmap Row $Matrix row $matrix {concat $Row $row}]
+    }
+    return $Matrix
+}
+
+# block --
+#
+# Combine a matrix of matrices
+#
+# Syntax:
+# block $matrices
+#
+# Arguments:
+# matrices          Matrix of matrices
+
+proc ::ndlist::block {matrices} {
+    stack {*}[lmap row $matrices {augment {*}$row}]
 }
 
 # transpose --
@@ -96,55 +189,46 @@ proc ::ndlist::matmul {A B} {
     }
 }
 
-# stack --
-# 
-# Combines matrices (row-wise)
+# outerprod --
 #
-# Syntax:
-# stack $mat1 $mat2 ...
-# 
+# Outer product of two vectors
+# [ a1 a2 ] x [ b1 b2 b3 ] = [ a1b1 a1b2 a1b3 ]
+#                            [ a2b1 a2b2 a2b3 ]
+# Syntax: 
+# outerprod $a $b
+#
 # Arguments:
-# $mat1 $mat2 ...       Arbitrary number of matrices
+# a b       Vectors (equal length) to take outer product of.
 
-proc ::ndlist::stack {args} {
-    set Matrix [lindex $args 0]
-    set M [llength [lindex $Matrix 0]]
-    foreach matrix [lrange $args 1 end] {
-        set m [llength [lindex $matrix 0]]
-        if {$m != $M} {
-            return -code error "incompatible number of columns"
-        }
-        set Matrix [concat $Matrix $matrix]
-    }
-    return $Matrix
+proc ::ndlist::outerprod {a b} {
+    matmul $a [list $b]
 }
 
-# augment --
-# 
-# Combines matrices (column-wise)
+# kronprod --
 #
-# Syntax:
-# augment $mat1 $mat2 ...
+# Kronecker product of two matrices (vector spaces)
+# Example:
 # 
+# [ a11 a12 ]                   [ a11b11 a11b12 a12b11 a12b12]
+# [ a21 a22 ] (x) [ b11 b12 ] = [ a21b11 a21b12 a22b11 a22b12]
+#
+# Syntax: 
+# kronprod $A $B
+#
 # Arguments:
-# mat1 mat2 ...         Arbitrary number of matrices
+# A B       Vector spaces to take Kronecker product of.
 
-proc ::ndlist::augment {args} {
-    set Matrix [lindex $args 0]
-    set N [llength $Matrix]
-    foreach matrix [lrange $args 1 end] {
-        set n [llength $matrix]
-        if {$n != $N} {
-            return -code error "incompatible number of rows"
-        }
-        set Matrix [lmap Row $Matrix row $matrix {concat $Row $row}]
-    }
-    return $Matrix
+proc ::ndlist::kronprod {A B} {
+    block [lmap rowA $A {lmap valueA $rowA {lmap rowB $B {lmap valueB $rowB {
+        expr {$valueA * $valueB}
+    }}}}]
 }
 
 # zip --
 #
 # Zip vectors (equal length) into a tuple list
+# To unzip, use lassign and transpose.
+# lassign [transpose $tuples] a b
 #
 # Syntax:
 # zip $a $b ...
@@ -164,6 +248,8 @@ proc ::ndlist::zip {a b} {
 # zip3 --
 #
 # Zip three vectors (equal length) into a triple
+# To unzip, use lassign and transpose.
+# lassign [transpose $triples] a b c
 #
 # Syntax:
 # zip3 $a $b $c
