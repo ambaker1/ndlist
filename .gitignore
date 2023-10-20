@@ -5,3 +5,4 @@ doc/**
 !doc/*.pdf
 !doc/template/
 !doc/template/*.tex
+!doc/template/*.tin
