@@ -584,8 +584,7 @@ proc ::ndlist::nreplace {ndlist args} {
         }
     }
     # Expand sublist if needed based on index dimensions.
-    set iDims [GetIndexShape $dims {*}$iArgs]
-    set sublist [nexpand $sublist {*}[concat {*}$iDims]]
+    set sublist [nexpand $sublist {*}[GetIndexShape $dims {*}$iArgs]]
     # Call recursive handler
     RecReplace $ndlist $sublist {*}$iArgs
 }

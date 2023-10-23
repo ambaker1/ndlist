@@ -300,9 +300,9 @@ proc ::ndlist::Index2Integer {n index} {
 # iList ...     Index lists
 
 proc ::ndlist::GetIndexShape {dims args} {
-    lmap dim $dims {iType iList} $args {
+    concat {*}[lmap dim $dims {iType iList} $args {
         GetIndexDim $dim $iType $iList
-    }
+    }]
 }
 
 # GetIndexDim --

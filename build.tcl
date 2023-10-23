@@ -1,7 +1,7 @@
 package require tin 1.0
 tin import assert from tin
 tin import tcltest
-set version 0.6
+set version 0.7
 set config ""
 dict set config VERSION $version
 
@@ -16,6 +16,7 @@ namespace import ndlist::*
 
 # Source all test files
 puts "Running all tests..."
+source tests/scalar_test.tcl
 source tests/vector_test.tcl
 source tests/matrix_test.tcl
 source tests/tensor_test.tcl
