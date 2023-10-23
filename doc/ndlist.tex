@@ -28,6 +28,43 @@ tin import ndlist
 \end{example}
 \end{abstract}
 \clearpage
+\section{0-Dimensional Lists (Scalars)}
+Everything is a string is a foundational rule of Tcl, and with this package, everything is a scalar, or a 0D-list. 
+To reinforce a specific scalar type, you can use the following commands:
+\subsection{Boolean Value}
+The command \cmdlink{bool} converts value to boolean, by calling the \textit{::tcl::mathfunc::bool} command.
+\begin{syntax}
+\command{bool} <\$value>
+\end{syntax}
+\begin{args}
+\$value & Boolean value. Default 0
+\end{args}
+\subsection{Integer Value}
+The command \cmdlink{int} converts value to integer, by calling the \textit{::tcl::mathfunc::int} command.
+\begin{syntax}
+\command{int} <\$value>
+\end{syntax}
+\begin{args}
+\$value & Integer value. Default 0
+\end{args}
+\subsection{Floating-point Decimal Value}
+The command \cmdlink{float} converts value to float, by calling the \textit{::tcl::mathfunc::double} command.
+\begin{syntax}
+\command{float} <\$value>
+\end{syntax}
+\begin{args}
+\$value & Double-precision floating point decimal value. Default 0.0
+\end{args}
+\begin{example}{Convert to floating-point decimal value}
+\begin{lstlisting}
+puts [float 5]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+5.0
+\end{lstlisting}
+\end{example}
+\clearpage
 \section{1-Dimensional Lists (Vectors)}
 Lists are foundational to Tcl, so in addition to providing utilities for ND-lists, this package also provides utilities for working with 1D-lists, or vectors.
 \subsection{Range Generator}
@@ -94,7 +131,7 @@ puts [nget $x [find $x > 2]]
 \end{example}
 \subsection{Linear Interpolation}
 The command \cmdlink{linterp} performs linear 1D interpolation.
-Converts input to ``double''.
+Converts input to ``\cmdlink{float}''.
 \begin{syntax}
 \command{linterp} \$x \$xList \$yList
 \end{syntax}
@@ -117,7 +154,7 @@ puts [linterp 8.2 {0 10 20} {2 -4 5}]
 \clearpage
 \subsection{Vector Generation}
 The command \cmdlink{linspace} can be used to generate a vector of specified length and equal spacing between two specified values. 
-Converts input to ``double''
+Converts input to ``\cmdlink{float}''
 \begin{syntax}
 \command{linspace} \$n \$start \$stop 
 \end{syntax}
@@ -136,7 +173,7 @@ puts [linspace 5 0 1]
 \end{lstlisting}
 \end{example}
 The command \cmdlink{linsteps} generates intermediate values given an increment size and a sequence of targets.
-Converts input to ``double''.
+Converts input to ``\cmdlink{float}''.
 \begin{syntax}
 \command{linsteps} \$step \$x1 \$x2 ...
 \end{syntax}
@@ -1300,7 +1337,7 @@ puts $indices
 \end{lstlisting}
 \end{example}
 \clearpage
-{\footnotesize\printindex}
+\printindex
 \end{document}
 
 
