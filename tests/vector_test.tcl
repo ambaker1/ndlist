@@ -133,13 +133,6 @@ test lapply2_error {
     lapply2 {format "%s %s"} {hello} {world moon}
 } -returnCodes {1} -result {mismatched list lengths}
 
-test lexpr {
-    # Map a math command over a list
-} -body {
-    set a 10
-    lexpr x {1 2 3} {$x + $a}
-} -result {11 12 13}
-
 test lop {
     # Map mathops over a list.
 } -body {

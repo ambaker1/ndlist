@@ -21,7 +21,7 @@ namespace eval ::ndlist {
     namespace export nremove ninsert ncat nappend; # Deletion/Combination
     namespace export nswapaxes nmoveaxis npermute; # Axis reordering
     namespace export napply napply2 nop nop2 nreduce; # Functional mapping
-    namespace export nmap nforeach nexpr i j k; # Generalized mapping/looping
+    namespace export nmap nforeach i j k; # Generalized mapping/looping
 }
 
 # ND-LIST BASICS
@@ -1357,32 +1357,6 @@ proc ::ndlist::nforeach {nd args} {
     set body [lindex $args end]
     # Call modified nmap (creates null tensor
     tailcall nmap $ndims {*}$varMap "$body; continue"
-}
-
-# nexpr --
-#
-# Generalized math mapping (version of nmap for math).
-#
-# Syntax:
-# nexpr $nd $varName $ndlist <$varName $ndlist ...> $expr
-#
-# Arguments:
-# varName ...   Variable(s) to map with
-# ndlist ...    ND-list(s) to map over.
-# expr          Tcl math expression to evaluate.
-
-proc ::ndlist::nexpr {nd args} {
-    # Check arity
-    if {[llength $args] == 1 || [llength $args] % 2 == 0} {
-        return -code error "wrong # args: should be\
-                \"nexpr nd varName ndlist ?varName ndlist ...? expr"
-    }
-    # Interpret input
-    set ndims [GetNDims $nd]
-    set varMap [lrange $args 0 end-1]
-    set expr [lindex $args end]
-    # Call modified nmap
-    tailcall nmap $ndims {*}$varMap [list expr $expr]
 }
 
 # i,j,k --

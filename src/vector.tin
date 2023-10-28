@@ -13,7 +13,7 @@
 namespace eval ::ndlist {
     namespace export range find; # List indexing utilities
     namespace export linspace linsteps linterp; # List generation
-    namespace export lapply lapply2 lop lop2 lexpr; # Functional mapping
+    namespace export lapply lapply2 lop lop2; # Functional mapping
     namespace export max min sum product mean median stdev pstdev; # Stats
     namespace export dot cross norm; # Vector algebra
 }
@@ -304,31 +304,6 @@ proc ::ndlist::lop2 {list1 op list2 args} {
     }
 }
 
-# lexpr --
-#
-# lmap, but with expr. Follows all rules of lmap.
-#
-# Syntax:
-# lexpr $varList $list <$varList $list ...> $expr
-#
-# Arguments:
-# varName ...   List(s) of variables to map with
-# list ...      List(s) to map over.
-# expr          Tcl math expression to evaluate.
-
-proc ::ndlist::lexpr {args} {
-    # Check arity
-    if {[llength $args] == 1 || [llength $args] % 2 == 0} {
-        return -code error "wrong # args: should be\
-                \"lexpr varList list ?varList list ...? expr"
-    }
-    # Interpret input
-    set varMap [lrange $args 0 end-1]
-    set expr [lindex $args end]
-    # Call modified lmap
-    tailcall lmap {*}$varMap [list expr $expr]
-}
-
 # List statistics
 ################################################################################
 
@@ -578,7 +553,7 @@ proc ::ndlist::cross {a b} {
 proc ::ndlist::norm {vector {p 2}} {
     switch $p {
         1 { # Sum of absolute values
-            sum [lexpr value $vector {abs($value)}]
+            sum [lmap value $vector {expr {abs($value)}}]
         }
         2 { # Euclidean (use hypot function to avoid overflow)
             set norm 0.0
@@ -588,7 +563,7 @@ proc ::ndlist::norm {vector {p 2}} {
             return $norm
         }
         Inf { # Absolute maximum of the vector
-            max [lexpr value $vector {abs($value)}]
+            max [lmap value $vector {expr {abs($value)}}]
         }
         default { # Arbitrary integer norm
             if {![string is integer -strict $p] || $p <= 0} {

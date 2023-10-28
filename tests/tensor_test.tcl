@@ -624,7 +624,7 @@ test npermute5 {
     assert $y1 eq $y2
 }
 
-# napply/nreduce/nmap/nexpr/nop
+# napply/nreduce/nmap/nop
 ################################################################################
 
 # napply
@@ -735,27 +735,27 @@ test nforeach {
     set values
 } -result {3 4 5 6 7 8 9}
 
-# nexpr
-test nexpr {
-    # nexpr is just a special case of nmap.
+# nmap
+test nmap_expr {
+    # using expr
 } -body {
-    assert {[nexpr 1D x {1 2 3} {-$x}] eq {-1 -2 -3}}
+    assert {[nmap 1D x {1 2 3} {expr {-$x}}] eq {-1 -2 -3}}
     # Basic operations
-    assert {[nexpr 2D x $testmat {-$x}] eq {{-1 -2 -3} {-4 -5 -6} {-7 -8 -9}}}
-    assert {[nexpr 2D x $testmat {$x / 2.0}] eq {{0.5 1.0 1.5} {2.0 2.5 3.0} {3.5 4.0 4.5}}}
-    assert {[nexpr 2D x $testmat y {.1 .2 .3} {$x + $y}] eq {{1.1 2.1 3.1} {4.2 5.2 6.2} {7.3 8.3 9.3}}}
-    assert {[nexpr 2D x $testmat y {{.1 .2 .3}} {$x + $y}] eq {{1.1 2.2 3.3} {4.1 5.2 6.3} {7.1 8.2 9.3}}}
-    assert {[nexpr 2D x $testmat y {{.1 .2 .3} {.4 .5 .6} {.7 .8 .9}} {$x + $y}] eq {{1.1 2.2 3.3} {4.4 5.5 6.6} {7.7 8.8 9.9}}}
-    assert {[nexpr 2D x $testmat {double($x)}] eq {{1.0 2.0 3.0} {4.0 5.0 6.0} {7.0 8.0 9.0}}}
+    assert {[nmap 2D x $testmat {expr {-$x}}] eq {{-1 -2 -3} {-4 -5 -6} {-7 -8 -9}}}
+    assert {[nmap 2D x $testmat {expr {$x / 2.0}}] eq {{0.5 1.0 1.5} {2.0 2.5 3.0} {3.5 4.0 4.5}}}
+    assert {[nmap 2D x $testmat y {.1 .2 .3} {expr {$x + $y}}] eq {{1.1 2.1 3.1} {4.2 5.2 6.2} {7.3 8.3 9.3}}}
+    assert {[nmap 2D x $testmat y {{.1 .2 .3}} {expr {$x + $y}}] eq {{1.1 2.2 3.3} {4.1 5.2 6.3} {7.1 8.2 9.3}}}
+    assert {[nmap 2D x $testmat y {{.1 .2 .3} {.4 .5 .6} {.7 .8 .9}} {expr {$x + $y}}] eq {{1.1 2.2 3.3} {4.4 5.5 6.6} {7.7 8.8 9.9}}}
+    assert {[nmap 2D x $testmat {expr {double($x)}}] eq {{1.0 2.0 3.0} {4.0 5.0 6.0} {7.0 8.0 9.0}}}
 } -result {}
 
-test nexpr_index2 {
+test nmap_index2 {
     # Test out indices
 } -body {
-    nexpr 2D x $testmat {$x*([i]%2 + [j]%2 == 1?-1:1)}
+    nmap 2D x $testmat {expr {$x*([i]%2 + [j]%2 == 1?-1:1)}}
 } -result {{1 -2 3} {-4 5 -6} {7 -8 9}}
 
-test nexpr_index3 {
+test nmap_index3 {
     # Test out all features.
 } -body {
     set y ""
@@ -780,15 +780,15 @@ test nexpr_index3 {
 11 1 2 1
 }
 
-test nexpr_index_nested {
-   # Verify that the nexpr indices can be nested.
+test nmap_index_nested {
+   # Verify that the nmap indices can be nested.
 } -body {
     nmap 1D x {{1 2} {1 2 3} {1 2 3 4}} {
-        list [i] [nexpr 1D xi $x {[i] * $xi}]
+        list [i] [nmap 1D xi $x {expr {[i] * $xi}}]
     }
 } -result {{0 {0 2}} {1 {0 2 6}} {2 {0 2 6 12}}}
 
-test nexpr_index_blank {
+test nmap_index_blank {
     # Verify that the index is reset, even if error occurs.
 } -body {
     assert $::ndlist::map_index eq ""

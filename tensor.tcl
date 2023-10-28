@@ -13,7 +13,8 @@
 namespace eval ::ndlist {    
     variable map_index ""; # Linear index of mapping
     variable map_shape ""; # Shape of nmap list
-    namespace export ndlist nshape nsize; # ND-list basics
+    namespace export ndlist ndfloat ndint ndbool; # ND-list validation
+    namespace export nshape nsize; # ND-list metadata
     namespace export nfull nrand; # ND-list initialization
     namespace export nflatten nreshape; # Reshaping an ND-list
     namespace export nrepeat nexpand npad nextend; # Expanding an ND-list
@@ -28,11 +29,17 @@ namespace eval ::ndlist {
 ################################################################################
 
 # ndlist --
+# ndfloat --
+# ndint --
+# ndbool --
 #
 # Validates an ND-list, and returns the ND-list.
 #
 # Syntax:
-# ndlist $nd $value
+# ndlist $nd $value; # no data validation
+# ndfloat $nd $value; # converts to float
+# ndint $nd $value; # converts to int
+# ndbool $nd $value; # converts to bool
 #
 # Arguments:
 # nd            Number of dimensions (e.g. 1D, 2D, etc.)
@@ -47,6 +54,15 @@ proc ::ndlist::ndlist {nd value} {
         return -code error "not a valid ${ndims}D-list"
     }
     return $ndlist
+}
+proc ::ndlist::ndfloat {nd value} {
+    napply $nd float [ndlist $nd $value]
+}
+proc ::ndlist::ndint {nd value} {
+    napply $nd int [ndlist $nd $value]
+}
+proc ::ndlist::ndbool {nd value} {
+    napply $nd bool [ndlist $nd $value]
 }
 
 # nshape --

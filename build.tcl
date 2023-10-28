@@ -1,9 +1,10 @@
 package require tin 1.0
 tin import assert from tin
 tin import tcltest
-set version 0.7
+set version 0.8
 set config ""
 dict set config VERSION $version
+dict set config VUTIL_VERSION 4.0
 
 puts "Building from source files..."
 tin bake src build $config
@@ -16,10 +17,10 @@ namespace import ndlist::*
 
 # Source all test files
 puts "Running all tests..."
-source tests/scalar_test.tcl
 source tests/vector_test.tcl
 source tests/matrix_test.tcl
 source tests/tensor_test.tcl
+source tests/object_test.tcl
 source tests/examples.tcl
 
 # Check number of failed tests
@@ -32,6 +33,8 @@ cleanupTests
 if {$nFailed > 0} {
     error "$nFailed tests failed"
 }
+
+exit
 
 puts "Tests passed, installing..."
 # Tests passed, copy build files to main folder and install

@@ -1,0 +1,483 @@
+# ndobj.tcl
+################################################################################
+# Object-oriented implementation of ND-lists
+
+# Copyright (C) 2023 Alex Baker, ambaker1@mtu.edu
+# All rights reserved. 
+
+# See the file "LICENSE" in the top level directory for information on usage, 
+# redistribution, and for a DISCLAIMER OF ALL WARRANTIES.
+################################################################################
+
+# Define namespace and exported commands
+namespace eval ::ndlist {
+    variable ref; # Reference map for ndlists.
+    namespace export ndnew neval nexpr
+}
+
+# ValidateRefName --
+#
+# Validate the reference name for ND objects.
+
+proc ::ndlist::ValidateRefName {refName} {
+    if {![regexp {^(::+|\w+)+$} $refName]} {
+        return -code error "invalid object reference name \"$refName\""
+    }
+    return $refName
+}
+
+# Create NDValueContainer class.
+::oo::class create ::ndlist::NDValueContainer {
+    superclass ::vutil::ValueContainer
+    variable myValue myType myRank
+   
+    # Constructor
+    # ::ndlist::NDValueContainer new $nd $refName <$value> <$type>
+    #
+    # Arguments:
+    # refName       Variable for garbage collection
+    # nd            Number of dimensions.
+    
+    constructor {nd refName {value ""} {type ""}} {
+        set myRank [::ndlist::GetNDims $nd]
+        # Validate reference name
+        ::ndlist::ValidateRefName $refName
+        next $refName $value $type
+    }
+    method Uplevel {level body} {
+        next $level [list ::ndlist::neval $body [self]]
+    }
+
+    # my ValidateValue $value --
+    #
+    # Validate the value of an ND-list.
+    #
+    # Arguments:
+    # value         Value to validate.
+    
+    method ValidateValue {value} {
+        my ValidateNDValue $myRank $value
+    }
+    
+    # my ValidateNDValue $rank $value --
+    #
+    # Called by ValidateValue. Adds input "rank".
+    #
+    # Arguments:
+    # rank          Rank to validate.
+    
+    method ValidateNDValue {rank value} {
+        set ndlist [::ndlist::ndlist $rank $value]
+        if {$myType eq ""} {
+            return $ndlist
+        }
+        ::ndlist::napply $myRank ::vutil::type::$myType $ndlist
+    }
+
+    # $object ndims --
+    #
+    # Query the number of dimensions of the object. Same as rank.
+    
+    method GetRank {} {
+        return $myRank
+    }
+    method ndims {} {
+        my GetRank
+    }
+    
+    # $object shape <$axis> --
+    #
+    # Query the shape of the object.
+    #
+    # Arguments:
+    # axis          Axis to get dimension of. Default returns all.
+    
+    method shape {{axis ""}} {
+        if {$axis eq ""} {
+            return [my GetShape]
+        }
+        ::ndlist::ValidateAxis $myRank $axis
+        lindex [my GetShape] $axis
+    }
+    
+    # $object @ $index <$op $arg ...> --
+    #
+    # Index into the object
+    #
+    # Arguments:
+    # index         Index arguments separated by commas, # must match rank.
+    # op arg ...    Index operators, explained below:
+    #   = value             Value assignment.
+    #   := expr             Expression assignment.
+    #   --> varName         Create new object from range.
+    #   | method arg ...    Temp object evaluation.
+    #   & refName body      Evaluate body with range assigned to ref var.
+    
+    method @ {index args} {
+        # Get indices from input
+        set indices [split $index ,]
+        if {[llength $indices] != $myRank} {
+            return -code error "wrong # of indices: want $myRank"
+        }
+        # Check arity
+        if {[llength $args] == 0} {
+            tailcall my GetIndexValue $indices
+        }
+        # Interpret input
+        set args [lassign $args op]
+        switch $op {
+            = { # Assignment to range.
+                if {[llength $args] != 1} {
+                    return -code error "wrong # args: should be\
+                            \"[self] @ $index = value\""
+                }
+                tailcall my SetIndexValue $indices [lindex $args 0]
+            }
+            := { # Math evaluation. 
+                if {[llength $args] != 1} {
+                    return -code error "wrong # args: should be\
+                            \"[self] @ $index := expr\""
+                }
+                my CopyIndexObject $indices temp
+                uplevel 1 [list $temp := [lindex $args 0]]
+                tailcall my SetIndexValue $indices [$temp]
+            }
+            --> { # Copy range to new element.
+                if {[llength $args] != 1} {
+                    return -code error "wrong # args: should be\
+                            \"[self] @ $index --> varName\""
+                }
+                tailcall my CopyIndexObject $indices [lindex $args 0]
+            }
+            | { # Copy to temp, evaluate in temp.
+                if {[llength $args] == 0} {
+                    return -code error "wrong # args: should be\
+                            \"[self] @ $index | method ?arg ...?\""
+                }
+                tailcall my TempIndexObject $indices {*}$args
+            }
+            & { # Copy range to temp, run RefEval in caller, set range, return.
+                if {[llength $args] != 2} {
+                    return -code error "wrong # args: should be\
+                            \"[self] @ $index & refName body\""
+                }
+                my CopyIndexObject $indices temp
+                set result [uplevel 1 [list $temp & {*}$args]]
+                my SetIndexValue $indices [$temp]
+                return $result
+            }
+            default {
+                return -code error "unknown operator \"$op\":\
+                        want =, :=, -->, or |"
+            }
+        }
+    }
+    export @
+
+    # my GetShape --
+    #
+    # Get the shape of the ND-list.
+    
+    method GetShape {} {
+        ::ndlist::GetShape $myRank $myValue
+    }
+
+    # my ValidateValue $value --
+    #
+    # Validate the value of an ND-list.
+    #
+    # Arguments:
+    # value         Value to validate.
+    
+    method ValidateValue {value} {
+        my ValidateNDValue $myRank $value
+    }
+    
+    # my ValidateNDValue $rank $value --
+    #
+    # Called by ValidateValue. Adds input "rank".
+    #
+    # Arguments:
+    # rank          Rank to validate.
+    
+    method ValidateNDValue {rank value} {
+        ::ndlist::ndlist $rank $value
+    }
+    
+    # my GetIndexValue --
+    #
+    # Index into an ND-list object.
+    #
+    # Arguments:
+    # indices       Index inputs
+    
+    method GetIndexValue {indices} {
+        # Interpret input
+        if {[llength $indices] != $myRank} {
+            return -code error "wrong # of indices: want $myRank"
+        }
+        ::ndlist::nget $myValue {*}$indices
+    }
+    
+    # my SetIndexValue $indices $value --
+    #
+    # Set a range of an ND-list object.
+    #
+    # Arguments:
+    # indices       Index inputs
+    # value         Value to assign with
+    
+    method SetIndexValue {indices value} {
+        # Interpret input
+        if {[llength $indices] != $myRank} {
+            return -code error "wrong # of indices: want $myRank"
+        }
+        # Validate input, and call nset.
+        set rank [my GetIndexRank $indices]
+        set value [my ValidateNDValue $rank $value]
+        ::ndlist::nset myValue {*}$indices $value
+        return [self]
+    }
+    
+    # my GetIndexRank $indices --
+    #
+    # Get rank of index input
+    #
+    # Arguments:
+    # indices       Index inputs
+    
+    method GetIndexRank {indices} {
+        set myShape [my shape]
+        set indexArgs [::ndlist::ParseIndices $myShape {*}$indices]
+        set indexShape [::ndlist::GetIndexShape $myShape {*}$indexArgs]
+        return [llength $indexShape]
+    }
+    
+    # my CopyIndexObject $indices $varName --
+    #
+    # Copy range to new variable
+    #
+    # Arguments:
+    # indices       Index inputs
+    # varName       Variable to tie to object.
+    
+    method CopyIndexObject {indices varName} {
+        # Interpret input
+        if {[llength $indices] != $myRank} {
+            return -code error "wrong # of indices: want $myRank"
+        }
+        # Get new rank and value.
+        set rank [my GetIndexRank $indices]
+        set value [my GetIndexValue $indices]
+        tailcall ::ndlist::NDValueContainer new $rank $varName $value $myType
+    }
+    
+    # my TempIndexObject $indices $method $arg ... --
+    #
+    # Copy range to new variable
+    #
+    # Arguments:
+    # indices       Index inputs
+    # method        Method to invoke on temporary object.
+    # arg ...       Additional arguments for method
+    
+    method TempIndexObject {indices method args} {
+        # Interpret input
+        if {[llength $indices] != $myRank} {
+            return -code error "wrong # of indices: want $myRank"
+        }
+        my CopyIndexObject $indices temp
+        set result [uplevel 1 [list $temp $method {*}$args]]
+        if {$result eq $temp} {
+            set result [$temp]
+        }
+        return $result
+    }
+}
+
+# ndnew --
+#
+# Declare a new value container object, using the NDValueContainer superclass.
+# Same as "new" from vutil package.
+#
+# Syntax:
+# ndnew $nd <$type> $refName <= $value>
+# 
+# Arguments:
+# type          Type for validation. See ::vutil::type namespace.
+# refName       Reference variable for object.
+# value         Value to assign to variable. Optional.
+
+proc ::ndlist::ndnew {nd args} {
+    set ndims [GetNDims $nd]
+    # Check arity. Must be 1,2,3, or 4 args.
+    if {[llength $args] == 0 || [llength $args] > 4} {
+        return -code error "wrong # args: should be\
+                \"ndnew nd ?type? varName ?= value?\""
+    }
+    # Assignment case
+    if {[llength $args] % 2} {
+        set type ""
+        set args [lassign $args refName]
+    } else {
+        set args [lassign $args type refName]
+    }
+    # Assign default values.
+    if {[llength $args] == 0} {
+        if {$ndims == 0} {
+            # Scalar case
+            set value [::vutil::type::$type]; # Get default for type
+        } else {
+            set value ""
+        }
+    } elseif {[lindex $args 0] eq "="} {
+        set value [lindex $args end]
+    } else {
+        return -code error "bad syntax: want \"ndnew nd ?type? refName = value\""
+    }
+    # Call ValueContainer constructor
+    tailcall NDValueContainer new $nd $refName $value $type
+}
+
+# RefSub --
+#
+# Search for pattern $@ref(index)
+# Returns body substituted with array references, and list of refs.
+# Reference list has two parts: name and index.
+# name:     Variable name that contains object. Blank for "self".
+# index:    Index for ND var. Blank for all.
+
+proc ::ndlist::RefSub {body} {
+    set exp {\$@(?!@)((::+|\w+)+)?(\(([^\(]*)\))?}
+    set refMap ""
+    foreach {match name ~ ~ index} [regexp -all -inline $exp $body] {
+        dict set refMap [list $name $index] ""
+    }
+    set body [regsub -all $exp $body {$::ndlist::ref(\1.\4)}]
+    # Handle recursion for escaped object references, and trim
+    set body [string map {$@@ $@} $body]
+    set refNames [concat {*}[dict keys $refMap]]
+    return [list $body $refNames]
+}
+
+# neval --
+#
+# Map over ND objects. 
+# References must have matching rank or be scalar.
+#
+# Syntax:
+# neval $body <$self>
+#
+# Arguments:
+# body          Tcl script, with $@ref notation for object references.
+# self          Object to refer to with $@
+
+# Example:
+# ndnew 1D x = {{hello world} {foo bar}}
+# neval {string toupper $@x}; # {{HELLO WORLD} {FOO BAR}}
+
+proc ::ndlist::neval {body {self ""} {rankVar ""}} {
+    variable ref; # Reference array
+    # Get references
+    lassign [RefSub $body] body refNames 
+    # Get values and shapes from object references
+    set shapes ""
+    set values "" 
+    foreach {refName index} $refNames {
+        # Get object for reference
+        if {$refName eq ""} {
+            # Self-reference
+            if {$self eq ""} {
+                return -code error "no self reference object provided"
+            }
+            set object $self
+        } else {
+            # Variable reference
+            upvar 1 $refName refVar
+            if {![info exists refVar]} {
+                return -code error "\"$refName\" does not exist"
+            }
+            if {[array exists refVar]} {
+                return -code error "\"$refName\" is an array"
+            }
+            set object $refVar
+        }
+        # Check that the reference is pointing to a valid object.
+        if {![info object isa object $object]} {
+            return -code error "\"$object\" is not an object"
+        }
+        if {![info object isa typeof $object ::ndlist::NDValueContainer]} {
+            return -code error "\"$object\" is not an ND object"
+        }
+        # Index if needed
+        if {$index ne ""} {
+            $object @ $index --> object
+        }
+        # Get object rank and value for mapping.
+        lappend refRanks [$object ndims]
+        lappend refValues [$object value]
+    }
+    # Get rank of mapping
+    if {$rankVar ne ""} {
+        upvar 1 $rankVar rank
+    }
+    set rank 0
+    foreach refRank $refRanks {
+        # Skip scalars
+        if {$refRank == 0} {
+            continue
+        }
+        # Check for mismatch
+        if {$rank == 0} {
+            set rank $refRank
+        } elseif {$rank != $refRank} {
+            return -code error "mismatched reference ranks"
+        }
+    }
+    # Save old reference mapping, and initialize.
+    set oldRefs [array get ref]
+    array unset ref
+    # Assign scalars and build map list
+    set varMap ""; # varName value ...
+    foreach refValue $refValues refRank $refRanks {refName index} $refNames {
+        if {$refRank == 0} {
+            # Scalar. Set value directly.
+            set ::ndlist::ref($refName.$index) $refValue
+        } else {
+            # Not a scalar (rank > 0)
+            lappend varMap ::ndlist::ref($refName.$index) $refValue
+        }
+    }
+    # Try to evaluate user-input
+    try {
+        if {[llength $varMap] == 0} {
+            uplevel 1 $body
+        } else {
+            uplevel 1 [list ::ndlist::nmap $rank {*}$varMap $body]
+        }
+    } finally {
+        # Reset refs (even if mapping failed)
+        array unset ref
+        array set ref $oldRefs
+    }
+}
+
+# nexpr --
+#
+# Version of neval, but for math.
+#
+# Syntax:
+# nexpr $expr <$rank>
+#
+# Arguments:
+# expr          Math expression, with $@ref notation for object references.
+# rank          Target rank. Default "" for auto.
+
+# Example:
+# ndnew 1D double x = {1 2 3}
+# ndnew 0D double y = 5
+# nexpr {$@x + $@y}; # {6.0 7.0 8.0}
+
+proc ::ndlist::nexpr {expr {self ""} {rankVar ""}} {
+    tailcall neval [list expr $expr] $self $rankVar
+}
