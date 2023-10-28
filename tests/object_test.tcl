@@ -1,7 +1,36 @@
 # Tests for object-oriented version vutil new.
+tin import flytrap 
+
+ndnew 4D double x = [nrand 5 5 5 5]
+
+pause
+
+$x @ 2*,4*,0:2:end,end-1*
+$x @ 2*,4*,0:2:end,end-1* | := {$@ * 5}
+$x @ 2*,4*,0:2:end,end-1* & value {lmap val $value {puts $val}}
+
+ndnew 4D double x = {{1 2 3} {4 5 6}}
+puts [$x shape]
+ndnew 4D double y = {{{{1 2} {1 2}}}}
+puts [$y shape]
+puts [nexpr {$@x * $@y}]
+
+foreach n {10 100 500} {
+puts $n
+ndnew 2D double x = [nrand $n $n]
+set t1 [time {$x | := {$@ * 2}} 10]
+set x [$x]
+set t2 [time {nmap 2D xi $x {expr {$xi * 2}}} 10]
+puts $t1
+puts $t2
+puts [expr {[lindex $t1 0] / [lindex $t2 0]}]
+}
+pause
+
+
 
 ndnew 2D double x = {1 2 3}
-tin import flytrap 
+
 $x := {$@ + 10}
 
 ndnew 2D int i = [ones 3 3]

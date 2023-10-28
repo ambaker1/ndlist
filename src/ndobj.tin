@@ -181,28 +181,6 @@ proc ::ndlist::ValidateRefName {refName} {
     method GetShape {} {
         ::ndlist::GetShape $myRank $myValue
     }
-
-    # my ValidateValue $value --
-    #
-    # Validate the value of an ND-list.
-    #
-    # Arguments:
-    # value         Value to validate.
-    
-    method ValidateValue {value} {
-        my ValidateNDValue $myRank $value
-    }
-    
-    # my ValidateNDValue $rank $value --
-    #
-    # Called by ValidateValue. Adds input "rank".
-    #
-    # Arguments:
-    # rank          Rank to validate.
-    
-    method ValidateNDValue {rank value} {
-        ::ndlist::ndlist $rank $value
-    }
     
     # my GetIndexValue --
     #
@@ -381,8 +359,8 @@ proc ::ndlist::neval {body {self ""} {rankVar ""}} {
     # Get references
     lassign [RefSub $body] body refNames 
     # Get values and shapes from object references
-    set shapes ""
-    set values "" 
+    set refRanks ""
+    set refValues "" 
     foreach {refName index} $refNames {
         # Get object for reference
         if {$refName eq ""} {
