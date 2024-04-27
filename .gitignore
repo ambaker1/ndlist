@@ -6,3 +6,7 @@ doc/**
 !doc/template/
 !doc/template/*.tex
 !doc/template/*.tin
+!doc/section/
+!doc/section/*.tex
+!doc/figures
+!doc/figures/*.pdf
