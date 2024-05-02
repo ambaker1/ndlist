@@ -14,40 +14,7 @@ All other ND-list commands assume a valid ND-list.
 \$value & List to interpret as an ndlist
 \end{args}
 
-ND-lists can also be created with the command \cmdlink{narray}, which creates a value container object.
-This is a TclOO class that uses the superclass ::vutil::ValueContainer, from the package \textcolor{blue}{\href{https://github.com/ambaker1/vutil}{vutil}}.
-Operator methods are explained in depth in the documentation of \textit{vutil}.
 
-\begin{syntax}
-\command{narray} new \$nd \$varName <\$value>
-\end{syntax}
-\begin{syntax}
-\command{narray} create \$name \$nd \$varName <\$value>
-\end{syntax}
-\begin{args}
-\$nd & Rank of ND-list (e.g. 2D, 2d, or 2 for a matrix). \\
-\$varName & Variable to store object name for access and garbage collection. \\
-\$value & Value to store in object. Default blank. \\
-\$name & Name of object if using ``create'' method.
-\end{args}
-
-The dimensionality of an ND-list object can be accessed through the method \methodlink[0]{narray}{ndims}.
-\begin{syntax}
-\method{narray}{ndims}
-\end{syntax}
-
-\begin{example}{Creating and accessing an ND-list object}
-\begin{lstlisting}
-[narray new 2D x] = {{1 2 3} {4 5 6}}
-puts [$x ndims]
-puts [$x]
-\end{lstlisting}
-\tcblower
-\begin{lstlisting}
-2
-{1 2 3} {4 5 6}
-\end{lstlisting}
-\end{example}
 \clearpage
 
 
@@ -377,8 +344,7 @@ puts $a
 \end{lstlisting}
 \end{example}
 
-\subsection{Object Indexing}
-ND-list objects
+
 
 \clearpage
 \subsection{Removal}
@@ -724,6 +690,8 @@ puts $indices
 {1 1} {1 2} {2 0} {2 1} {2 2}
 \end{lstlisting}
 \end{example}
+
+
 
 
 \clearpage
