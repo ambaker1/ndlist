@@ -1,7 +1,8 @@
 # Tests for object-oriented version vutil new.
+
 tin import flytrap 
 
-ndnew 4D double x = [nrand 5 5 5 5]
+narray new 4D x = [nrand 5 5 5 5]
 
 pause
 

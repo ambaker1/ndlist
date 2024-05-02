@@ -1,0 +1,252 @@
+\section{2-Dimensional Lists (Matrices)}
+A matrix is a two-dimensional list, or a list of row vectors.
+This is consistent with the format used in the Tcllib math::linearalgebra package.
+See the example below for how matrices are interpreted.
+\begin{equation*}\label{eq:matrix_AB}
+A=\begin{bmatrix}
+2 & 5 & 1 & 3 \\
+4 & 1 & 7 & 9 \\
+6 & 8 & 3 & 2 \\
+7 & 8 & 1 & 4
+\end{bmatrix},\quad
+B=\begin{bmatrix}
+9 \\ 3 \\ 0 \\ -3
+\end{bmatrix},\quad
+C = \begin{bmatrix}
+3 & 7 & -5 & -2
+\end{bmatrix}
+\end{equation*}
+\begin{example}{Matrices and vectors}
+\begin{lstlisting}
+# Define matrices, column vectors, and row vectors
+set A {{2 5 1 3} {4 1 7 9} {6 8 3 2} {7 8 1 4}}
+set B {9 3 0 -3}
+set C {{3 7 -5 -2}}
+# Print out matrices (join with newline to print out each row)
+puts "A ="
+puts [join $A \n]
+puts "B ="
+puts [join $B \n]
+puts "C ="
+puts [join $C \n]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+A =
+2 5 1 3
+4 1 7 9
+6 8 3 2
+7 8 1 4
+B =
+9
+3
+0
+-3
+C =
+3 7 -5 -2
+\end{lstlisting}
+\end{example}
+\clearpage
+\subsection{Generating Matrices}
+The commands \cmdlink{zeros}, \cmdlink{ones}, and \cmdlink{eye} generate common matrices.
+\begin{syntax}
+\command{zeros} \$n \$m
+\end{syntax}
+\begin{syntax}
+\command{ones} \$n \$m
+\end{syntax}
+\begin{args}
+\$n & Number of rows \\
+\$m & Number of columns
+\end{args}
+The command \cmdlink{eye} generates an identity matrix of a specified size.
+\begin{syntax}
+\command{eye} \$n
+\end{syntax}
+\begin{args}
+\$n  & Size of identity matrix 
+\end{args}
+
+\begin{example}{Generating standard matrices}
+\begin{lstlisting}
+puts [zeros 2 3]
+puts [ones 3 2]
+puts [eye 3]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+{0 0 0} {0 0 0}
+{1 1} {1 1} {1 1}
+{1 0 0} {0 1 0} {0 0 1}
+\end{lstlisting}
+\end{example}
+\clearpage
+
+
+\subsection{Combining Matrices}
+The commands \cmdlink{stack} and \cmdlink{augment} can be used to combine matrices, row or column-wise.
+\begin{syntax}
+\command{stack} \$mat1 \$mat2 ...
+\end{syntax}
+\begin{syntax}
+\command{augment} \$mat1 \$mat2 ...
+\end{syntax}
+\begin{args}
+\$mat1 \$mat2 ... & Arbitrary number of matrices to stack/augment (number of columns/rows must match)
+\end{args}
+The command \cmdlink{block} combines a matrix of matrices into a block matrix.
+\begin{syntax}
+\command{block} \$matrices
+\end{syntax}
+\begin{args}
+\$matrices & Matrix of matrices.
+\end{args}
+\begin{example}{Combining matrices}
+\begin{lstlisting}
+set A [stack {{1 2}} {{3 4}}]
+set B [augment {1 2} {3 4}]
+set C [block [list [list $A $B] [list $B $A]]]
+puts $A
+puts $B
+puts [join $C \n]; # prints each row on a new line
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+{1 2} {3 4}
+{1 3} {2 4}
+1 2 1 3
+3 4 2 4
+1 3 1 2
+2 4 3 4
+\end{lstlisting}
+\end{example}
+\clearpage
+\subsection{Matrix Transpose}
+The command \cmdlink{transpose} simply swaps the rows and columns of a matrix. 
+\begin{syntax}
+\command{transpose} \$A
+\end{syntax}
+\begin{args}
+\$A & Matrix to transpose, nxm.
+\end{args}
+Returns an mxn matrix.
+\begin{example}{Transposing a matrix}
+\begin{lstlisting}
+puts [transpose {{1 2} {3 4}}]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+{1 3} {2 4}
+\end{lstlisting}
+\end{example}
+\subsection{Matrix Multiplication}
+The command \cmdlink{matmul} performs matrix multiplication for two matrices.
+Inner dimensions must match.
+\begin{syntax}
+\command{matmul} \$A \$B
+\end{syntax}
+\begin{args}
+\$A & Left matrix, nxq. \\
+\$B & Right matrix, qxm. 
+\end{args}
+Returns an nxm matrix (or the corresponding dimensions from additional matrices)
+\begin{example}{Multiplying a matrix}
+\begin{lstlisting}
+puts [matmul {{2 5 1 3} {4 1 7 9} {6 8 3 2} {7 8 1 4}} {9 3 0 -3}]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+24 12 72 75
+\end{lstlisting}
+\end{example}
+\clearpage
+\subsection{Miscellaneous Linear Algebra Routines}
+The command \cmdlink{outerprod} takes the outer product of two vectors, $\bm{a} \otimes \bm{b} = \bm{a}\bm{b}^T$.
+\begin{syntax}
+\command{outerprod} \$a \$b
+\end{syntax}
+\begin{args}
+\$a \$b & Vectors with lengths n and m. Returns a matrix, shape nxm.
+\end{args}
+
+The command \cmdlink{kronprod} takes the Kronecker product of two matrices, as shown in \eq\eqref{eq:kronprod}.
+\begin{syntax}
+\command{kronprod} \$A \$B
+\end{syntax}
+\begin{args}
+\$A \$B & Matrices, shapes nxm and pxq. Returns a matrix, shape (np)x(mq).
+\end{args}
+\begin{equation}\label{eq:kronprod}
+\bm{A} \otimes \bm{B} = \left[\begin{matrix}
+a_{11}\bm{B} & ... & a_{1n}\bm{B} \\
+\vdots & \ddots & \vdots \\
+a_{n1}\bm{B} & ... & a_{nn}\bm{B}
+\end{matrix}\right]
+\end{equation}
+\begin{example}{Outer product and Kronecker product}
+\begin{lstlisting}
+set A [eye 3]
+set B [outerprod {1 2} {3 4}]
+set C [kronprod $A $B]
+puts [join $C \n]; # prints out each row on a new line
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+3 4 0 0 0 0
+6 8 0 0 0 0
+0 0 3 4 0 0
+0 0 6 8 0 0
+0 0 0 0 3 4
+0 0 0 0 6 8
+\end{lstlisting}
+\end{example}
+For more advanced matrix algebra routines, check out the Tcllib math::linearalgebra package.
+\clearpage
+\subsection{Iteration Tools}
+The commands \cmdlink{zip} zips two lists into a list of tuples, and \cmdlink{zip3} zip three lists into a list of triples. 
+Lists must be the same length.
+\begin{syntax}
+\command{zip} \$a \$b
+\end{syntax}
+\begin{syntax}
+\command{zip3} \$a \$b \$c
+\end{syntax}
+\begin{args}
+\$a \$b \$c & Lists to zip together.
+\end{args}
+\begin{example}{Zipping and unzipping lists}
+\begin{lstlisting}
+# Zipping
+set x [zip {A B C} {1 2 3}]
+set y [zip3 {Do Re Mi} {A B C} {1 2 3}]
+puts $x
+puts $y
+# Unzipping (using transpose)
+puts [transpose $x]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+{A 1} {B 2} {C 3}
+{Do A 1} {Re B 2} {Mi C 3}
+{A B C} {1 2 3}
+\end{lstlisting}
+\end{example}
+The command \cmdlink{cartprod} computes the Cartesian product of an arbitrary number of vectors, returning a matrix where the columns correspond to the input vectors and the rows correspond to all the combinations of the vector elements.
+\begin{syntax}
+\command{cartprod} \$a \$b ...
+\end{syntax}
+\begin{args}
+\$a \$b ... & Arbitrary number of vectors to take Cartesian product of.
+\end{args}
+
+\begin{example}{Cartesian product}
+\begin{lstlisting}
+puts [cartprod {A B C} {1 2 3}]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+{A 1} {A 2} {A 3} {B 1} {B 2} {B 3} {C 1} {C 2} {C 3}
+\end{lstlisting}
+\end{example}
+
+\clearpage

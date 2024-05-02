@@ -12,7 +12,7 @@
 # Define namespace and exported commands
 namespace eval ::ndlist {
     variable ref; # Reference map for ndlists.
-    namespace export ndnew neval nexpr
+    namespace export narray neval nexpr
 }
 
 # ValidateRefName --
@@ -26,52 +26,34 @@ proc ::ndlist::ValidateRefName {refName} {
     return $refName
 }
 
-# Create NDValueContainer class.
-::oo::class create ::ndlist::NDValueContainer {
+# Create narray class.
+
+::oo::class create ::ndlist::narray {
     superclass ::vutil::ValueContainer
-    variable myValue myType myRank
+    variable myValue myRank
    
     # Constructor
-    # ::ndlist::NDValueContainer new $nd $refName <$value> <$type>
+    # ::ndlist::narray new $nd $refName <$value>
     #
     # Arguments:
     # refName       Variable for garbage collection
     # nd            Number of dimensions.
     
-    constructor {nd refName {value ""} {type ""}} {
+    constructor {nd refName {value ""}} {
         set myRank [::ndlist::GetNDims $nd]
         # Validate reference name
         ::ndlist::ValidateRefName $refName
         next $refName $value $type
     }
+    
+    # Uplevel is modified to call ::ndlist::neval, handling object references.
     method Uplevel {level body} {
         next $level [list ::ndlist::neval $body [self]]
     }
-
-    # my ValidateValue $value --
-    #
-    # Validate the value of an ND-list.
-    #
-    # Arguments:
-    # value         Value to validate.
     
-    method ValidateValue {value} {
-        my ValidateNDValue $myRank $value
-    }
-    
-    # my ValidateNDValue $rank $value --
-    #
-    # Called by ValidateValue. Adds input "rank".
-    #
-    # Arguments:
-    # rank          Rank to validate.
-    
-    method ValidateNDValue {rank value} {
-        set ndlist [::ndlist::ndlist $rank $value]
-        if {$myType eq ""} {
-            return $ndlist
-        }
-        ::ndlist::napply $myRank ::vutil::type::$myType $ndlist
+    # SetValue is modified to validate ND-list rank.
+    method SetValue {value} {
+        next [::ndlist::ndlist $myRank $value]
     }
 
     # $object ndims --
@@ -85,19 +67,34 @@ proc ::ndlist::ValidateRefName {refName} {
         my GetRank
     }
     
-    # $object shape <$axis> --
-    #
-    # Query the shape of the object.
-    #
-    # Arguments:
-    # axis          Axis to get dimension of. Default returns all.
-    
+    # Object-oriented versions of ND-list commands that require input of rank.
     method shape {{axis ""}} {
         if {$axis eq ""} {
             return [my GetShape]
         }
         ::ndlist::ValidateAxis $myRank $axis
         lindex [my GetShape] $axis
+    }
+    method size {} {
+        ::ndlist::nsize $myRank $myValue
+    }
+    method flatten {} {
+        ::ndlist::nflatten $myRank $myValue
+    }
+    method insert {index sublist {axis 0}} {
+        ::ndlist::ninsert $myRank $myValue $index $sublist $axis
+    }
+    method append {args} {
+        my & ref {::ndlist::nappend $myRank ref {*}$args}
+    }
+    method apply {command args} {
+        tailcall ::ndlist::napply $myRank $command $myValue {*}$args
+    }
+    method op {op args} {
+        ::ndlist::nop $myRank $myValue $op $args
+    }
+    method reduce {command {axis 0} args} {
+        ::ndlist::nreduce $myRank $command $myValue $axis {*}$args
     }
     
     # $object @ $index <$op $arg ...> --
@@ -212,8 +209,7 @@ proc ::ndlist::ValidateRefName {refName} {
         }
         # Validate input, and call nset.
         set rank [my GetIndexRank $indices]
-        set value [my ValidateNDValue $rank $value]
-        ::ndlist::nset myValue {*}$indices $value
+        ::ndlist::nset myValue {*}$indices [::ndlist::ndlist $rank $value]
         return [self]
     }
     
@@ -247,7 +243,7 @@ proc ::ndlist::ValidateRefName {refName} {
         # Get new rank and value.
         set rank [my GetIndexRank $indices]
         set value [my GetIndexValue $indices]
-        tailcall ::ndlist::NDValueContainer new $rank $varName $value $myType
+        tailcall ::ndlist::narray new $rank $varName $value $myType
     }
     
     # my TempIndexObject $indices $method $arg ... --
@@ -273,57 +269,13 @@ proc ::ndlist::ValidateRefName {refName} {
     }
 }
 
-# ndnew --
-#
-# Declare a new value container object, using the NDValueContainer superclass.
-# Same as "new" from vutil package.
-#
-# Syntax:
-# ndnew $nd <$type> $refName <= $value>
-# 
-# Arguments:
-# type          Type for validation. See ::vutil::type namespace.
-# refName       Reference variable for object.
-# value         Value to assign to variable. Optional.
-
-proc ::ndlist::ndnew {nd args} {
-    set ndims [GetNDims $nd]
-    # Check arity. Must be 1,2,3, or 4 args.
-    if {[llength $args] == 0 || [llength $args] > 4} {
-        return -code error "wrong # args: should be\
-                \"ndnew nd ?type? varName ?= value?\""
-    }
-    # Assignment case
-    if {[llength $args] % 2} {
-        set type ""
-        set args [lassign $args refName]
-    } else {
-        set args [lassign $args type refName]
-    }
-    # Assign default values.
-    if {[llength $args] == 0} {
-        if {$ndims == 0} {
-            # Scalar case
-            set value [::vutil::type::$type]; # Get default for type
-        } else {
-            set value ""
-        }
-    } elseif {[lindex $args 0] eq "="} {
-        set value [lindex $args end]
-    } else {
-        return -code error "bad syntax: want \"ndnew nd ?type? refName = value\""
-    }
-    # Call ValueContainer constructor
-    tailcall NDValueContainer new $nd $refName $value $type
-}
-
 # RefSub --
 #
 # Search for pattern $@ref(index)
 # Returns body substituted with array references, and list of refs.
 # Reference list has two parts: name and index.
 # name:     Variable name that contains object. Blank for "self".
-# index:    Index for ND var. Blank for all.
+# index:    Index for narray. Blank for all.
 
 proc ::ndlist::RefSub {body} {
     set exp {\$@(?!@)((::+|\w+)+)?(\(([^\(]*)\))?}
@@ -351,7 +303,7 @@ proc ::ndlist::RefSub {body} {
 # self          Object to refer to with $@
 
 # Example:
-# ndnew 1D x = {{hello world} {foo bar}}
+# narray new 1D x = {{hello world} {foo bar}}
 # neval {string toupper $@x}; # {{HELLO WORLD} {FOO BAR}}
 
 proc ::ndlist::neval {body {self ""} {rankVar ""}} {
@@ -384,7 +336,7 @@ proc ::ndlist::neval {body {self ""} {rankVar ""}} {
         if {![info object isa object $object]} {
             return -code error "\"$object\" is not an object"
         }
-        if {![info object isa typeof $object ::ndlist::NDValueContainer]} {
+        if {![info object isa typeof $object ::ndlist::narray]} {
             return -code error "\"$object\" is not an ND object"
         }
         # Index if needed
@@ -452,8 +404,8 @@ proc ::ndlist::neval {body {self ""} {rankVar ""}} {
 # rank          Target rank. Default "" for auto.
 
 # Example:
-# ndnew 1D double x = {1 2 3}
-# ndnew 0D double y = 5
+# narray new 1D x = {1.0 2.0 3.0}
+# narray new 0D y = 5.0
 # nexpr {$@x + $@y}; # {6.0 7.0 8.0}
 
 proc ::ndlist::nexpr {expr {self ""} {rankVar ""}} {
