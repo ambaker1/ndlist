@@ -64,7 +64,7 @@ puts [nget $x [find $x > 2]]
 \end{example}
 \subsection{Linear Interpolation}
 The command \cmdlink{linterp} performs linear 1D interpolation.
-Converts input to ``\cmdlink{float}''.
+Converts input to double.
 \begin{syntax}
 \command{linterp} \$x \$xList \$yList
 \end{syntax}
@@ -87,7 +87,7 @@ puts [linterp 8.2 {0 10 20} {2 -4 5}]
 \clearpage
 \subsection{Vector Generation}
 The command \cmdlink{linspace} can be used to generate a vector of specified length and equal spacing between two specified values. 
-Converts input to ``\cmdlink{float}''
+Converts input to double.
 \begin{syntax}
 \command{linspace} \$n \$start \$stop 
 \end{syntax}
@@ -106,7 +106,7 @@ puts [linspace 5 0 1]
 \end{lstlisting}
 \end{example}
 The command \cmdlink{linsteps} generates intermediate values given an increment size and a sequence of targets.
-Converts input to ``\cmdlink{float}''.
+Converts input to double.
 \begin{syntax}
 \command{linsteps} \$step \$x1 \$x2 ...
 \end{syntax}
@@ -127,18 +127,18 @@ puts [linsteps 0.25 0 1 0]
 \clearpage
 \subsection{Functional Mapping}
 The command \cmdlink{lapply} simply applies a command over each element of a list, and returns the result.
-Basic math operators can be mapped over a list with the command \cmdlink{lop}.
+The command \cmdlink{lapply2} maps element-wise over two equal length lists.
 \begin{syntax}
 \command{lapply} \$command \$list \$arg ...
 \end{syntax}
 \begin{syntax}
-\command{lop} \$list \$op \$arg... 
+\command{lapply2} \$command \$list1 \$list2 \$arg ...
 \end{syntax}
 \begin{args}
 \$list & List to map over. \\
+\$list1 \$list2 & Lists to map over, element-wise. \\
 \$command & Command prefix to map with. \\
-\$op & Math operator (see ::tcl::mathop documentation). \\
-\$arg ... & Additional arguments to append to command after each list element. 
+\$arg ... & Additional arguments to append to command after list elements. 
 \end{args}
 
 \begin{example}{Applying a math function to a list}
@@ -153,24 +153,6 @@ puts [lapply abs {-5 1 2 -2}]
 \end{lstlisting}
 \end{example}
 
-\clearpage
-\subsection{Mapping Over Two Lists}
-The commands \cmdlink{lapply} and \cmdlink{lop} only map over one list.
-The commands \cmdlink{lapply2} and \cmdlink{lop2} allow you to map, element-wise, over two lists.
-List lengths must be equal. 
-\begin{syntax}
-\command{lapply2} \$command \$list1 \$list2 \$arg ...
-\end{syntax}
-\begin{syntax}
-\command{lop2} \$list1 \$op \$list2 \$arg... 
-\end{syntax}
-\begin{args}
-\$list1 \$list2 & Lists to map over, element-wise. \\
-\$command & Command prefix to map with. \\
-\$op & Math operator (see ::tcl::mathop documentation). \\
-\$arg ... & Additional arguments to append to command after list elements. \\
-\end{args}
-
 \begin{example}{Mapping over two lists}
 \begin{lstlisting}
 lapply puts [lapply2 {format "%s %s"} {hello goodbye} {world moon}]
@@ -179,16 +161,6 @@ lapply puts [lapply2 {format "%s %s"} {hello goodbye} {world moon}]
 \begin{lstlisting}
 hello world
 goodbye moon
-\end{lstlisting}
-\end{example}
-
-\begin{example}{Adding two lists together}
-\begin{lstlisting}
-puts [lop2 {1 2 3} + {2 3 2}]
-\end{lstlisting}
-\tcblower
-\begin{lstlisting}
-3 5 5
 \end{lstlisting}
 \end{example}
 
@@ -256,6 +228,14 @@ The cross product of two vectors of length 3 can be computed with \cmdlink{cross
 \$a & First vector. \\
 \$b & Second vector.
 \end{args}
+The norm, or magnitude, of a vector can be computed with \cmdlink{norm}.
+\begin{syntax}
+\command{norm} \$a <\$p>
+\end{syntax}
+\begin{args}
+\$a & Vector to compute norm of. \\
+\$p & Norm type. 1 is sum of absolute values, 2 is euclidean distance, and Inf is absolute maximum value. Default 2.
+\end{args}
 \begin{example}{Dot and cross product}
 \begin{lstlisting}
 set x {1 2 3}
@@ -269,25 +249,7 @@ puts [cross $x $y]
 24 -12 0
 \end{lstlisting}
 \end{example}
-The norm, or magnitude, of a vector can be computed with \cmdlink{norm}.
-\begin{syntax}
-\command{norm} \$a <\$p>
-\end{syntax}
-\begin{args}
-\$a & Vector to compute norm of. \\
-\$p & Norm type. 1 is sum of absolute values, 2 is euclidean distance, and Inf is absolute maximum value. Default 2.
-\end{args}
-\begin{example}{Normalizing a vector}
-\begin{lstlisting}
-set x {3 4}
-set x [lop $x / [norm $x]]
-puts $x
-\end{lstlisting}
-\tcblower
-\begin{lstlisting}
-0.6 0.8
-\end{lstlisting}
-\end{example}
+
 For more advanced vector algebra routines, check out the Tcllib math::linearalgebra package.
 
 \clearpage
