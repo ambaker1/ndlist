@@ -1194,51 +1194,6 @@ proc ::ndlist::RecApply2 {level ndims command ndlist1 ndlist2 args} {
     }
 }
 
-# nop --
-#
-# Simple math operations on ndlists.
-#
-# Syntax:
-# nop $nd $ndlist $op $arg ...
-#
-# Arguments:
-# nd            Number of dimensions (e.g. 1D, 2D, etc.)
-# ndlist        ND-list to iterate over
-# op            Valid mathop (see tcl::mathop documentation)
-# arg ...       Values to perform mathop with 
-#
-# Matrix examples:
-# nop 2D $matrix /; # Performs reciprocal
-# nop 2D $matrix -; # Negates values
-# nop 2D $matrix !; # Boolean negation
-# nop 2D $matrix + 5 1; # Adds 5 and 1 to each matrix element
-# nop 2D $matrix ** 2; # Squares entire matrix
-# nop 2D $matrix in {1 2 3}; # Returns boolean matrix, if values are in a list
-
-proc ::ndlist::nop {nd ndlist op args} {
-    napply [GetNDims $nd] ::tcl::mathop::$op $ndlist {*}$args
-}
-
-# nop2 --
-#
-# Simple math operations over two ND-lists (element-wise)
-#
-# Syntax:
-# nop2 $nd $ndlist1 $op $ndlist2 $arg ...
-#
-# Arguments:
-# nd                Number of dimensions (e.g. 1D, 2D, etc.)
-# ndlist1 ndlist2   ND-lists to iterate over
-# op                Valid mathop (see tcl::mathop documentation)
-# arg ...           Additional values to perform mathop with 
-#
-# Matrix examples:
-# nop2 2D $A + $B
-
-proc ::ndlist::nop2 {nd ndlist1 op ndlist2 args} {
-    napply2 [GetNDims $nd] ::tcl::mathop::$op $ndlist1 $ndlist2 {*}$args
-}
-
 # nreduce --
 #
 # Use a reducing function to process an ND-list along an axis.
