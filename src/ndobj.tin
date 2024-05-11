@@ -81,6 +81,9 @@ proc ::ndlist::ValidateRefName {refName} {
     method flatten {} {
         ::ndlist::nflatten $myRank $myValue
     }
+    method remove {index {axis 0}} {
+        ::ndlist::nremove $myRank $myValue $index $axis
+    }
     method insert {index sublist {axis 0}} {
         ::ndlist::ninsert $myRank $myValue $index $sublist $axis
     }
@@ -90,19 +93,16 @@ proc ::ndlist::ValidateRefName {refName} {
     method apply {command args} {
         tailcall ::ndlist::napply $myRank $command $myValue {*}$args
     }
-    method op {op args} {
-        ::ndlist::nop $myRank $myValue $op $args
-    }
     method reduce {command {axis 0} args} {
         ::ndlist::nreduce $myRank $command $myValue $axis {*}$args
     }
     
-    # $object @ $index <$op $arg ...> --
+    # $object @ $i ... <$op $arg ...> --
     #
     # Index into the object
     #
     # Arguments:
-    # index         Index arguments separated by commas, # must match rank.
+    # i ...         Index arguments. Must match rank.
     # op arg ...    Index operators, explained below:
     #   = value             Value assignment.
     #   := expr             Expression assignment.
@@ -110,12 +110,12 @@ proc ::ndlist::ValidateRefName {refName} {
     #   | method arg ...    Temp object evaluation.
     #   & refName body      Evaluate body with range assigned to ref var.
     
-    method @ {index args} {
+    method @ {args} {
         # Get indices from input
-        set indices [split $index ,]
-        if {[llength $indices] != $myRank} {
+        if {[llength $args] < $myRank} {
             return -code error "wrong # of indices: want $myRank"
         }
+        set indices [lrange $args 0 $myRank]
         # Check arity
         if {[llength $args] == 0} {
             tailcall my GetIndexValue $indices
@@ -126,14 +126,14 @@ proc ::ndlist::ValidateRefName {refName} {
             = { # Assignment to range.
                 if {[llength $args] != 1} {
                     return -code error "wrong # args: should be\
-                            \"[self] @ $index = value\""
+                            \"[self] @ i ... = value\""
                 }
                 tailcall my SetIndexValue $indices [lindex $args 0]
             }
             := { # Math evaluation. 
                 if {[llength $args] != 1} {
                     return -code error "wrong # args: should be\
-                            \"[self] @ $index := expr\""
+                            \"[self] @ i ... := expr\""
                 }
                 my CopyIndexObject $indices temp
                 uplevel 1 [list $temp := [lindex $args 0]]
@@ -142,21 +142,21 @@ proc ::ndlist::ValidateRefName {refName} {
             --> { # Copy range to new element.
                 if {[llength $args] != 1} {
                     return -code error "wrong # args: should be\
-                            \"[self] @ $index --> varName\""
+                            \"[self] @ i ... --> varName\""
                 }
                 tailcall my CopyIndexObject $indices [lindex $args 0]
             }
             | { # Copy to temp, evaluate in temp.
                 if {[llength $args] == 0} {
                     return -code error "wrong # args: should be\
-                            \"[self] @ $index | method ?arg ...?\""
+                            \"[self] @ i ... | method ?arg ...?\""
                 }
                 tailcall my TempIndexObject $indices {*}$args
             }
             & { # Copy range to temp, run RefEval in caller, set range, return.
                 if {[llength $args] != 2} {
                     return -code error "wrong # args: should be\
-                            \"[self] @ $index & refName body\""
+                            \"[self] @ i ... & refName body\""
                 }
                 my CopyIndexObject $indices temp
                 set result [uplevel 1 [list $temp & {*}$args]]
@@ -296,11 +296,12 @@ proc ::ndlist::RefSub {body} {
 # References must have matching rank or be scalar.
 #
 # Syntax:
-# neval $body <$self>
+# neval $body <$self> <$rankVar>
 #
 # Arguments:
 # body          Tcl script, with $@ref notation for object references.
-# self          Object to refer to with $@
+# self          Object to refer to with "$@". Default blank.
+# rankVar       Variable to store resulting rank in. Default blank.
 
 # Example:
 # narray new 1D x = {{hello world} {foo bar}}
@@ -341,7 +342,7 @@ proc ::ndlist::neval {body {self ""} {rankVar ""}} {
         }
         # Index if needed
         if {$index ne ""} {
-            $object @ $index --> object
+            $object @ {*}[split $index ,] --> object
         }
         # Get object rank and value for mapping.
         lappend refRanks [$object ndims]
@@ -397,11 +398,12 @@ proc ::ndlist::neval {body {self ""} {rankVar ""}} {
 # Version of neval, but for math.
 #
 # Syntax:
-# nexpr $expr <$rank>
+# nexpr $expr <$self> <$rankVar>
 #
 # Arguments:
 # expr          Math expression, with $@ref notation for object references.
-# rank          Target rank. Default "" for auto.
+# self          Object to refer to with "$@". Default blank.
+# rankVar       Variable to store resulting rank in. Default blank.
 
 # Example:
 # narray new 1D x = {1.0 2.0 3.0}
