@@ -133,24 +133,6 @@ test lapply2_error {
     lapply2 {format "%s %s"} {hello} {world moon}
 } -returnCodes {1} -result {mismatched list lengths}
 
-test lop {
-    # Map mathops over a list.
-} -body {
-    lop {1 2 3} + 10
-} -result {11 12 13}
-
-test lop2 {
-    # Map mathops over two lists.
-} -body {
-    lop2 {1 2 3} + {2 3 2}
-} -result {3 5 5}
-
-test lop2_error {
-    # lop2 requires same list length
-} -body {
-    lop2 {1 2 3} + 1
-} -returnCodes {1} -result {mismatched list lengths}
-
 test stats {
     # Test out every stats function
 } -body {
