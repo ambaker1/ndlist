@@ -105,7 +105,7 @@ proc ::ndlist::find {list args} {
                 \"find list ?op value?\""
     }
     # Perform search.
-    lsearch -exact -integer -all [lapply $list ::tcl::mathop::$op $value] 1
+    lsearch -exact -integer -all [lapply ::tcl::mathop::$op $list $value] 1
 }
 
 # List generation
