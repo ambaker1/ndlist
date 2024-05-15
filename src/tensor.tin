@@ -842,60 +842,6 @@ proc ::ndlist::ncat {nd ndlist1 ndlist2 {axis 0}} {
     ninsert $nd $ndlist1 end $ndlist2 $axis
 }
 
-# nappend --
-#
-# Append an ND-list along dimension 0.
-# For 0D, simply append (string). 
-# For 1D, simply lappend.
-# For higher dimensions, check subshapes, then call lappend.
-#
-# Syntax:
-# nappend $nd $varName $arg ...
-#
-# Arguments:
-# nd                Number of dimensions
-# varName           Variable containing ND-list.
-# arg ...           For 0D: strings to append. For 1D, list elements.
-#                   For 2D: row vectors. Etc.
-
-proc ::ndlist::nappend {nd varName args} {
-    # Get number of dimensions
-    set ndims [GetNDims $nd]
-    # Create link to ndlist, initialize if needed.
-    upvar 1 $varName ndlist
-    if {![info exists ndlist]} {
-        set ndlist ""
-    }
-    # No element case
-    if {[llength $args] == 0} {
-        return $ndlist
-    }
-    # Scalar case (call append)
-    if {$ndims == 0} {
-        return [append ndlist {*}$args]
-    } 
-    # Vector case (call lappend)
-    if {$ndims == 1} {
-        return [lappend ndlist {*}$args]
-    }
-    # Matrix and Tensor case
-    # Get subshape (shape of axes 1 to N-1)
-    set subrank [expr {$ndims - 1}]
-    if {[llength $ndlist] == 0} {
-        set subshape [GetShape $subrank [lindex $args 0]]
-    } else {
-        set subshape [GetShape $subrank [lindex $ndlist 0]]
-    }
-    # Ensure shape of each sublist is compatible with the subshape.
-    foreach sublist $args {
-        if {[GetShape $subrank $sublist] ne $subshape} {
-            return -code error "incompatible dimensions"
-        }
-    }
-    # Call lappend after checking subshapes.
-    lappend ndlist {*}$args
-}
-
 # NDLIST AXIS MANIPULATION
 ################################################################################
 
