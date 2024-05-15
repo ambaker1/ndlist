@@ -392,7 +392,7 @@ test nset_I_3D {
     set I
 } -result {{{1 0 0} {0 0 0} {0 0 0}} {{0 0 0} {0 1 0} {0 0 0}} {{0 0 0} {0 0 0} {0 0 1}}}
 
-# ninsert/nstack
+# ninsert/ncat
 ################################################################################
 
 # ninsert
@@ -442,42 +442,6 @@ test ncat {
     assert [ninsert 2D {1 2 3} end {4 5 6} 1] eq [ncat 2D {1 2 3} {4 5 6} 1]
     assert [ninsert 3D $x end $y 2] eq [ncat 3D $x $y 2]
 } -result {}
-
-test nappend0D {
-    # nappend 0D is "append"
-} -body {
-    set a {hello}
-    nappend 0D a { world}
-} -result {hello world}
-
-test nappend1D {
-    # nappend 1D is "lappend"
-} -body {
-    set a {hello}
-    nappend 1D a {world}
-} -result {hello world}
-
-test nappend2D {
-    # Append row vectors
-} -body {
-    set a {{1 2 3} {4 5 6}}
-    nappend 2D a {7 8 9} {10 11 12}
-} -result {{1 2 3} {4 5 6} {7 8 9} {10 11 12}}
-
-test nappend2D_error {
-    # Sublists must match dimension with source ndlist.
-} -body {
-    set a {{1 2 3} {4 5 6}}
-    nappend 2D a {foo bar}
-} -returnCodes 1 -result {incompatible dimensions}
-
-test nappend3D {
-    # Append matrices
-} -body {
-    set a {{{1 2 3} {4 5 6}} {{10 20 30} {40 50 60}}}
-    nappend 2D a {{100 200 300} {400 500 600}}
-} -result {{{1 2 3} {4 5 6}} {{10 20 30} {40 50 60}} {{100 200 300} {400 500 600}}}
-
 
 # nflatten/nswapaxes
 ################################################################################
@@ -624,7 +588,7 @@ test npermute5 {
     assert $y1 eq $y2
 }
 
-# napply/nreduce/nmap/nop
+# napply/nreduce/nmap
 ################################################################################
 
 # napply
@@ -723,18 +687,6 @@ test nmap2 {
     nmap 2D x $testmat {format %.2f $x}
 } -result {{1.00 2.00 3.00} {4.00 5.00 6.00} {7.00 8.00 9.00}}
 
-test nforeach {
-    # nforeach doesn't return a value, but performs loop.
-} -body {
-    set values ""
-    assert [nforeach 2D x {{1 2 3} {4 5 6} {7 8 9}} {
-        if {$x >= 3} {
-            lappend values $x
-        }
-    }] eq ""
-    set values
-} -result {3 4 5 6 7 8 9}
-
 # nmap
 test nmap_expr {
     # using expr
@@ -797,28 +749,3 @@ test nmap_index_blank {
     assert $::ndlist::map_index eq ""
     assert $::ndlist::map_shape eq ""
 } -result {}
-
-# nop
-test nop0_multiple {
-    # 0D is just a simple mathop
-} -body {
-    nop 0D 1 + 1 1
-} -result {3}
-
-test nop1_noargs {
-    # Self-op (no additional arguments)
-} -body {
-    nop 1D {1 2 3} -
-} -result {-1 -2 -3}
-
-test nop1_onearg {
-    # Add one
-} -body {
-    nop 1D {1 2 3} + 1
-} -result {2 3 4}
-
-test nop2 {
-    # Test for higher dimensions
-} -body {
-    nop 2D {{1 2 3} {4 5 6}} > 2
-} -result {{0 0 1} {1 1 1}}
