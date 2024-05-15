@@ -43,7 +43,7 @@ proc ::ndlist::ValidateRefName {refName} {
         set myRank [::ndlist::GetNDims $nd]
         # Validate reference name
         ::ndlist::ValidateRefName $refName
-        next $refName $value $type
+        next $refName $value
     }
     
     # Uplevel is modified to call ::ndlist::neval, handling object references.
@@ -56,18 +56,25 @@ proc ::ndlist::ValidateRefName {refName} {
         next [::ndlist::ndlist $myRank $value]
     }
 
-    # $object ndims --
+    # $object rank --
     #
     # Query the number of dimensions of the object. Same as rank.
     
     method GetRank {} {
         return $myRank
     }
-    method ndims {} {
+    method rank {} {
         my GetRank
     }
     
     # Object-oriented versions of ND-list commands that require input of rank.
+    
+    # $object shape <$axis> --
+    #
+    # Get dimensions of object
+    #
+    # axis      Axis to get dimension along. Default blank for all.
+    
     method shape {{axis ""}} {
         if {$axis eq ""} {
             return [my GetShape]
@@ -77,19 +84,15 @@ proc ::ndlist::ValidateRefName {refName} {
     }
     method size {} {
         ::ndlist::nsize $myRank $myValue
-    }
-    method flatten {} {
-        ::ndlist::nflatten $myRank $myValue
-    }
+    }    
+    # Remove and insert modify and return object
     method remove {index {axis 0}} {
-        ::ndlist::nremove $myRank $myValue $index $axis
+        my SetValue [::ndlist::nremove $myRank $myValue $index $axis]
     }
     method insert {index sublist {axis 0}} {
-        ::ndlist::ninsert $myRank $myValue $index $sublist $axis
+        my SetValue [::ndlist::ninsert $myRank $myValue $index $sublist $axis]
     }
-    method append {args} {
-        my & ref {::ndlist::nappend $myRank ref {*}$args}
-    }
+    # Apply and reduce return values
     method apply {command args} {
         tailcall ::ndlist::napply $myRank $command $myValue {*}$args
     }
@@ -115,7 +118,8 @@ proc ::ndlist::ValidateRefName {refName} {
         if {[llength $args] < $myRank} {
             return -code error "wrong # of indices: want $myRank"
         }
-        set indices [lrange $args 0 $myRank]
+        set indices [lrange $args 0 $myRank-1]
+        set args [lrange $args $myRank end]
         # Check arity
         if {[llength $args] == 0} {
             tailcall my GetIndexValue $indices
@@ -160,6 +164,10 @@ proc ::ndlist::ValidateRefName {refName} {
                 }
                 my CopyIndexObject $indices temp
                 set result [uplevel 1 [list $temp & {*}$args]]
+                # If variable is deleted, throw error.
+                if {[info commands $temp] eq ""} {
+                    return -code error "cannot unset reference to range"
+                }
                 my SetIndexValue $indices [$temp]
                 return $result
             }
@@ -243,7 +251,7 @@ proc ::ndlist::ValidateRefName {refName} {
         # Get new rank and value.
         set rank [my GetIndexRank $indices]
         set value [my GetIndexValue $indices]
-        tailcall ::ndlist::narray new $rank $varName $value $myType
+        tailcall [self class] new $rank $varName $value
     }
     
     # my TempIndexObject $indices $method $arg ... --
