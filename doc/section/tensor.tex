@@ -14,162 +14,19 @@ All other ND-list commands assume a valid ND-list.
 \$nd & Rank of ND-list (e.g. 2D, 2d, or 2 for a matrix).\\
 \$value & List to interpret as an ndlist
 \end{args}
-
-ND-lists can be stored in \cmdlink{narray} objects, which enforce dimensionality.
-\begin{syntax}
-\command{narray} new \$nd \$varName <\$value>
-\end{syntax}
-\begin{syntax}
-\command{narray} create \$name \$nd \$varName <\$value>
-\end{syntax}
-\begin{args}
-\$nd & Rank of ND-list (e.g. 2D, 2d, or 2 for a matrix). \\
-\$varName & Variable to store object name for access and garbage collection. \\
-\$value & Value to store in object. Default blank. \\
-\$name & Name of object if using ``create'' method.
-\end{args}
-
-The dimensionality of an ND-list object can be accessed through the method \methodlink[0]{narray}{ndims}.
-\begin{syntax}
-\method{narray}{ndims}
-\end{syntax}
-
-\clearpage
-\subsection{ND-List Object Operators}
-The class \cmdlink{narray} is based on the superclass \textit{::vutil::ValueContainer}, from the package \textcolor{blue}{\href{https://github.com/ambaker1/vutil}{vutil}}.
-Basic operator methods are explained in depth in the documentation of \textit{vutil}, and are documented here for convenience.
-
-\subsubsection{Copying an Object}
-The operator ``\texttt{-{}->}'' copies the object to a new variable, and returns the name of the new object.
-\begin{syntax}
-\method{narray}{-{}->} \$varName
-\end{syntax}
-\begin{args}
-\$varName & Variable to store object name for access and garbage collection. 
-\end{args}
-
-\subsubsection{Getting and Setting}
-Calling the object by itself retrieves the ND-list value.
-The assignment operator, ``\texttt{=}'', sets the value in the object, validating that it is a proper ND-list, and returns the object.
-
-\begin{syntax}
-\method{narray}{=} \$value
-\end{syntax}
-\begin{args}
-\$value & Value to store in object. 
-\end{args}
-
-\begin{example}{Getting and setting}
-\begin{lstlisting}
-narray new 2D x
-$x = {{1 2 3} {4 5 6}}
-puts [$x]
-\end{lstlisting}
-\tcblower
-\begin{lstlisting}
-{1 2 3} {4 5 6}
-\end{lstlisting}
-\end{example}
-\clearpage
-\subsubsection{Math Assignment}
-The math assignment operator, ``\texttt{:=}'', sets the value, passing the input through the \cmdlink{nexpr} command. 
-This differs from the superclass, which passes input through the \textit{expr} command.
-Returns the object.
-
-\begin{syntax}
-\method{narray}{:=} \$expr
-\end{syntax}
-\begin{args}
-\$expr & Expression to evaluate.
-\end{args}
-
-During evaluation of the expression, the object can be accessed with the alias ``\texttt{\$.}'', and the elements of the object can be accessed with ``\texttt{\$@}''.
-\begin{syntax}
-\$. \$arg ...
-\end{syntax}
-\begin{args}
-\$arg ... & Method arguments for object.
-\end{args}
-
-\begin{example}{Simple math expression}
-\begin{lstlisting}
-narray new 1D x {1 2 3}
-$x = {$@ * 2}
-puts [$x]
-\end{lstlisting}
-\tcblower
-\begin{lstlisting}
-2 4 6
-\end{lstlisting}
-\end{example}
-
-\clearpage
-
-\subsubsection{Temporary Object Evaluation}
-The temporary object operator, ``\texttt{|}'', creates a temporary object and evaluates the method on the temporary object.
-Returns the result of the method, or the value of the temporary object.
-\begin{syntax}
-\method{narray}{|} \$method \$arg ...
-\end{syntax}
-\begin{args}
-\$method & Method to evaluate. \\
-\$arg ... & Arguments to pass to method.
-\end{args}
-
-\subsubsection{Object Value Reference Evaluation}
-The operator ``\texttt{\&}'' copies the value to a reference variable, and evaluates a body of script. 
-The changes made to the reference variable will be applied to the object, and if the variable is unset, the object will be deleted.
-Returns the result of the script.
-
-\begin{syntax}
-\method{narray}{\&} \$varName \$body
-\end{syntax}
-\begin{args}
-\$varName & Variable name to use for reference. \\
-\$body & Body to evaluate.
-\end{args}
-
-
-\begin{example}{Modification by reference}
-\begin{lstlisting}
-narray new 1D x {1 2 3}
-$x & ref {lappend ref 4}
-puts [$x]
-\end{lstlisting}
-\tcblower
-\begin{lstlisting}
-1 2 3 4
-\end{lstlisting}
-\end{example}
-
-
-\clearpage
-
 \subsection{Shape and Size}
 The commands \cmdlink{nshape} and \cmdlink{nsize} return the shape and size of an ND-list, respectively.
-For ND-list objects, the methods \methodlink[0]{narray}{shape} and \methodlink[0]{narray}{size}
 The shape is a list of the dimensions, and the size is the product of the shape.
 \begin{syntax}
 \command{nshape} \$nd \$ndlist <\$axis>
 \end{syntax}
 \begin{syntax}
-\method{narray}{shape} <\$axis> 
-\end{syntax}
-\begin{args}
-\$nd & Rank of ND-list (e.g. 2D, 2d, or 2 for a matrix).  \\
-\$ndlist & ND-list to get dimensions of. \\
-\$axis & Axis to get dimension along. Blank for all. 
-\end{args}
-
-\begin{syntax}
 \command{nsize} \$nd \$ndlist 
 \end{syntax}
-\begin{syntax}
-\method{narray}{size}
-\end{syntax}
 \begin{args}
 \$nd & Rank of ND-list (e.g. 2D, 2d, or 2 for a matrix).  \\
-\$ndlist & ND-list to get size of. \\
+\$ndlist & ND-list to get shape/size of. \\
+\$axis & Axis to get dimension along. Blank for all. 
 \end{args}
 \begin{example}{Getting shape and size of an ND-list}
 \begin{lstlisting}
@@ -304,31 +161,9 @@ puts [nextend $a world -1 2]
 \end{example}
 \clearpage
 \subsection{Flattening and Reshaping}
-The command \cmdlink{nreshape} reshapes a vector into a compatible shape. 
-Vector length must equal target ND-list size.
-\begin{syntax}
-\command{nreshape} \$vector \$n ...
-\end{syntax}
-\begin{args}
-\$vector & Vector (1D-list) to reshape. \\
-\$n ... & Shape (list of dimensions) of ND-list. 
-\end{args}
-\begin{example}{Reshape a vector to a matrix}
-\begin{lstlisting}
-puts [nreshape {1 2 3 4 5 6} 2 3]
-\end{lstlisting}
-\tcblower
-\begin{lstlisting}
-{1 2 3} {4 5 6}
-\end{lstlisting}
-\end{example}
-The inverse is \cmdlink{nflatten}, which flattens an ND-list to a vector, which can be then used with \cmdlink{nreshape}.
-The flattened value of an ND-list object can be accessed with the method \methodlink[0]{narray}{flatten}.
+The command \cmdlink{nflatten} flattens an ND-list to a vector.
 \begin{syntax}
 \command{nflatten} \$nd \$ndlist
-\end{syntax}
-\begin{syntax}
-\method{narray}{flatten}
 \end{syntax}
 \begin{args}
 \$nd & Rank of ND-list (e.g. 2D, 2d, or 2 for a matrix).  \\
@@ -345,7 +180,28 @@ puts [nreshape $x 2 2 2]
 \end{lstlisting}
 \end{example}
 
+The command \cmdlink{nreshape} reshapes a vector into specified dimensions.
+Sizes must be compatible.
+\begin{syntax}
+\command{nreshape} \$vector \$n ...
+\end{syntax}
+\begin{args}
+\$vector & Vector (1D-list) to reshape. \\
+\$n ... & Shape (list of dimensions) of ND-list. 
+\end{args}
+\begin{example}{Reshape a vector to a matrix}
+\begin{lstlisting}
+puts [nreshape {1 2 3 4 5 6} 2 3]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+{1 2 3} {4 5 6}
+\end{lstlisting}
+\end{example}
+
+
 \clearpage
+
 \subsection{Index Notation}
 This package provides generalized N-dimensional list access/modification commands, using an index notation parsed by the command \cmdlink{::ndlist::ParseIndex}, which returns the index type and an index list for the type.
 \begin{syntax}
@@ -388,8 +244,6 @@ L {0 5 8}
 S 9
 \end{lstlisting}
 \end{example}
-
-
 \clearpage
 \subsection{Access}
 Portions of an ND-list can be accessed with the command \cmdlink{nget}, using the index parser \cmdlink{::ndlist::ParseIndex} for each dimension being indexed.
@@ -397,14 +251,9 @@ Note that unlike the Tcl \textit{lindex} and \textit{lrange} commands, \cmdlink{
 \begin{syntax}
 \command{nget} \$ndlist \$i ...
 \end{syntax}
-\begin{syntax}
-\method{narray}{@} \$index
-\end{syntax}
 \begin{args}
 \$ndlist & ND-list value. \\
 \$i ... & Index inputs, parsed with \cmdlink{::ndlist::ParseIndex}. 
-The number of index arguments determines the interpreted dimensions. \\
-\$index & Index inputs joined with commas. Number of indices must match the object's rank.
 \end{args}
 \begin{example}{ND-list access}
 \begin{lstlisting}
@@ -437,15 +286,10 @@ Otherwise, the replacement ND-list must be expandable to the target index dimens
 \begin{syntax}
 \command{nreplace} \$ndlist \$i ... \$sublist
 \end{syntax}
-\begin{syntax}
-\method{narray}{@} \$index = \$sublist
-\end{syntax}
 \begin{args}
 \$varName & Variable that contains an ND-list. \\
 \$ndlist & ND-list to modify. \\
-\$i ... & Index inputs, parsed with \cmdlink{::ndlist::ParseIndex}.
-The number of index inputs determines the interpreted dimensions. \\
-\$index & Index string, with index arguments separated with commas. E.g. ``1,:``. \\
+\$i ... & Index inputs, parsed with \cmdlink{::ndlist::ParseIndex}. \\
 \$sublist & Replacement list, or blank to delete values.
 \end{args}
 \begin{example}{Replace range with a single value}
@@ -470,13 +314,12 @@ puts $a
 \end{example}
 
 \clearpage
+
+\clearpage
 \subsection{Removal}
-The command \cmdlink{nremove}, and the corresponding method \methodlink[0]{narray}{remove}, removes portions of an ND-list at a specified axis.
+The command \cmdlink{nremove} removes portions of an ND-list at a specified axis.
 \begin{syntax}
 \command{nremove} \$nd \$ndlist \$i <\$axis>
-\end{syntax}
-\begin{syntax}
-\method{narray}{remove} \$i <\$axis>
 \end{syntax}
 \begin{args}
 \$nd & Rank of ND-list (e.g. 2D, 2d, or 2 for a matrix).  \\
@@ -507,64 +350,14 @@ puts [nremove $a 2 1]
 \end{lstlisting}
 \end{example}
 \clearpage
-\subsection{Appending}
-The command \cmdlink{nappend} and the corresponding method \methodlink[0]{narray}{append} appends ND-lists. 
-The command modifies the variable, and the method modifies the object. Both return the value.
-For 0D, it just calls the Tcl \textit{append} command.
-For 1D, it just calls the Tcl \textit{lappend} command.
-For ND, it verifies that the (N-1)D inputs have the same shape as the elements of the ND-list, and then calls the Tcl \textit{lappend} command, appending along axis 0.
-For example, for 2D, it verifies that the list lengths match the number of columns of the matrix.
-\begin{syntax}
-\command{nappend} \$nd \$varName \$arg ...
-\end{syntax}
-\begin{syntax}
-\method{narray}{append} \$arg ...
-\end{syntax}
-\begin{args}
-\$nd & Rank of ND-list (e.g. 2D, 2d, or 2 for a matrix).  \\
-\$varName & Variable that contains an ND-list. \\
-\$arg ... & (N-1)D lists (or strings for 0D) to append to ND-list.
-\end{args}
-
-\begin{example}{Scalar and list append}
-\begin{lstlisting}
-set a {}
-nappend 0D a foo
-nappend 0D a bar
-nappend 1D a {hello world}
-puts $a
-\end{lstlisting}
-\tcblower
-\begin{lstlisting}
-foobar {hello world}
-\end{lstlisting}
-\end{example}
-
-\begin{example}{Adding rows to a matrix (checks dimensions)}
-\begin{lstlisting}
-set a {}
-nappend 2D a {1 2 3}
-nappend 2D a {4 5 6}
-nappend 2D a {7 8 9}
-puts $a
-\end{lstlisting}
-\tcblower
-\begin{lstlisting}
-{1 2 3} {4 5 6} {7 8 9}
-\end{lstlisting}
-\end{example}
-\clearpage
 \subsection{Insertion and Concatenation}
-The command \cmdlink{ninsert} or the corresponding method \methodlink[0]{narray}{insert} inserts an ND-list into another ND-list at a specified index and axis.
+The command \cmdlink{ninsert} inserts an ND-list into another ND-list at a specified index and axis.
 The ND-lists must agree in dimension at all other axes.
 If ``end'' or ``end-integer'' is used for the index, it will insert after the index. 
 Otherwise, it will insert before the index.
 The command \cmdlink{ncat} is shorthand for inserting at ``end'', and concatenates two ND-lists.
 \begin{syntax}
 \command{ninsert} \$nd \$ndlist1 \$index \$ndlist2 <\$axis>
-\end{syntax}
-\begin{syntax}
-\method{narray}{insert} \$index \$ndlist2 <\$axis>
 \end{syntax}
 \begin{syntax}
 \command{ncat} \$nd \$ndlist1 \$ndlist2 <\$axis>
@@ -648,16 +441,19 @@ puts [lindex $z 0 1 0]
 
 \clearpage
 \subsection{ND Functional Mapping}
-The command \cmdlink{napply} or the method \methodlink[0]{narray}{apply} applies a command over each element of an ND-list, and returns the result.
+The command \cmdlink{napply} applies a command over each element of an ND-list, and returns the result.
+The commands \cmdlink{napply2} maps element-wise over two ND-lists. 
+If the input lists have different shapes, they will be expanded to their maximum dimensions with \cmdlink{nexpand} (if compatible).
 \begin{syntax}
 \command{napply} \$nd \$command \$ndlist \$arg ...
 \end{syntax}
 \begin{syntax}
-\method{narray}{apply} \$command \$arg ...
+\command{napply2} \$nd \$command \$ndlist1 \$ndlist2 \$arg ...
 \end{syntax}
 \begin{args}
 \$nd & Rank of ND-list (e.g. 2D, 2d, or 2 for a matrix).  \\
 \$ndlist & ND-list to map over. \\
+\$ndlist1 \$ndlist2 & ND-lists to map over, element-wise. \\
 \$command & Command prefix to map with. \\
 \$arg ... & Additional arguments to append to command after ND-list element. 
 \end{args}
@@ -673,21 +469,6 @@ napply 2D puts [napply 2D {format %.2f} [napply 2D expr {{1 2} {3 4}} + 1]]
 5.00
 \end{lstlisting}
 \end{example}
-
-\clearpage
-\subsection{Mapping Over Two ND-lists}
-The commands \cmdlink{napply2} maps element-wise over two ND-lists. 
-If the input lists have different shapes, they will be expanded to their maximum dimensions with \cmdlink{nexpand} (if compatible).
-\begin{syntax}
-\command{napply2} \$nd \$command \$ndlist1 \$ndlist2 \$arg ...
-\end{syntax}
-\begin{args}
-\$nd & Rank of ND-list (e.g. 2D, 2d, or 2 for a matrix).  \\
-\$ndlist1 \$ndlist2 & ND-lists to map over, element-wise. \\
-\$command & Command prefix to map with. \\
-\$arg ... & Additional arguments to append to command after ND-list elements.
-\end{args}
-
 \begin{example}{Format columns of a matrix}
 \begin{lstlisting}
 set data {{1 2 3} {4 5 6} {7 8 9}}
@@ -702,12 +483,8 @@ puts [napply2 2D format $formats $data]
 \clearpage
 \subsection{Reducing an ND-list}
 The command \cmdlink{nreduce} combines \cmdlink{nmoveaxis} and \cmdlink{napply} to reduce an axis of an ND-list with a function that reduces a vector to a scalar, like \cmdlink{max} or \cmdlink{sum}.
-The corresponding method \methodlink[0]{narray}{reduce} returns the reduced ND-list value.
 \begin{syntax}
 \command{nreduce} \$nd \$command \$ndlist <\$axis> <\$arg ...>
-\end{syntax}
-\begin{syntax}
-\method{narray}{reduce} \$command <\$axis> <\$arg ...>
 \end{syntax}
 \begin{args}
 \$nd & Rank of ND-list (e.g. 2D, 2d, or 2 for a matrix).  \\
@@ -767,7 +544,7 @@ goodbye moon
 \end{example}
 \clearpage
 \subsection{Loop Index Access}
-The iteration indices of \cmdlink{nmap}, \cmdlink{nexpr}, or \cmdlink{nforeach} can be accessed with the commands \cmdlink{i}, \cmdlink{j}, and \cmdlink{k}. 
+The iteration indices of \cmdlink{nmap} can be accessed with the commands \cmdlink{i}, \cmdlink{j}, and \cmdlink{k}. 
 The commands \cmdlink{j} and \cmdlink{k} are simply shorthand for \cmdlink{i} with axes 1 and 2.
 \begin{syntax}
 \command{i} <\$axis>
@@ -801,49 +578,6 @@ puts $indices
 \end{example}
 
 
-\clearpage
-\subsection{ND-List Object Evaluation}
-The command \cmdlink{neval} maps over ND-list objects, and \cmdlink{nexpr} is a special case that passes input through the Tcl \textit{expr} command.
-Objects can be referred to with ``\texttt{\$@ref}'', where ``ref'' is the name of the variable that contains the object.
-Portions of an ND-list can be mapped over with the notation ``\texttt{\$@ref(\$i,...)}''.
-Input ND-list objects must all be scalar or agree in rank. Additionally, they must have compatible dimensions.
-The ``\texttt{:=}'' assignment operator uses \cmdlink{nexpr}, passing the object name to ``\texttt{\$self}''.
-\begin{syntax}
-\command{neval} \$body <\$self> <\$rankVar>
-\end{syntax}
-\begin{syntax}
-\command{nexpr} \$expr <\$self> <\$rankVar>
-\end{syntax}
-\begin{args}
-\$body & Script to evaluate, with ``\texttt{\$@ref}'' notation for object references. \\
-\$expr & Expression to evaluate, with ``\texttt{\$@ref}'' notation for object references. \\
-\$self & Object to refer to with ``\texttt{\$@}''. Default blank. \\
-\$rankVar & Variable to store resulting rank in. Default blank.
-\end{args}
-
-\begin{example}{Get distance between elements in a vector}
-\begin{lstlisting}
-narray new 1D x {1 2 4 7 11 16}
-puts [nexpr {$@x(1:end) - $@x(0:end-1)}]
-\end{lstlisting}
-\tcblower
-\begin{lstlisting}
-1 2 3 4 5
-\end{lstlisting}
-\end{example}
-
-\begin{example}{Outer product of two vectors}
-\begin{lstlisting}
-narray new 2D x {1 2 3}
-narray new 2D y {{4 5 6}}
-[narray new 2D z] := {$@x * $@y}
-puts [$z]
-\end{lstlisting}
-\tcblower
-\begin{lstlisting}
-{4 5 6} {8 10 12} {12 15 18}
-\end{lstlisting}
-\end{example}
 
 
 \clearpage
