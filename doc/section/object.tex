@@ -1,0 +1,336 @@
+\section{ND-Arrays}
+The command \cmdlink{narray} is a TclOO class based on the superclass \textit{::vutil::ValueContainer}, from the package \textcolor{blue}{\href{https://github.com/ambaker1/vutil}{vutil}}. 
+It is an object-oriented approach to array manipulation and processing.
+
+\begin{syntax}
+\command{narray} new \$nd \$varName <\$ndlist>
+\end{syntax}
+\begin{syntax}
+\command{narray} create \$name \$nd \$varName <\$ndlist>
+\end{syntax}
+\begin{args}
+\$nd & Rank of ND-array (e.g. 2D, 2d, or 2 for a matrix). \\
+\$varName & Variable to store object name for access and garbage collection. 
+Variable names are restricted to word characters and namespace delimiters only.\\
+\$ndlist & ND-list value to store in ND-array. Default blank. \\
+\$name & Name of object if using ``create'' method.
+\end{args}
+\subsection{Value, Rank, Shape, and Size}
+The value is accessed by calling the object by itself, the rank is accessed with the method \methodlink[0]{narray}{rank}, and the shape and size are accessed with the methods \methodlink[0]{narray}{shape} and \methodlink[0]{narray}{size}.
+\begin{syntax}
+\method{narray}{rank}
+\end{syntax}
+\begin{syntax}
+\method{narray}{shape} <\$axis>
+\end{syntax}
+\begin{syntax}
+\method{narray}{size}
+\end{syntax}
+\begin{args}
+\$axis & Axis to get dimension along. Default blank for all axes. \\
+\end{args}
+\begin{example}{Creating ND-arrays}
+\begin{lstlisting}
+# Create new ND-arrays
+narray new 2D x {{1 2 3} {4 5 6} {7 8 9}}
+narray new 1D y {hello world}
+# Print rank and value of ND-arrays
+puts "[$x rank], [$x]"
+puts "[$y rank], [$y]"
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+2, {1 2 3} {4 5 6} {7 8 9}
+1, hello world
+\end{lstlisting}
+\end{example}
+
+\clearpage
+\subsection{Indexing}
+The ``\texttt{@}'' operator uses \cmdlink{nget} to access a portion of the ND-array. 
+\begin{syntax}
+\index{narray methods!@} \$narrayObj @ \$i ...
+\end{syntax}
+\begin{args}
+\$i ... & Index inputs corresponding with rank of ND-array. \\
+\end{args}
+
+\begin{example}{Accessing portions of an ND-array}
+\begin{lstlisting}
+narray new 2D x {{1 2 3} {4 5 6} {7 8 9}}
+puts [$x @ 0 2]
+puts [$x @ 0:end-1 {0 2}]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+3
+{1 3} {4 6}
+\end{lstlisting}
+\end{example}
+
+\subsection{Copying}
+The operator ``\texttt{-{}->}'' copies the ND-array to a new variable, and returns the new object.
+If indices are specified, the new ND-array object will have the rank of the indexed range.
+\begin{syntax}
+\index{narray methods!-{}->} \$narrayObj <@ \$i ...> -{}-> \$varName
+\end{syntax}
+\begin{args}
+\$i ... & Indices to access. Default all. \\
+\$varName & Variable to store object name for access and garbage collection. 
+Variable names are restricted to word characters and namespace delimiters only.
+\end{args}
+
+\begin{example}{Copying a portion of an ND-array}
+\begin{lstlisting}
+narray new 2 x {{1 2 3} {4 5 6}}
+$x @ 0* : --> y; # Row vector (flattened to 1D)
+puts "[$y rank], [$y]"
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+1, 1 2 3
+\end{lstlisting}
+\end{example}
+\clearpage
+\subsection{Evaluation/Mapping}
+The command \cmdlink{neval} maps over ND-arrays using \cmdlink{nmap}. 
+The command \cmdlink{nexpr} is a special case that passes input through the Tcl \textit{expr} command.
+ND-arrays can be referred to with ``\texttt{\$@ref}'', where ``ref'' is the name of the ND-array variable.
+Portions of an ND-array can be mapped over with the notation ``\texttt{\$@ref(\$i,...)}''.
+Input ND-arrays must all agree in rank or be scalar. 
+Additionally, they must have compatible dimensions.
+\begin{syntax}
+\command{neval} \$body <\$self> <\$rankVar>
+\end{syntax}
+\begin{syntax}
+\command{nexpr} \$expr <\$self> <\$rankVar>
+\end{syntax}
+\begin{args}
+\$body & Script to evaluate, with ``\texttt{\$@ref}'' notation for object references. \\
+\$expr & Expression to evaluate, with ``\texttt{\$@ref}'' notation for object references. \\
+\$self & Object to refer to with ``\texttt{\$@}''. Default blank. \\
+\$rankVar & Variable to store resulting rank in. Default blank.
+\end{args}
+
+\begin{example}{Get distance between elements in a vector}
+\begin{lstlisting}
+narray new 1D x {1 2 4 7 11 16}
+puts [nexpr {$@x(1:end) - $@x(0:end-1)}]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+1 2 3 4 5
+\end{lstlisting}
+\end{example}
+
+\begin{example}{Outer product of two vectors}
+\begin{lstlisting}
+narray new 2D x {1 2 3}
+narray new 2D y {{4 5 6}}
+puts [nexpr {$@x * $@y}]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+{4 5 6} {8 10 12} {12 15 18}
+\end{lstlisting}
+\end{example}
+
+\clearpage
+\subsection{Modification}
+The assignment operator, ``\texttt{=}'', sets the value of the entire ND-array, or of a specified range.
+The math assignment operator, ``\texttt{:=}'', sets the value, passing the input through the \cmdlink{nexpr} command. 
+Both assignment operators return the object.
+
+\begin{syntax}
+\index{narray methods!=} \$narrayObj <@ \$i ...> = \$value
+\end{syntax}
+\begin{syntax}
+\index{narray methods!:=} \$narrayObj <@ \$i ...> := \$expr
+\end{syntax}
+\begin{args}
+\$i ... & Indices to modify. Default all. \\
+\$value & Value to assign. Blank to remove values. \\
+\$expr & Expression to evaluate.
+\end{args}
+
+If using the math assignment operator, the ND-array or indexed range can be accessed with the alias ``\texttt{\$.}'', and the elements of the array or indexed range can be accessed with ``\texttt{\$@}''.
+\begin{syntax}
+\$. \$arg ...
+\end{syntax}
+\begin{args}
+\$arg ... & Method arguments for object.
+\end{args}
+
+\begin{example}{Element-wise modification of a vector}
+\begin{lstlisting}
+# Create blank vectors and assign values
+[narray new 1D x] = {1 2 3}
+[narray new 1D y] = {10 20 30}
+# Add one to each element
+puts [[$x := {$@ + 1}]]
+# Double the last element
+puts [[$x @ end := {$@ * 2}]]
+# Element-wise addition of vectors
+puts [[$x := {$@ + $@y}]]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+2 3 4
+2 3 8
+12 23 38
+\end{lstlisting}
+\end{example}
+
+\clearpage
+\subsection{Removal/Insertion}
+The method \methodlink[0]{narray}{remove} removes portions of an ND-array along a specified axis, returning the object.
+
+The method \methodlink[0]{narray}{insert} inserts values into an ND-array at a specified index/axis, returning the object.
+
+\begin{syntax}
+\method{narray}{remove} \$i <\$axis>
+\end{syntax}
+\begin{syntax}
+\method{narray}{insert} \$i \$sublist <\$axis>
+\end{syntax}
+\begin{args}
+\$i & Indices to remove/insert at. \\
+\$sublist & Value to insert. \\
+\$axis & Axis to remove/insert at (default 0).
+\end{args}
+
+\begin{example}{Removing elements from a vector}
+\begin{lstlisting}
+narray new 1 vector {1 2 3 4 5 6 7 8}
+# Remove all odd numbers
+$vector remove [find [nexpr {$@vector % 2}]]
+puts [$vector]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+2 4 6 8
+\end{lstlisting}
+\end{example}
+
+\begin{example}{Inserting a column into a matrix}
+\begin{lstlisting}
+narray new 2 matrix {{1 2} {3 4} {5 6}}
+$matrix insert 1 {A B C} 1
+puts [$matrix]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+{1 A 2} {3 B 4} {5 C 6}
+\end{lstlisting}
+\end{example}
+
+
+\clearpage
+\subsection{Map/Reduce}
+The method \methodlink[0]{narray}{apply} maps a command over the ND-array, returning the value, and the method \methodlink[0]{narray}{reduce} applies a reducing command over a specified axis, returning the value. 
+Both commands do not modify the object.
+
+\begin{syntax}
+\method{narray}{apply} \$command \$arg ...
+\end{syntax}
+\begin{syntax}
+\method{narray}{reduce} \$command <\$axis> \$arg ...
+\end{syntax}
+\begin{args}
+\$command & Command prefix to map over the ND-list object. \\
+\$arg ... & Additional arguments to append to command. \\
+\$axis & Axis to reduce at (default 0).
+\end{args}
+
+\begin{example}{Map a command over a list}
+\begin{lstlisting}
+narray new 1 text {The quick brown fox jumps over the lazy dog}
+puts [$text apply {string length}]; # Print the length of each word
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+3 5 5 3 5 4 3 4 3
+\end{lstlisting}
+\end{example}
+
+\begin{example}{Get column statistics of a matrix}
+\begin{lstlisting}
+narray new 2 matrix {{1 2 3} {4 5 6} {7 8 9}}
+# Convert to double-precision floating point
+$matrix = [$matrix apply ::tcl::mathfunc::double]
+# Get maximum and minimum of each column
+puts [$matrix reduce max]
+puts [$matrix reduce min]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+7.0 8.0 9.0
+1.0 2.0 3.0
+\end{lstlisting}
+\end{example}
+
+\clearpage
+\subsection{Temporary Object Evaluation}
+The pipe operator, ``\texttt{|}'', copies the ND-array to a temporary object, and evaluates the method.
+Returns the result of the method, or the value of the temporary object.
+This operator is useful for converting methods that modify the object to methods that return a modified value.
+\begin{syntax}
+\index{narray methods!$\vert$} \$narrayObj <@ \$i ...> | \$method \$arg ...
+\end{syntax}
+\begin{args}
+\$i ... & Indices to access. Default all. \\
+\$method & Method to evaluate. \\
+\$arg ... & Arguments to pass to method.
+\end{args}
+\begin{example}{Temporary object value}
+\begin{lstlisting}
+# Create a matrix
+narray new 2 x {{1 2 3} {4 5 6}}
+# Print value with first row doubled.
+puts [$x | @ 0* : := {$@ * 2}]
+# Source object was not modified
+puts [$x]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+{2 4 6} {4 5 6}
+{1 2 3} {4 5 6}
+\end{lstlisting}
+\end{example}
+\clearpage
+\subsection{Reference Variable Evaluation}
+The operator ``\texttt{\&}'' copies the ND-array value or range to a reference variable, and evaluates a body of script. 
+The changes made to the reference variable will be applied to the object, and if the variable is unset, the object will be deleted.
+If no indices are specified and the variable is unset in the script, the ND-array object will be destroyed.
+Returns the result of the script.
+
+\begin{syntax}
+\index{narray methods!\&} \$narrayObj <@ \$i ...> \& \$refName \$body
+\end{syntax}
+\begin{args}
+\$i ... & Indices to access. Default all. \\
+\$refName & Variable name to use for reference. \\
+\$body & Body to evaluate.
+\end{args}
+
+\begin{example}{Appending a vector}
+\begin{lstlisting}
+# Create a 1D list
+narray new 1 x {1 2 3}
+# Append the list
+$x & ref {lappend ref 4 5 6}
+puts [$x]
+# Append a subset of the list
+$x @ end* & ref {lappend ref 7 8 9}
+puts [$x]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+1 2 3 4 5 6
+1 2 3 4 5 {6 7 8 9}
+\end{lstlisting}
+\end{example}
+
+\clearpage
+
+

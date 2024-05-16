@@ -1,0 +1,255 @@
+\section{1-Dimensional Lists (Vectors)}
+Lists are foundational to Tcl, so in addition to providing utilities for ND-lists, this package also provides utilities for working with 1D-lists, or vectors.
+\subsection{Range Generator}
+The command \cmdlink{range} simply generates a list of integer values. 
+This can be used in conjunction with the Tcl \textit{foreach} loop to simplify writing ``for'' loops.
+There are two ways of calling this command, as shown below.
+\begin{syntax}
+\command{range} \$n \\
+range \$start \$stop <\$step>
+\end{syntax}
+\begin{args}
+\$n & Number of indices, starting at 0 (e.g. 3 returns 0 1 2). \\
+\$start & Starting value. \\
+\$stop & Stop value. \\
+\$step & Step size. Default 1 or -1, depending on direction of start to stop.
+\end{args}
+\begin{example}{Integer range generation}
+\begin{lstlisting}
+puts [range 3]
+puts [range 0 2]
+puts [range 10 3 -2]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+0 1 2
+0 1 2
+10 8 6 4
+\end{lstlisting}
+\end{example}
+\begin{example}{Simpler for-loop}
+\begin{lstlisting}
+foreach i [range 3] {
+    puts $i
+}
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+0
+1
+2
+\end{lstlisting}
+\end{example}
+\clearpage
+\subsection{Logical Indexing}
+The command \cmdlink{find} returns the indices of non-zero elements of a boolean list, or indices of elements that satisfy a given criterion.
+Can be used in conjunction with \cmdlink{nget} to perform logical indexing.
+\begin{syntax}
+\command{find} \$list <\$op \$scalar>
+\end{syntax}
+\begin{args}
+\$list & List of values to compare. \\
+\$op & Comparison operator. Default ``!=''. \\
+\$scalar & Comparison value. Default 0.
+\end{args}
+\begin{example}{Filtering a list}
+\begin{lstlisting}
+set x {0.5 2.3 4.0 2.5 1.6 2.0 1.4 5.6}
+puts [nget $x [find $x > 2]]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+2.3 4.0 2.5 5.6
+\end{lstlisting}
+\end{example}
+\subsection{Linear Interpolation}
+The command \cmdlink{linterp} performs linear 1D interpolation.
+Converts input to double.
+\begin{syntax}
+\command{linterp} \$x \$xList \$yList
+\end{syntax}
+\begin{args}
+\$x & Value to query in \texttt{\$xList} \\
+\$xList & List of x points, strictly increasing \\
+\$yList & List of y points, same length as \texttt{\$xList}
+\end{args}
+\begin{example}{Linear interpolation}
+\begin{lstlisting}
+puts [linterp 2 {1 2 3} {4 5 6}]
+puts [linterp 8.2 {0 10 20} {2 -4 5}]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+5.0
+-2.92
+\end{lstlisting}
+\end{example}
+\clearpage
+\subsection{Vector Generation}
+The command \cmdlink{linspace} can be used to generate a vector of specified length and equal spacing between two specified values. 
+Converts input to double.
+\begin{syntax}
+\command{linspace} \$n \$start \$stop 
+\end{syntax}
+\begin{args}
+\$n & Number of points \\
+\$start & Starting value \\
+\$stop & End value
+\end{args}
+\begin{example}{Linearly spaced vector generation}
+\begin{lstlisting}
+puts [linspace 5 0 1]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+0.0 0.25 0.5 0.75 1.0
+\end{lstlisting}
+\end{example}
+The command \cmdlink{linsteps} generates intermediate values given an increment size and a sequence of targets.
+Converts input to double.
+\begin{syntax}
+\command{linsteps} \$step \$x1 \$x2 ...
+\end{syntax}
+\begin{args}
+\$step & Maximum step size \\
+\$x1 \$x2 ... & Targets to hit.
+\end{args}
+\begin{example}{Intermediate value vector generation}
+\begin{lstlisting}
+puts [linsteps 0.25 0 1 0]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+0.0 0.25 0.5 0.75 1.0 0.75 0.5 0.25 0.0
+\end{lstlisting}
+\end{example}
+
+\clearpage
+\subsection{Functional Mapping}
+The command \cmdlink{lapply} simply applies a command over each element of a list, and returns the result.
+The command \cmdlink{lapply2} maps element-wise over two equal length lists.
+\begin{syntax}
+\command{lapply} \$command \$list \$arg ...
+\end{syntax}
+\begin{syntax}
+\command{lapply2} \$command \$list1 \$list2 \$arg ...
+\end{syntax}
+\begin{args}
+\$list & List to map over. \\
+\$list1 \$list2 & Lists to map over, element-wise. \\
+\$command & Command prefix to map with. \\
+\$arg ... & Additional arguments to append to command after list elements. 
+\end{args}
+
+\begin{example}{Applying a math function to a list}
+\begin{lstlisting}
+# Add Tcl math functions to the current namespace path
+namespace path [concat [namespace path] ::tcl::mathfunc]
+puts [lapply abs {-5 1 2 -2}]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+5 1 2 2
+\end{lstlisting}
+\end{example}
+
+\begin{example}{Mapping over two lists}
+\begin{lstlisting}
+lapply puts [lapply2 {format "%s %s"} {hello goodbye} {world moon}]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+hello world
+goodbye moon
+\end{lstlisting}
+\end{example}
+
+\clearpage
+\subsection{List Statistics}
+The commands \cmdlink{max}, \cmdlink{min}, \cmdlink{sum}, \cmdlink{product}, \cmdlink{mean}, \cmdlink{median}, \cmdlink{stdev} and \cmdlink{pstdev} compute the maximum, minimum, sum, product, mean, median, sample and population standard deviation of values in a list.
+For more advanced statistics, check out the Tcllib math::statistics package.
+\begin{syntax}
+\command{max} \$list 
+\end{syntax}
+\begin{syntax}
+\command{min} \$list 
+\end{syntax}
+\begin{syntax}
+\command{sum} \$list
+\end{syntax}
+\begin{syntax}
+\command{product} \$list
+\end{syntax}
+\begin{syntax}
+\command{mean} \$list 
+\end{syntax}
+\begin{syntax}
+\command{median} \$list 
+\end{syntax}
+\begin{syntax}
+\command{stdev} \$list
+\end{syntax}
+\begin{syntax}
+\command{pstdev} \$list
+\end{syntax}
+\begin{args}
+\$list & List to compute statistic of. \\
+\end{args}
+\begin{example}{List Statistics}
+\begin{lstlisting}
+set list {-5 3 4 0}
+foreach stat {max min sum product mean median stdev pstdev} {
+    puts [list $stat [$stat $list]]
+}
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+max 4
+min -5
+sum 2
+product 0
+mean 0.5
+median 1.5
+stdev 4.041451884327381
+pstdev 3.5
+\end{lstlisting}
+\end{example}
+\clearpage
+\subsection{Vector Algebra}
+The dot product of two equal length vectors can be computed with \cmdlink{dot}.
+The cross product of two vectors of length 3 can be computed with \cmdlink{cross}. 
+\begin{syntax}
+\command{dot} \$a \$b
+\end{syntax}
+\begin{syntax}
+\command{cross} \$a \$b
+\end{syntax}
+\begin{args}
+\$a & First vector. \\
+\$b & Second vector.
+\end{args}
+The norm, or magnitude, of a vector can be computed with \cmdlink{norm}.
+\begin{syntax}
+\command{norm} \$a <\$p>
+\end{syntax}
+\begin{args}
+\$a & Vector to compute norm of. \\
+\$p & Norm type. 1 is sum of absolute values, 2 is euclidean distance, and Inf is absolute maximum value. Default 2.
+\end{args}
+\begin{example}{Dot and cross product}
+\begin{lstlisting}
+set x {1 2 3}
+set y {-2 -4 6}
+puts [dot $x $y]
+puts [cross $x $y]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+8
+24 -12 0
+\end{lstlisting}
+\end{example}
+
+For more advanced vector algebra routines, check out the Tcllib math::linearalgebra package.
+
+\clearpage

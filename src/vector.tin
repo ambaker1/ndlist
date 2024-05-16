@@ -13,7 +13,7 @@
 namespace eval ::ndlist {
     namespace export range find; # List indexing utilities
     namespace export linspace linsteps linterp; # List generation
-    namespace export lapply lapply2 lop lop2 lexpr; # Functional mapping
+    namespace export lapply lapply2; # Functional mapping
     namespace export max min sum product mean median stdev pstdev; # Stats
     namespace export dot cross norm; # Vector algebra
 }
@@ -105,7 +105,7 @@ proc ::ndlist::find {list args} {
                 \"find list ?op value?\""
     }
     # Perform search.
-    lsearch -exact -integer -all [lop $list $op $value] 1
+    lsearch -exact -integer -all [lapply ::tcl::mathop::$op $list $value] 1
 }
 
 # List generation
@@ -262,71 +262,6 @@ proc ::ndlist::lapply2 {command list1 list2 args} {
     lmap value1 $list1 value2 $list2 {
         uplevel 1 [linsert $command end $value1 $value2 {*}$args]
     }
-}
-
-# lop --
-#
-# Math operations over a list, using lmap.
-#
-# Syntax:
-# lop $list $op $arg ...
-#
-# Arguments:
-# list          List to map over
-# op            Math operator (see ::tcl::mathop namespace)
-# arg ...       Additional arguments
-
-proc ::ndlist::lop {list op args} {
-    lmap value $list {
-        ::tcl::mathop::$op $value {*}$args
-    }
-}
-
-# lop2 --
-#
-# Math operations over two lists, using lmap.
-# List lengths must be equal.
-#
-# Syntax:
-# lop2 $list1 $op $list2 $arg ...
-#
-# Arguments:
-# list1 list2   Lists to map over
-# op            Math operator (see ::tcl::mathop namespace)
-# arg ...       Additional arguments
-
-proc ::ndlist::lop2 {list1 op list2 args} {
-    if {[llength $list1] != [llength $list2]} {
-        return -code error "mismatched list lengths"
-    }
-    lmap value1 $list1 value2 $list2 {
-        ::tcl::mathop::$op $value1 $value2 {*}$args
-    }
-}
-
-# lexpr --
-#
-# lmap, but with expr. Follows all rules of lmap.
-#
-# Syntax:
-# lexpr $varList $list <$varList $list ...> $expr
-#
-# Arguments:
-# varName ...   List(s) of variables to map with
-# list ...      List(s) to map over.
-# expr          Tcl math expression to evaluate.
-
-proc ::ndlist::lexpr {args} {
-    # Check arity
-    if {[llength $args] == 1 || [llength $args] % 2 == 0} {
-        return -code error "wrong # args: should be\
-                \"lexpr varList list ?varList list ...? expr"
-    }
-    # Interpret input
-    set varMap [lrange $args 0 end-1]
-    set expr [lindex $args end]
-    # Call modified lmap
-    tailcall lmap {*}$varMap [list expr $expr]
 }
 
 # List statistics
@@ -578,7 +513,7 @@ proc ::ndlist::cross {a b} {
 proc ::ndlist::norm {vector {p 2}} {
     switch $p {
         1 { # Sum of absolute values
-            sum [lexpr value $vector {abs($value)}]
+            sum [lmap value $vector {expr {abs($value)}}]
         }
         2 { # Euclidean (use hypot function to avoid overflow)
             set norm 0.0
@@ -588,13 +523,13 @@ proc ::ndlist::norm {vector {p 2}} {
             return $norm
         }
         Inf { # Absolute maximum of the vector
-            max [lexpr value $vector {abs($value)}]
+            max [lmap value $vector {expr {abs($value)}}]
         }
         default { # Arbitrary integer norm
             if {![string is integer -strict $p] || $p <= 0} {
                 return -code error "p must be integer > 0"
             }
-            expr {pow([sum [lop $vector ** $p]],1.0/$p)}
+            expr {pow([sum [lmap x $vector {expr {$x ** $p}}]],1.0/$p)}
         }
     }
 }
