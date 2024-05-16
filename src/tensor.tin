@@ -556,14 +556,14 @@ proc ::ndlist::nreplace {ndlist args} {
     }
     # Parse indices
     set dims [GetShape $ndims $ndlist]
-    set iArgs [ParseIndices $dims {*}$indices]
+    set iArgs [ParseIndices $dims {*}$indices]; # type list type list ...
     set iTypes [lmap {iType iList} $iArgs {set iType}]
     
     # Check for simple lset case
     if {[lsearch -exact -not $iTypes S] == -1} {
         # Linear case (just lset)
         if {$ndims == 1} {
-            return [lset ndlist $iLists $sublist]
+            return [lset ndlist [lindex $iArgs 1 0] $sublist]
         }
         # Higher dimension case (ensure that indices are in range)
         set indices [lmap {iType iList} $iArgs {lindex $iList 0}]
