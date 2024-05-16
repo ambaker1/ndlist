@@ -16,29 +16,33 @@ proc GetLstListing {fid} {
 
 # Find examples in file
 set examples ""
-set fid [open doc/ndlist.tex r]
-while {![eof $fid]} {
-    # Look for example
-    set line [gets $fid]
-    if {[string range $line 0 14] ne "\\begin{example}"} {
-        continue
+foreach section {vector matrix tensor object} {
+    set filename "doc/section/$section.tex"
+    set fid [open $filename r]
+    while {![eof $fid]} {
+        # Look for example
+        set line [gets $fid]
+        if {[string range $line 0 14] ne "\\begin{example}"} {
+            continue
+        }
+        # Example found, with name $name
+        set name [string range $line 16 end-1]
+        # Get example body
+        set body [GetLstListing $fid]
+        # Check for output
+        set line [gets $fid]
+        if {$line eq "\\tcblower"} {
+            set output [GetLstListing $fid]
+        } else {
+            set output ""
+        }
+        # Add to examples 
+        dict set examples $name body $body
+        dict set examples $name output $output
     }
-    # Example found, with name $name
-    set name [string range $line 16 end-1]
-    # Get example body
-    set body [GetLstListing $fid]
-    # Check for output
-    set line [gets $fid]
-    if {$line eq "\\tcblower"} {
-        set output [GetLstListing $fid]
-    } else {
-        set output ""
-    }
-    # Add to examples 
-    dict set examples $name body $body
-    dict set examples $name output $output
+    close $fid
 }
-close $fid
+
 
 # Write examples file
 set fid [open tests/examples.tcl w]
