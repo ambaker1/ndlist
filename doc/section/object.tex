@@ -85,7 +85,7 @@ Variable names are restricted to word characters and namespace delimiters only.
 narray new 2 x {{1 2 3} {4 5 6}}
 $x @ 0* : --> y; # Row vector (flattened to 1D)
 puts "[$y rank], [$y]"
-\end{lstlisting} 
+\end{lstlisting}
 \tcblower
 \begin{lstlisting}
 1, 1 2 3
@@ -167,11 +167,11 @@ If using the math assignment operator, the ND-array or indexed range can be acce
 [narray new 1D x] = {1 2 3}
 [narray new 1D y] = {10 20 30}
 # Add one to each element
-puts [$x := {$@ + 1}]
+puts [[$x := {$@ + 1}]]
 # Double the last element
-puts [$x @ end := {$@ * 2}]
+puts [[$x @ end := {$@ * 2}]]
 # Element-wise addition of vectors
-puts [$x := {$@ + $@y}]
+puts [[$x := {$@ + $@y}]]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
@@ -188,13 +188,13 @@ The method \methodlink[0]{narray}{remove} removes portions of an ND-array along 
 The method \methodlink[0]{narray}{insert} inserts values into an ND-array at a specified index/axis, returning the object.
 
 \begin{syntax}
-\method{narray}{remove} \$index <\$axis>
+\method{narray}{remove} \$i <\$axis>
 \end{syntax}
 \begin{syntax}
-\method{narray}{insert} \$index \$sublist <\$axis>
+\method{narray}{insert} \$i \$sublist <\$axis>
 \end{syntax}
 \begin{args}
-\$index & Index to remove/insert at. \\
+\$i & Indices to remove/insert at. \\
 \$sublist & Value to insert. \\
 \$axis & Axis to remove/insert at (default 0).
 \end{args}
@@ -215,7 +215,8 @@ puts [$vector]
 \begin{example}{Inserting a column into a matrix}
 \begin{lstlisting}
 narray new 2 matrix {{1 2} {3 4} {5 6}}
-puts [$matrix insert 1 {A B C} 1]
+$matrix insert 1 {A B C} 1
+puts [$matrix]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
@@ -258,8 +259,8 @@ narray new 2 matrix {{1 2 3} {4 5 6} {7 8 9}}
 # Convert to double-precision floating point
 $matrix = [$matrix apply ::tcl::mathfunc::double]
 # Get maximum and minimum of each column
-puts [$matrix reduce max 1]
-puts [$matrix reduce min 1]
+puts [$matrix reduce max]
+puts [$matrix reduce min]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
@@ -289,7 +290,7 @@ narray new 2 x {{1 2 3} {4 5 6}}
 puts [$x | @ 0* : := {$@ * 2}]
 # Source object was not modified
 puts [$x]
-\end{lstlisting} 
+\end{lstlisting}
 \tcblower
 \begin{lstlisting}
 {2 4 6} {4 5 6}
@@ -320,7 +321,7 @@ narray new 1 x {1 2 3}
 $x & ref {lappend ref 4 5 6}
 puts [$x]
 # Append a subset of the list
-$x @ end & ref {lappend ref 7 8 9}
+$x @ end* & ref {lappend ref 7 8 9}
 puts [$x]
 \end{lstlisting}
 \tcblower

@@ -319,10 +319,9 @@ puts $a
 \subsection{Removal}
 The command \cmdlink{nremove} removes portions of an ND-list at a specified axis.
 \begin{syntax}
-\command{nremove} \$nd \$ndlist \$i <\$axis>
+\command{nremove} \$ndlist \$i <\$axis>
 \end{syntax}
 \begin{args}
-\$nd & Rank of ND-list (e.g. 2D, 2d, or 2 for a matrix).  \\
 \$ndlist & ND-list to modify. \\
 \$i & Index input, parsed with \cmdlink{::ndlist::ParseIndex}. \\
 \$axis & Axis to remove at. Default 0.
