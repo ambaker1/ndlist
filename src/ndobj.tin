@@ -67,11 +67,9 @@ proc ::ndlist::ValidateRefName {refName} {
         my GetRank
     }
     
-    # Object-oriented versions of ND-list commands that require input of rank.
-    
     # $object shape <$axis> --
     #
-    # Get dimensions of object
+    # Get dimensions of ND-array
     #
     # axis      Axis to get dimension along. Default blank for all.
     
@@ -82,20 +80,54 @@ proc ::ndlist::ValidateRefName {refName} {
         ::ndlist::ValidateAxis $myRank $axis
         lindex [my GetShape] $axis
     }
+    
+    # $object size --
+    #
+    # Get size of ND-array
+    
     method size {} {
         ::ndlist::nsize $myRank $myValue
     }    
-    # Remove and insert modify and return object
+        
+    # $object remove $index <$axis> --
+    #
+    # Remove portion of ND-array. Returns object.
+    #
+    # axis      Axis to remove from. Default 0.
+    
     method remove {index {axis 0}} {
-        my SetValue [::ndlist::nremove $myRank $myValue $index $axis]
+        my SetValue [::ndlist::nremove $myValue $index $axis]
     }
+    
+    # $object insert $index <$axis> --
+    #
+    # Insert values into ND-array. Returns object.
+    #
+    # axis      Axis to insert at. Default 0
+    
     method insert {index sublist {axis 0}} {
         my SetValue [::ndlist::ninsert $myRank $myValue $index $sublist $axis]
     }
-    # Apply and reduce return values
+    
+    # $object apply $command $arg ... --
+    #
+    # Apply command to values of ND-array, return value.
+    #
+    # command   Command prefix to apply
+    # arg ...   Additional arguments to append to command
+    
     method apply {command args} {
         tailcall ::ndlist::napply $myRank $command $myValue {*}$args
     }
+     
+    # $object reduce $command <$axis> $arg ... --
+    #
+    # Apply command to axis of ND-array, return value.
+    #
+    # command   Command prefix to apply
+    # arg ...   Additional arguments to append to command
+    # axis      Axis to reduce along. Default 0.
+    
     method reduce {command {axis 0} args} {
         ::ndlist::nreduce $myRank $command $myValue $axis {*}$args
     }
@@ -353,8 +385,8 @@ proc ::ndlist::neval {body {self ""} {rankVar ""}} {
             $object @ {*}[split $index ,] --> object
         }
         # Get object rank and value for mapping.
-        lappend refRanks [$object ndims]
-        lappend refValues [$object value]
+        lappend refRanks [$object rank]
+        lappend refValues [$object]
     }
     # Get rank of mapping
     if {$rankVar ne ""} {
