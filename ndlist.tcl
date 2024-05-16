@@ -9,16 +9,19 @@
 # redistribution, and for a DISCLAIMER OF ALL WARRANTIES.
 ################################################################################
 
+# Required packages
+package require vutil 4.0
+
 # Define namespace
 namespace eval ::ndlist {
     # Source all required files
     set dir [file dirname [file normalize [info script]]]
-    source [file join $dir ndapi.tcl]
-    source [file join $dir scalar.tcl]
     source [file join $dir vector.tcl]
     source [file join $dir matrix.tcl]
     source [file join $dir tensor.tcl]
+    source [file join $dir ndapi.tcl]
+    source [file join $dir ndobj.tcl]
 }
 
 # Finally, provide the package
-package provide ndlist 0.7
+package provide ndlist 0.8

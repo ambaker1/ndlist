@@ -34,8 +34,6 @@ if {$nFailed > 0} {
     error "$nFailed tests failed"
 }
 
-exit
-
 puts "Tests passed, installing..."
 # Tests passed, copy build files to main folder and install
 file copy -force {*}[glob -directory build *] [pwd]

@@ -13,8 +13,7 @@
 namespace eval ::ndlist {    
     variable map_index ""; # Linear index of mapping
     variable map_shape ""; # Shape of nmap list
-    namespace export ndlist ndfloat ndint ndbool; # ND-list validation
-    namespace export nshape nsize; # ND-list metadata
+    namespace export ndlist nshape nsize; # ND-list basics
     namespace export nfull nrand; # ND-list initialization
     namespace export nflatten nreshape; # Reshaping an ND-list
     namespace export nrepeat nexpand npad nextend; # Expanding an ND-list
@@ -22,24 +21,18 @@ namespace eval ::ndlist {
     namespace export nremove ninsert ncat nappend; # Deletion/Combination
     namespace export nswapaxes nmoveaxis npermute; # Axis reordering
     namespace export napply napply2 nop nop2 nreduce; # Functional mapping
-    namespace export nmap nforeach nexpr i j k; # Generalized mapping/looping
+    namespace export nmap nforeach i j k; # Generalized mapping/looping
 }
 
 # ND-LIST BASICS
 ################################################################################
 
 # ndlist --
-# ndfloat --
-# ndint --
-# ndbool --
 #
 # Validates an ND-list, and returns the ND-list.
 #
 # Syntax:
-# ndlist $nd $value; # no data validation
-# ndfloat $nd $value; # converts to float
-# ndint $nd $value; # converts to int
-# ndbool $nd $value; # converts to bool
+# ndlist $nd $value
 #
 # Arguments:
 # nd            Number of dimensions (e.g. 1D, 2D, etc.)
@@ -54,15 +47,6 @@ proc ::ndlist::ndlist {nd value} {
         return -code error "not a valid ${ndims}D-list"
     }
     return $ndlist
-}
-proc ::ndlist::ndfloat {nd value} {
-    napply $nd float [ndlist $nd $value]
-}
-proc ::ndlist::ndint {nd value} {
-    napply $nd int [ndlist $nd $value]
-}
-proc ::ndlist::ndbool {nd value} {
-    napply $nd bool [ndlist $nd $value]
 }
 
 # nshape --
@@ -572,14 +556,14 @@ proc ::ndlist::nreplace {ndlist args} {
     }
     # Parse indices
     set dims [GetShape $ndims $ndlist]
-    set iArgs [ParseIndices $dims {*}$indices]
+    set iArgs [ParseIndices $dims {*}$indices]; # type list type list ...
     set iTypes [lmap {iType iList} $iArgs {set iType}]
     
     # Check for simple lset case
     if {[lsearch -exact -not $iTypes S] == -1} {
         # Linear case (just lset)
         if {$ndims == 1} {
-            return [lset ndlist $iLists $sublist]
+            return [lset ndlist [lindex $iArgs 1 0] $sublist]
         }
         # Higher dimension case (ensure that indices are in range)
         set indices [lmap {iType iList} $iArgs {lindex $iList 0}]
@@ -856,60 +840,6 @@ proc ::ndlist::RecInsert {ndlist i sublist axis} {
 
 proc ::ndlist::ncat {nd ndlist1 ndlist2 {axis 0}} {
     ninsert $nd $ndlist1 end $ndlist2 $axis
-}
-
-# nappend --
-#
-# Append an ND-list along dimension 0.
-# For 0D, simply append (string). 
-# For 1D, simply lappend.
-# For higher dimensions, check subshapes, then call lappend.
-#
-# Syntax:
-# nappend $nd $varName $arg ...
-#
-# Arguments:
-# nd                Number of dimensions
-# varName           Variable containing ND-list.
-# arg ...           For 0D: strings to append. For 1D, list elements.
-#                   For 2D: row vectors. Etc.
-
-proc ::ndlist::nappend {nd varName args} {
-    # Get number of dimensions
-    set ndims [GetNDims $nd]
-    # Create link to ndlist, initialize if needed.
-    upvar 1 $varName ndlist
-    if {![info exists ndlist]} {
-        set ndlist ""
-    }
-    # No element case
-    if {[llength $args] == 0} {
-        return $ndlist
-    }
-    # Scalar case (call append)
-    if {$ndims == 0} {
-        return [append ndlist {*}$args]
-    } 
-    # Vector case (call lappend)
-    if {$ndims == 1} {
-        return [lappend ndlist {*}$args]
-    }
-    # Matrix and Tensor case
-    # Get subshape (shape of axes 1 to N-1)
-    set subrank [expr {$ndims - 1}]
-    if {[llength $ndlist] == 0} {
-        set subshape [GetShape $subrank [lindex $args 0]]
-    } else {
-        set subshape [GetShape $subrank [lindex $ndlist 0]]
-    }
-    # Ensure shape of each sublist is compatible with the subshape.
-    foreach sublist $args {
-        if {[GetShape $subrank $sublist] ne $subshape} {
-            return -code error "incompatible dimensions"
-        }
-    }
-    # Call lappend after checking subshapes.
-    lappend ndlist {*}$args
 }
 
 # NDLIST AXIS MANIPULATION
@@ -1210,51 +1140,6 @@ proc ::ndlist::RecApply2 {level ndims command ndlist1 ndlist2 args} {
     }
 }
 
-# nop --
-#
-# Simple math operations on ndlists.
-#
-# Syntax:
-# nop $nd $ndlist $op $arg ...
-#
-# Arguments:
-# nd            Number of dimensions (e.g. 1D, 2D, etc.)
-# ndlist        ND-list to iterate over
-# op            Valid mathop (see tcl::mathop documentation)
-# arg ...       Values to perform mathop with 
-#
-# Matrix examples:
-# nop 2D $matrix /; # Performs reciprocal
-# nop 2D $matrix -; # Negates values
-# nop 2D $matrix !; # Boolean negation
-# nop 2D $matrix + 5 1; # Adds 5 and 1 to each matrix element
-# nop 2D $matrix ** 2; # Squares entire matrix
-# nop 2D $matrix in {1 2 3}; # Returns boolean matrix, if values are in a list
-
-proc ::ndlist::nop {nd ndlist op args} {
-    napply [GetNDims $nd] ::tcl::mathop::$op $ndlist {*}$args
-}
-
-# nop2 --
-#
-# Simple math operations over two ND-lists (element-wise)
-#
-# Syntax:
-# nop2 $nd $ndlist1 $op $ndlist2 $arg ...
-#
-# Arguments:
-# nd                Number of dimensions (e.g. 1D, 2D, etc.)
-# ndlist1 ndlist2   ND-lists to iterate over
-# op                Valid mathop (see tcl::mathop documentation)
-# arg ...           Additional values to perform mathop with 
-#
-# Matrix examples:
-# nop2 2D $A + $B
-
-proc ::ndlist::nop2 {nd ndlist1 op ndlist2 args} {
-    napply2 [GetNDims $nd] ::tcl::mathop::$op $ndlist1 $ndlist2 {*}$args
-}
-
 # nreduce --
 #
 # Use a reducing function to process an ND-list along an axis.
@@ -1347,58 +1232,6 @@ proc ::ndlist::nmap {nd args} {
         set map_index $oldmap_index
         set map_shape $oldmap_shape
     }
-}
-
-# nforeach --
-#
-# N-Dimensional foreach loop (version of nmap that returns nothing).
-#
-# Syntax:
-# nforeach $nd $varName $ndlist <$varName $ndlist ...> $body
-#
-# Arguments:
-# varName ...   Variable(s) to map with
-# ndlist ...    ND-list(s) to map over.
-# body          Body to evaluate at every iteration
-
-proc ::ndlist::nforeach {nd args} {
-    # Check arity
-    if {[llength $args] == 1 || [llength $args] % 2 == 0} {
-        return -code error "wrong # args: should be\
-                \"nforeach nd varName ndlist ?varName ndlist ...? expr"
-    }
-    # Interpret input
-    set ndims [GetNDims $nd]
-    set varMap [lrange $args 0 end-1]
-    set body [lindex $args end]
-    # Call modified nmap (creates null tensor
-    tailcall nmap $ndims {*}$varMap "$body; continue"
-}
-
-# nexpr --
-#
-# Generalized math mapping (version of nmap for math).
-#
-# Syntax:
-# nexpr $nd $varName $ndlist <$varName $ndlist ...> $expr
-#
-# Arguments:
-# varName ...   Variable(s) to map with
-# ndlist ...    ND-list(s) to map over.
-# expr          Tcl math expression to evaluate.
-
-proc ::ndlist::nexpr {nd args} {
-    # Check arity
-    if {[llength $args] == 1 || [llength $args] % 2 == 0} {
-        return -code error "wrong # args: should be\
-                \"nexpr nd varName ndlist ?varName ndlist ...? expr"
-    }
-    # Interpret input
-    set ndims [GetNDims $nd]
-    set varMap [lrange $args 0 end-1]
-    set expr [lindex $args end]
-    # Call modified nmap
-    tailcall nmap $ndims {*}$varMap [list expr $expr]
 }
 
 # i,j,k --
