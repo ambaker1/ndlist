@@ -18,10 +18,10 @@ namespace eval ::ndlist {
     namespace export nflatten nreshape; # Reshaping an ND-list
     namespace export nrepeat nexpand npad nextend; # Expanding an ND-list
     namespace export nget nset nreplace; # Access/modification
-    namespace export nremove ninsert ncat nappend; # Deletion/Combination
+    namespace export nremove ninsert ncat; # Deletion/Combination
     namespace export nswapaxes nmoveaxis npermute; # Axis reordering
-    namespace export napply napply2 nop nop2 nreduce; # Functional mapping
-    namespace export nmap nforeach i j k; # Generalized mapping/looping
+    namespace export napply napply2 nreduce; # Functional mapping
+    namespace export nmap i j k; # Generalized mapping/looping
 }
 
 # ND-LIST BASICS
