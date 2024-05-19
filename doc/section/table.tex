@@ -56,14 +56,14 @@ The copy operator, ``\texttt{-{}->}'', copies the table to a new variable, and r
 \$varName & Variable to store object name for access and garbage collection. 
 \end{args}
 
-The assignment operator, ``\texttt{=}'', sets the value of the entire table, and the math assignment operator, ``\texttt{:=}'', sets the value after passing the input through the \cmdlink{expr} command. 
+The assignment operator, ``\texttt{=}'', sets the value of the entire table, and the math assignment operator, ``\texttt{:=}'', sets the value after passing the input through the Tcl \textit{expr} command. 
 Both operators return the object.
 
 \begin{syntax}
-\index{table methods!-{}->} \$tableObj = \$value
+\index{table methods!=} \$tableObj = \$value
 \end{syntax}
 \begin{syntax}
-\index{table methods!-{}->} \$tableObj := \$expr
+\index{table methods!:=} \$tableObj := \$expr
 \end{syntax}
 
 \begin{args}

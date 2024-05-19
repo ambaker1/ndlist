@@ -225,9 +225,9 @@ puts -nonewline {}
 
 test {Example 19} {Getting shape and size of an ND-list} -body {
 puts {}
-narray new 2D x {{1 2 3} {4 5 6}}
-puts [nshape 2D [$x]]
-puts [$x size]
+set x {{1 2 3} {4 5 6}}
+puts [nshape 2D $x]
+puts [nsize 2D $x]
 puts -nonewline {}
 } -output {
 2 3

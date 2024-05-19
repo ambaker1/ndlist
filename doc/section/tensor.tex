@@ -30,9 +30,9 @@ The shape is a list of the dimensions, and the size is the product of the shape.
 \end{args}
 \begin{example}{Getting shape and size of an ND-list}
 \begin{lstlisting}
-narray new 2D x {{1 2 3} {4 5 6}}
-puts [nshape 2D [$x]]
-puts [$x size]
+set x {{1 2 3} {4 5 6}}
+puts [nshape 2D $x]
+puts [nsize 2D $x]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
