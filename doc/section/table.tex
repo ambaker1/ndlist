@@ -423,6 +423,7 @@ Note: Just like in \textit{dict with}, the key variable and field variables in \
 The method \methodlink[0]{table}{expr} computes a list of values according to a field expression, and the method \methodlink[0]{table}{query} returns the keys in a table that match criteria in an expression.
 In the same style as referring to variables with the dollar sign (\$), the ``at'' symbol (@) is used by \methodlink{table}{expr} to refer to field values, or row keys if the keyname is used. 
 This is similar to the syntax for \cmdlink{nexpr}, but the table expression method is limited to fields within a table.
+Additionally, unlike ND-array variable names, field names are not limited to word characters. 
 If any referenced fields have missing values for a table row, the corresponding result will be blank as well. 
 The resulting list corresponds to the keys in the table.
 \begin{syntax}
@@ -441,7 +442,7 @@ $myTable set 1 x 1.0
 $myTable set 2 x 2.0
 $myTable set 3 x 3.0
 set a 20.0
-puts [$tableCopy expr {@x*2 + $a}]
+puts [$myTable expr {@x*2 + $a}]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
@@ -523,19 +524,18 @@ Note: If a field contains missing values, the missing values will be last, regar
 \end{args}
 \begin{example}{Searching and sorting}
 \begin{lstlisting}
-$tableObj --> tableCopy
-puts [$tableCopy search -real x 8.25]; # returns first matching key
-$tableCopy sort -real x
-puts [$tableCopy keys]
-puts [$tableCopy cget x]; # table access reflects sorted keys
-puts [$tableCopy search -sorted -bisect -real x 5.0]
+# Use zip command to make a one-column table
+table new data [zip {key 1 2 3 4 5} {x 3.0 2.3 5.0 2.0 1.8}]
+# Find key corresponding to x value of 5
+puts [$data search -exact -real x 5]
+# Sort the table, and print list of keys and values
+$data sort -real x
+puts [zip [$data keys] [$data cget x]]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
 3
-5 1 2 4 3
-3.26 3.44 4.61 5.20 8.25
-2
+{5 1.8} {4 2.0} {2 2.3} {1 3.0} {3 5.0}
 \end{lstlisting}
 \end{example}
 \clearpage
@@ -555,9 +555,9 @@ Additionally, the keys and fields are combined, such that if a key appears in an
 \begin{example}{Merging data from other tables}
 \begin{lstlisting}
 table new table1 {{key A B} {1 foo bar} {2 hello world}}
-table new table2 {{key B} {1 foo} {2 there}
+table new table2 {{key B} {1 foo} {2 there}}
 $table1 merge $table2
-puts [$table2]
+puts [$table1]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
@@ -596,13 +596,15 @@ The order is preserved in the order of the key and field lists, which are used t
 The following methods modify the key and field lists, but do not modify the raw data (except when removing keys/fields).
 
 \subsubsection{Overwriting Keys/Fields}
-The method \methodlink[0]{table}{define} overwrites the keys and fields of the table, additionally filtering the data or adding keys and fields as necessary. 
+The method \methodlink[0]{table}{define} overwrites the keyname, keys, and fields the table, additionally filtering the data or adding keys and fields as necessary. 
 For example, if the keys are defined to be a subset of the current keys, it will filter the data to only include the key subset. 
 \begin{syntax}
-\method{table}{define} keys \$keys \\
+\method{table}{define} keyname \$keyname \\
+\$tableObj define keys \$keys \\
 \$tableObj define fields \$fields
 \end{syntax}
 \begin{args}
+\$keyname & Name of keys (first column header). \\
 \$keys & Unique list of keys. \\
 \$fields & Unique list of fields.
 \end{args}
@@ -661,7 +663,7 @@ puts [$tableObj]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
-{{key x y z} {1 1 2 3}}
+{key x y z} {1 1 2 3}
 \end{lstlisting}
 \end{example}
 

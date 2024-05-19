@@ -30,6 +30,7 @@ writeMatrix example.csv {{foo bar} {hello world}}
 # Read CSV file
 puts [readFile example.csv]
 puts [readMatrix example.csv]; # converts from csv to matrix
+file delete example.csv
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
@@ -67,7 +68,7 @@ Commas and newlines are escaped with quotes, and quotes are escaped with double-
 \end{args}
 \begin{example}{Data conversions}
 \begin{lstlisting}
-set matrix {{A B C} {{hello world} foo,bar {"hi"}}
+set matrix {{A B C} {{hello world} foo,bar {"hi"}}}
 puts {TXT format:}
 puts [mat2txt $matrix]
 puts {CSV format:}
@@ -80,7 +81,7 @@ A B C
 {hello world} foo,bar {"hi"}
 CSV format:
 A,B,C
-hello world,"foo,bar",""hi""
+hello world,"foo,bar","""hi"""
 \end{lstlisting}
 \end{example}
 \clearpage
