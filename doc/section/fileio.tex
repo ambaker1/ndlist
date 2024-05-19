@@ -1,0 +1,87 @@
+\section{File Import/Export}
+The commands \cmdlink{readFile} and \cmdlink{writeFile} perform simple data import/export, while the commands \cmdlink{readMatrix} and \cmdlink{writeMatrix} dynamically convert files to matrix format and matrices to file format.
+\begin{syntax}
+\command{readFile} <\$option \$value ...> <-newline> \$file
+\end{syntax}
+\begin{syntax}
+\command{readMatrix} <\$option \$value ...> <-newline> \$file
+\end{syntax}
+\begin{args}
+\$option \$value ... & File configuration options, see Tcl \textit{fconfigure} command. \\
+-newline & Option to read the final newline if it exists. \\
+\$file & File to read data from.
+\end{args}
+\begin{syntax}
+\command{writeFile} <\$option \$value ...> <-nonewline> \$file \$data
+\end{syntax}
+\begin{syntax}
+\command{writeMatrix} <\$option \$value ...> <-nonewline> \$file \$data
+\end{syntax}
+\begin{args}
+\$option \$value ... & File configuration options, see Tcl \textit{fconfigure} command. \\
+-nonewline & Option to not write a final newline. \\
+\$file & File to write data to. \\
+\$data & Data to write to file.
+\end{args}
+\begin{example}{File import/export}
+\begin{lstlisting}
+# Export matrix to file (converts to csv)
+writeMatrix example.csv {{foo bar} {hello world}}
+# Read CSV file
+puts [readFile example.csv]
+puts [readMatrix example.csv]; # converts from csv to matrix
+file delete example.csv
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+foo,bar
+hello,world
+{foo bar} {hello world}
+\end{lstlisting}
+\end{example}
+
+\clearpage
+\subsection{Data Conversions}
+The commands \cmdlink{mat2txt} and \cmdlink{txt2mat} convert between matrix and space-delimited text, where new-lines separate rows.
+Escaping of spaces and newlines is consistent with Tcl rules for valid lists. 
+\begin{syntax}
+\command{mat2txt} \$mat 
+\end{syntax}
+\begin{syntax}
+\command{txt2mat} \$txt
+\end{syntax}
+\begin{args}
+\$mat & Matrix value. \\
+\$txt & Space-delimited values.
+\end{args}
+The commands \cmdlink{mat2csv} and \cmdlink{csv2mat} convert between matrix and CSV-formatted text, where new lines separate rows.  
+Commas and newlines are escaped with quotes, and quotes are escaped with double-quotes. 
+\begin{syntax}
+\command{mat2csv} \$mat
+\end{syntax}
+\begin{syntax}
+\command{csv2mat} \$csv
+\end{syntax}
+\begin{args}
+\$mat & Matrix value. \\
+\$csv & Comma-separated values.
+\end{args}
+\begin{example}{Data conversions}
+\begin{lstlisting}
+set matrix {{A B C} {{hello world} foo,bar {"hi"}}}
+puts {TXT format:}
+puts [mat2txt $matrix]
+puts {CSV format:}
+puts [mat2csv $matrix]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+TXT format:
+A B C
+{hello world} foo,bar {"hi"}
+CSV format:
+A,B,C
+hello world,"foo,bar","""hi"""
+\end{lstlisting}
+\end{example}
+\clearpage

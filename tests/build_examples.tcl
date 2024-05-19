@@ -16,7 +16,7 @@ proc GetLstListing {fid} {
 
 # Find examples in file
 set examples ""
-foreach section {vector matrix tensor object} {
+foreach section {vector matrix tensor object table fileio} {
     set filename "doc/section/$section.tex"
     set fid [open $filename r]
     while {![eof $fid]} {

@@ -21,6 +21,8 @@ source tests/vector_test.tcl
 source tests/matrix_test.tcl
 source tests/tensor_test.tcl
 source tests/object_test.tcl
+source tests/fileio_test.tcl
+source tests/table_test.tcl
 source tests/examples.tcl
 
 # Check number of failed tests

@@ -3,16 +3,16 @@ The command \cmdlink{narray} is a TclOO class based on the superclass \textit{::
 It is an object-oriented approach to array manipulation and processing.
 
 \begin{syntax}
-\command{narray} new \$nd \$varName <\$ndlist>
+\command{narray} new \$nd \$varName <\$value>
 \end{syntax}
 \begin{syntax}
-\command{narray} create \$name \$nd \$varName <\$ndlist>
+narray create \$name \$nd \$varName <\$value>
 \end{syntax}
 \begin{args}
 \$nd & Rank of ND-array (e.g. 2D, 2d, or 2 for a matrix). \\
 \$varName & Variable to store object name for access and garbage collection. 
 Variable names are restricted to word characters and namespace delimiters only.\\
-\$ndlist & ND-list value to store in ND-array. Default blank. \\
+\$value & ND-list value to store in ND-array. Default blank. \\
 \$name & Name of object if using ``create'' method.
 \end{args}
 \subsection{Value, Rank, Shape, and Size}
@@ -299,7 +299,7 @@ puts [$x]
 \end{example}
 \clearpage
 \subsection{Reference Variable Evaluation}
-The operator ``\texttt{\&}'' copies the ND-array value or range to a reference variable, and evaluates a body of script. 
+The ampersand operator ``\texttt{\&}'' copies the ND-array value or range to a reference variable, and evaluates a body of script. 
 The changes made to the reference variable will be applied to the object, and if the variable is unset, the object will be deleted.
 If no indices are specified and the variable is unset in the script, the ND-array object will be destroyed.
 Returns the result of the script.
