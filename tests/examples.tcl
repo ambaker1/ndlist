@@ -611,3 +611,255 @@ puts -nonewline {}
 1 2 3 4 5 6
 1 2 3 4 5 {6 7 8 9}
 }
+
+test {Example 53} {Creating and accessing a table} -body {
+puts {}
+table new tableObj {{key A B} {1 foo bar} {2 hello world}}
+puts [$tableObj]
+puts -nonewline {}
+} -output {
+{key A B} {1 foo bar} {2 hello world}
+}
+
+test {Example 54} {Cleaning the table} -body {
+puts {}
+table new tableObj
+$tableObj = {
+    {key x y z}
+    {1 {} foo bar}
+    {2 {} hello world}
+    {3 {} {} {}}
+}
+puts [$tableObj]
+# Remove keys and fields with no data
+$tableObj clean
+puts [$tableObj]
+# Remove all keys and data, keep fields
+$tableObj clear
+puts [$tableObj]
+# Reset table 
+$tableObj wipe
+puts [$tableObj]
+puts -nonewline {}
+} -output {
+{key x y z} {1 {} foo bar} {2 {} hello world} {3 {} {} {}}
+{key y z} {1 foo bar} {2 hello world}
+{key y z}
+key
+}
+
+test {Example 55} {Access table components} -body {
+puts {}
+table new tableObj
+$tableObj = {
+    {key A B}
+    {1 foo bar}
+    {2 hello world}
+}
+puts [$tableObj]
+puts [$tableObj keyname]
+puts [$tableObj keys]
+puts [$tableObj fields]
+puts [$tableObj values]
+puts -nonewline {}
+} -output {
+{key A B} {1 foo bar} {2 hello world}
+key
+1 2
+A B
+{foo bar} {hello world}
+}
+
+test {Example 56} {Accessing table data and dimensions} -body {
+puts {}
+table new tableObj {{key A B} {1 foo bar} {2 hello world} {3 {} {}}}
+puts [$tableObj dict]
+puts [$tableObj height]
+puts [$tableObj width]
+puts -nonewline {}
+} -output {
+1 {A foo B bar} 2 {A hello B world} 3 {}
+3
+2
+}
+
+test {Example 57} {Find column index of a field} -body {
+puts {}
+table new tableObj {
+    {name x y z}
+    {bob 1 2 3}
+    {sue 3 2 1}
+}
+puts [$tableObj exists field z]
+puts [$tableObj find field z]
+puts -nonewline {}
+} -output {
+1
+2
+}
+
+test {Example 58} {Setting multiple values} -body {
+puts {}
+table new tableObj
+$tableObj set 1 x 2.0 y 3.0 z 6.5
+puts [$tableObj]
+puts -nonewline {}
+} -output {
+{key x y z} {1 2.0 3.0 6.5}
+}
+
+test {Example 59} {Setting entire rows/columns} -body {
+puts {}
+table new tableObj {{key A B}}
+$tableObj rset 1 {1 2}
+$tableObj rset 2 {4 5}
+$tableObj rset 3 {7 8}
+$tableObj cset C {3 6 9}
+puts [$tableObj]
+puts -nonewline {}
+} -output {
+{key A B C} {1 1 2 3} {2 4 5 6} {3 7 8 9}
+}
+
+test {Example 60} {Matrix entry and access} -body {
+puts {}
+table new T
+$T mset {1 2 3 4} {A B} 0.0; # Initialize as zero
+$T mset {1 2 3} A {1.0 2.0 3.0}; # Set subset of table
+puts [$T mget [$T keys] [$T fields]]; # Same as [$T values]
+puts -nonewline {}
+} -output {
+{1.0 0.0} {2.0 0.0} {3.0 0.0} {0.0 0.0}
+}
+
+test {Example 61} {Iterating over a table, accessing and modifying field values} -body {
+puts {}
+table new parameters {{key x y z}}
+$parameters set 1 x 1.0 y 2.0
+$parameters set 2 x 3.0 y 4.0
+$parameters with {
+    set z [expr {$x + $y}]
+}
+puts [$parameters cget z]
+puts -nonewline {}
+} -output {
+3.0 7.0
+}
+
+test {Example 62} {Math operation over table columns} -body {
+puts {}
+table new myTable
+$myTable set 1 x 1.0 
+$myTable set 2 x 2.0
+$myTable set 3 x 3.0
+set a 20.0
+puts [$myTable expr {@x*2 + $a}]
+puts -nonewline {}
+} -output {
+22.0 24.0 26.0
+}
+
+test {Example 63} {Getting data that meets a criteria} -body {
+puts {}
+# Create blank table with keyname "StudentID"
+table new classData StudentID
+$classData set 1 name bob {height (cm)} 175 {weight (kg)} 60
+$classData set 2 name frank {height (cm)} 180 {weight (kg)} 75
+$classData set 3 name sue {height (cm)} 165 {weight (kg)} 55
+$classData set 4 name sally {height (cm)} 150 {weight (kg)} 50
+# Subset of data where height is greater than 160
+puts [$classData mget [$classData query {@{height (cm)} > 160}] {name {height (cm)}}]
+puts -nonewline {}
+} -output {
+{bob 175} {frank 180} {sue 165}
+}
+
+test {Example 64} {Searching and sorting} -body {
+puts {}
+# Use zip command to make a one-column table
+table new data [zip {key 1 2 3 4 5} {x 3.0 2.3 5.0 2.0 1.8}]
+# Find key corresponding to x value of 5
+puts [$data search -exact -real x 5]
+# Sort the table, and print list of keys and values
+$data sort -real x
+puts [zip [$data keys] [$data cget x]]
+puts -nonewline {}
+} -output {
+3
+{5 1.8} {4 2.0} {2 2.3} {1 3.0} {3 5.0}
+}
+
+test {Example 65} {Merging data from other tables} -body {
+puts {}
+table new table1 {{key A B} {1 foo bar} {2 hello world}}
+table new table2 {{key B} {1 foo} {2 there}}
+$table1 merge $table2
+puts [$table1]
+puts -nonewline {}
+} -output {
+{key A B} {1 foo foo} {2 hello there}
+}
+
+test {Example 66} {Re-keying a table} -body {
+puts {}
+table new tableObj {{ID A B C} {1 1 2 3} {2 4 5 6} {3 7 8 9}}
+$tableObj mkkey A
+puts [$tableObj]
+puts -nonewline {}
+} -output {
+{A B C ID} {1 2 3 1} {4 5 6 2} {7 8 9 3}
+}
+
+test {Example 67} {Renaming fields} -body {
+puts {}
+table new tableObj {{key A B C} {1 1 2 3}}
+$tableObj rename fields {x y z}
+puts [$tableObj]
+puts -nonewline {}
+} -output {
+{key x y z} {1 1 2 3}
+}
+
+test {Example 68} {Swapping table rows} -body {
+puts {}
+table new tableObj
+$tableObj define keys {1 2 3 4}
+$tableObj cset A {2.0 4.0 8.0 16.0}
+$tableObj swap keys 1 4
+puts [$tableObj]
+puts -nonewline {}
+} -output {
+{key A} {4 16.0} {2 4.0} {3 8.0} {1 2.0}
+}
+
+test {Example 69} {File import/export} -body {
+puts {}
+# Export matrix to file (converts to csv)
+writeMatrix example.csv {{foo bar} {hello world}}
+# Read CSV file
+puts [readFile example.csv]
+puts [readMatrix example.csv]; # converts from csv to matrix
+file delete example.csv
+puts -nonewline {}
+} -output {
+foo,bar
+hello,world
+{foo bar} {hello world}
+}
+
+test {Example 70} {Data conversions} -body {
+puts {}
+set matrix {{A B C} {{hello world} foo,bar {"hi"}}}
+puts {TXT format:}
+puts [mat2txt $matrix]
+puts {CSV format:}
+puts [mat2csv $matrix]
+puts -nonewline {}
+} -output {
+TXT format:
+A B C
+{hello world} foo,bar {"hi"}
+CSV format:
+A,B,C
+hello world,"foo,bar","""hi"""
+}

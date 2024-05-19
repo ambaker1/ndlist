@@ -2,7 +2,7 @@
 ################################################################################
 # Main file for ND list package. 
 
-# Copyright (C) 2023 Alex Baker, ambaker1@mtu.edu
+# Copyright (C) 2024 Alex Baker, ambaker1@mtu.edu
 # All rights reserved. 
 
 # See the file "LICENSE" in the top level directory for information on usage, 
@@ -21,6 +21,8 @@ namespace eval ::ndlist {
     source [file join $dir tensor.tcl]
     source [file join $dir ndapi.tcl]
     source [file join $dir ndobj.tcl]
+    source [file join $dir table.tcl]
+    source [file join $dir fileio.tcl]
 }
 
 # Finally, provide the package

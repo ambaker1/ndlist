@@ -302,5 +302,3 @@ test merge {
     $tblCopy
 } -result {{key x y z q} {1 5.00 7.11 8.67 6.34} {2 4.61 1.81 7.63 {}} {3 8.25 7.56 3.84 {}} {4 5.20 6.78 1.11 {}} {5 3.26 9.92 4.56 {}}}
 
-tin import flytrap
-pause
