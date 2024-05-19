@@ -636,14 +636,14 @@ namespace eval ::ndlist {
             foreach {field match} $fieldMap {
                 if {![my exists value $key $field]} {
                     if {$field eq $keyname} {
-                        set subExpr [regsub $match $subExpr "{$key}"]
+                        set subExpr [regsub $exp $subExpr "{$key}"]
                         continue
                     }
                     # No data for this key/field combo. Skip.
                     set valid 0
                     break
                 }
-                set subExpr [regsub $match $subExpr "{[my get $key $field]}"]
+                set subExpr [regsub $exp $subExpr "{[my get $key $field]}"]
             }; # end foreach fieldmap pair
             if {$valid} {
                 # Only add data if all required fields exist.
@@ -1557,4 +1557,5 @@ namespace eval ::ndlist {
         return [self]
     }
 }; # end class definition
+
 

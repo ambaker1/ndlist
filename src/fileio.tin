@@ -176,8 +176,8 @@ proc ::ndlist::writeMatrix {args} {
 # matrix        Nested list to conform into a matrix.
 
 proc ::ndlist::Conform2Matrix {matrix} {
-    # Get number of columns
     set m 0
+    # Get number of columns
     foreach row $matrix {
         if {[llength $row] > $m} {
             set m [llength $row]
@@ -185,8 +185,8 @@ proc ::ndlist::Conform2Matrix {matrix} {
     }
     # Expand matrix if needed.
     lmap row $matrix {
-        if {[llength $row] < $n} {
-            lappend row {*}[lrepeat [expr {$n-[llength $row]}] {}]
+        if {[llength $row] < $m} {
+            lappend row {*}[lrepeat [expr {$m-[llength $row]}] {}]
         }
         set row
     }
@@ -323,4 +323,3 @@ proc ::ndlist::csv2mat {csv} {
     # Validate and return matrix
     return [Conform2Matrix $matrix]
 }
-
