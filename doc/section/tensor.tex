@@ -30,9 +30,9 @@ The shape is a list of the dimensions, and the size is the product of the shape.
 \end{args}
 \begin{example}{Getting shape and size of an ND-list}
 \begin{lstlisting}
-narray new 2D x {{1 2 3} {4 5 6}}
-puts [nshape 2D [$x]]
-puts [$x size]
+set x {{1 2 3} {4 5 6}}
+puts [nshape 2D $x]
+puts [nsize 2D $x]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
@@ -511,7 +511,7 @@ puts [nreduce 2D sum $x 1]; # sum of each row
 
 \clearpage
 \subsection{Generalized N-Dimensional Mapping}
-The command \cmdlink{nmap} is a general purpose mapping function for N-dimensional lists in Tcl, and the command \cmdlink{nexpr} a special case for math expressions.
+The command \cmdlink{nmap} is a general purpose mapping function for N-dimensional lists in Tcl.
 If multiple ND-lists are provided for iteration, they must be expandable to their maximum dimensions.
 The actual implementation flattens all the ND-lists and calls the Tcl \textit{lmap} command, and then reshapes the result to the target dimensions.
 So, if ``continue'' or ``break'' are used in the map body, it will return an error.

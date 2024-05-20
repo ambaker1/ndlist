@@ -1065,8 +1065,8 @@ namespace eval ::ndlist {
     # $tblObj remove fields $field ...
     #
     # Arguments:
-    # key ...       Keys to insert
-    # field ...     Fields to insert
+    # key ...       Keys to remove
+    # field ...     Fields to remove
 
     method remove {type args} {
         switch $type {
