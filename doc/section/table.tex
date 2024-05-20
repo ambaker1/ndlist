@@ -165,7 +165,6 @@ key
 The matrix representation of the table can be accessed by calling the object without any methods. 
 In addition, the four parts of the table can be accessed with the methods \methodlink[0]{table}{keyname}, \methodlink[0]{table}{keys}, \methodlink[0]{table}{fields}, and \methodlink[0]{table}{values}.
 
-The keyname of a table can be accessed or modified directly with their respective methods. 
 \begin{syntax}
 \method{table}{keyname}
 \end{syntax}
@@ -206,6 +205,7 @@ A B
 {foo bar} {hello world}
 \end{lstlisting}
 \end{example}
+Note: the default keyname of a table is ``key''.
 
 \clearpage
 
@@ -284,7 +284,7 @@ puts [$tableObj find field z]
 \clearpage
 \subsection{Table Entry and Access}
 Data entry and access to a table object can be done with single values with the methods \methodlink[0]{table}{set} and \methodlink[0]{table}{get}, entire rows with \methodlink[0]{table}{rset} and \methodlink[0]{table}{rget}, entire columns with \methodlink[0]{table}{cset} and \methodlink[0]{table}{cget}, or in matrix fashion with \methodlink[0]{table}{mset} and \methodlink[0]{table}{mget}. 
-If entry keys/fields do not exist, they are added to the table. 
+When entering data, if entry keys/fields do not exist, they are added to the table. 
 Additionally, since blank values represent missing data, setting a value to blank effectively unsets the table entry, but does not remove the key or field. 
 \subsubsection{Single Value Entry and Access}
 The methods \methodlink[0]{table}{set} and \methodlink[0]{table}{get} allow for easy entry and access of single values in the table. 
@@ -302,17 +302,22 @@ Note that multiple field-value pairings can be used in \methodlink{table}{set}.
 \$filler & Filler to return if value is missing. Default blank. 
 \end{args}
 
-\begin{example}{Setting multiple values}
+\begin{example}{Getting and setting values in a table}
 \begin{lstlisting}
 table new tableObj
+# Set multiple values at once
 $tableObj set 1 x 2.0 y 3.0 z 6.5
-puts [$tableObj]
+# Access values in the table
+puts [$tableObj get 1 x]
+puts [$tableObj get 1 y]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
-{key x y z} {1 2.0 3.0 6.5}
+2.0
+3.0
 \end{lstlisting}
 \end{example}
+Note: the ``filler'' is only returned if the key and field exist, but the value does not.
 \clearpage
 \subsubsection{Row Entry and Access}
 The methods \methodlink[0]{table}{rset} and \methodlink[0]{table}{rget} allow for easy row entry and access.
@@ -423,7 +428,7 @@ Note: Just like in \textit{dict with}, the key variable and field variables in \
 The method \methodlink[0]{table}{expr} computes a list of values according to a field expression, and the method \methodlink[0]{table}{query} returns the keys in a table that match criteria in an expression.
 In the same style as referring to variables with the dollar sign (\$), the ``at'' symbol (@) is used by \methodlink{table}{expr} to refer to field values, or row keys if the keyname is used. 
 This is similar to the syntax for \cmdlink{nexpr}, but the table expression method is limited to fields within a table.
-Additionally, unlike ND-array variable names, field names are not limited to word characters. 
+Additionally, unlike ND-array variable names, field names are not limited to word characters, as shown in the example. 
 If any referenced fields have missing values for a table row, the corresponding result will be blank as well. 
 The resulting list corresponds to the keys in the table.
 \begin{syntax}
@@ -470,10 +475,9 @@ puts [$classData mget [$classData query {@{height (cm)} > 160}] {name {height (c
 
 \subsection{Searching a Table}
 Besides searching for specific field expression criteria with \methodlink{table}{query}, keys matching criteria can be found with the method \methodlink[0]{table}{search}. 
-The method \methodlink[0]{table}{search} searches a table using the Tcl \textit{lsearch} command on the keys or field values. The default search method uses glob pattern matching, and returns matching keys.
+The method \methodlink[0]{table}{search} searches a table using the Tcl \textit{lsearch} command on the keys or field values. The default search method uses ``glob'' pattern matching, and returns the matching keys.
 This search behavior can be changed with the various options, which are taken directly from the Tcl \textit{lsearch} command. 
-Therefore, while brief descriptions of the options are provided here, they are explained more in depth in the Tcl documentation, with the exception of the -inline option.
-The -inline option filters a table based on the search criteria.
+Therefore, while brief descriptions of the options are provided here, they are explained more in depth in the Tcl documentation.
 \begin{syntax}
 \method{table}{search} <\$option ...> <\$field> \$value
 \end{syntax}
@@ -544,6 +548,7 @@ Data from other tables can be merged into the table object with \methodlink{tabl
 In order to merge, all the tables must have the same keyname.
 If the merge is valid, the table data is combined, with later entries taking precedence. 
 Additionally, the keys and fields are combined, such that if a key appears in any of the tables, it is in the combined table.
+Returns the table object.
 
 \begin{syntax}
 \method{table}{merge} \$object ...
@@ -565,7 +570,7 @@ puts [$table1]
 \end{lstlisting}
 \end{example}
 \clearpage
-\subsection{Re-Keying a Table}
+\subsection{Re-keying a Table}
 The method \methodlink[0]{table}{mkkey} makes a field the key of a table, and makes the key a field. 
 If a field is empty for some keys, those keys will be lost. 
 Additionally, if field values repeat, only the last entry for that field value will be included. 
@@ -596,7 +601,7 @@ The order is preserved in the order of the key and field lists, which are used t
 The following methods modify the key and field lists, but do not modify the raw data (except when removing keys/fields).
 
 \subsubsection{Overwriting Keys/Fields}
-The method \methodlink[0]{table}{define} overwrites the keyname, keys, and fields the table, additionally filtering the data or adding keys and fields as necessary. 
+The method \methodlink[0]{table}{define} overwrites the keyname, keys, and fields of the table, additionally filtering the data or adding keys and fields as necessary. 
 For example, if the keys are defined to be a subset of the current keys, it will filter the data to only include the key subset. 
 \begin{syntax}
 \method{table}{define} keyname \$keyname \\
@@ -683,7 +688,7 @@ Existing keys and fields can be moved with the method \methodlink[0]{table}{move
 
 \subsubsection{Swapping Keys/Fields}
 Existing keys and fields can be swapped with the method \methodlink[0]{table}{swap}.
-To swap the a field column with the key column, use the method \methodlink[0]{table}{mkkey}.
+To swap a field column with the key column, use the method \methodlink[0]{table}{mkkey}.
 
 \begin{syntax}
 \method{table}{swap} keys \$key1 \$key2 \\

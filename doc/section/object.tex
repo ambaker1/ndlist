@@ -183,9 +183,8 @@ puts [[$x := {$@ + $@y}]]
 
 \clearpage
 \subsection{Removal/Insertion}
-The method \methodlink[0]{narray}{remove} removes portions of an ND-array along a specified axis, returning the object.
-
-The method \methodlink[0]{narray}{insert} inserts values into an ND-array at a specified index/axis, returning the object.
+The method \methodlink[0]{narray}{remove} removes portions of an ND-array along a specified axis with the command \cmdlink{nremove}, and the method \methodlink[0]{narray}{insert} inserts values into an ND-array at a specified index/axis with the command \cmdlink{ninsert}. 
+Both methods modify the object and return the object. 
 
 \begin{syntax}
 \method{narray}{remove} \$i <\$axis>
@@ -227,8 +226,8 @@ puts [$matrix]
 
 \clearpage
 \subsection{Map/Reduce}
-The method \methodlink[0]{narray}{apply} maps a command over the ND-array, returning the value, and the method \methodlink[0]{narray}{reduce} applies a reducing command over a specified axis, returning the value. 
-Both commands do not modify the object.
+The method \methodlink[0]{narray}{apply} maps a command over the ND-array with \cmdlink{napply}, and the method \methodlink[0]{narray}{reduce} reduces the ND-array over an axis with \cmdlink{nreduce}. 
+Both methods do not modify the object, but rather return values.
 
 \begin{syntax}
 \method{narray}{apply} \$command \$arg ...

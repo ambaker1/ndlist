@@ -698,14 +698,18 @@ puts -nonewline {}
 2
 }
 
-test {Example 58} {Setting multiple values} -body {
+test {Example 58} {Getting and setting values in a table} -body {
 puts {}
 table new tableObj
+# Set multiple values at once
 $tableObj set 1 x 2.0 y 3.0 z 6.5
-puts [$tableObj]
+# Access values in the table
+puts [$tableObj get 1 x]
+puts [$tableObj get 1 y]
 puts -nonewline {}
 } -output {
-{key x y z} {1 2.0 3.0 6.5}
+2.0
+3.0
 }
 
 test {Example 59} {Setting entire rows/columns} -body {
