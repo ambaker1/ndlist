@@ -1,4 +1,5 @@
 package require tin 1.0
+tin add -auto vutil https://github.com/ambaker1/vutil install.tcl 4.0-
 tin depend vutil @VUTIL_VERSION@
 set dir [tin mkdir -force ndlist @VERSION@]
 file copy pkgIndex.tcl ndlist.tcl ndapi.tcl ndobj.tcl $dir
