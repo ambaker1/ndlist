@@ -1,5 +1,5 @@
 # N-Dimensional Lists (ndlist)
-Utilities for accessing, modifying and manipulating N-Dimensional lists in Tcl.
+A pure Tcl implementation of arbitrary rank tensors.
 
 Full documentation [here](https://raw.githubusercontent.com/ambaker1/ndlist/main/doc/ndlist.pdf).
 
