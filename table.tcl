@@ -1140,7 +1140,7 @@ namespace eval ::ndlist {
                 }
             }
             default {
-                return -code error "unknown option \"$option\".\
+                return -code error "unknown option \"$type\".\
                         want \"keys\" or \"fields\""
             }
         }
