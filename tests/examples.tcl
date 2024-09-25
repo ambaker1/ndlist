@@ -378,7 +378,7 @@ puts -nonewline {}
 
 test {Example 34} {Inserting a column into a matrix} -body {
 puts {}
-narray new 2 matrix {{1 2} {3 4} {5 6}}
+narray new matrix 2 {{1 2} {3 4} {5 6}}
 $matrix insert 1 {A B C} 1
 puts [$matrix]
 puts -nonewline {}
@@ -479,8 +479,8 @@ puts -nonewline {}
 test {Example 42} {Creating ND-arrays} -body {
 puts {}
 # Create new ND-arrays
-narray new 2D x {{1 2 3} {4 5 6} {7 8 9}}
-narray new 1D y {hello world}
+narray new x 2D {{1 2 3} {4 5 6} {7 8 9}}
+narray new y 1D {hello world}
 # Print rank and value of ND-arrays
 puts "[$x rank], [$x]"
 puts "[$y rank], [$y]"
@@ -492,7 +492,7 @@ puts -nonewline {}
 
 test {Example 43} {Accessing portions of an ND-array} -body {
 puts {}
-narray new 2D x {{1 2 3} {4 5 6} {7 8 9}}
+narray new x 2D {{1 2 3} {4 5 6} {7 8 9}}
 puts [$x @ 0 2]
 puts [$x @ 0:end-1 {0 2}]
 puts -nonewline {}
@@ -503,7 +503,7 @@ puts -nonewline {}
 
 test {Example 44} {Copying a portion of an ND-array} -body {
 puts {}
-narray new 2 x {{1 2 3} {4 5 6}}
+narray new x 2 {{1 2 3} {4 5 6}}
 $x @ 0* : --> y; # Row vector (flattened to 1D)
 puts "[$y rank], [$y]"
 puts -nonewline {}
@@ -513,8 +513,8 @@ puts -nonewline {}
 
 test {Example 45} {Get distance between elements in a vector} -body {
 puts {}
-narray new 1D x {1 2 4 7 11 16}
-puts [nexpr {$@x(1:end) - $@x(0:end-1)}]
+narray new x 1D {1 2 4 7 11 16}
+puts [nexpr {$.x(1:end) - $.x(0:end-1)}]
 puts -nonewline {}
 } -output {
 1 2 3 4 5
@@ -522,9 +522,9 @@ puts -nonewline {}
 
 test {Example 46} {Outer product of two vectors} -body {
 puts {}
-narray new 2D x {1 2 3}
-narray new 2D y {{4 5 6}}
-puts [nexpr {$@x * $@y}]
+narray new x 2D {1 2 3}
+narray new y 2D {{4 5 6}}
+puts [nexpr {$.x * $.y}]
 puts -nonewline {}
 } -output {
 {4 5 6} {8 10 12} {12 15 18}
@@ -533,14 +533,14 @@ puts -nonewline {}
 test {Example 47} {Element-wise modification of a vector} -body {
 puts {}
 # Create blank vectors and assign values
-[narray new 1D x] = {1 2 3}
-[narray new 1D y] = {10 20 30}
+[narray new x 1D] = {1 2 3}
+[narray new y 1D] = {10 20 30}
 # Add one to each element
-puts [[$x := {$@ + 1}]]
+puts [[$x := {$. + 1}]]
 # Double the last element
-puts [[$x @ end := {$@ * 2}]]
+puts [[$x @ end := {$. * 2}]]
 # Element-wise addition of vectors
-puts [[$x := {$@ + $@y}]]
+puts [[$x := {$. + $.y}]]
 puts -nonewline {}
 } -output {
 2 3 4
@@ -550,9 +550,9 @@ puts -nonewline {}
 
 test {Example 48} {Removing elements from a vector} -body {
 puts {}
-narray new 1 vector {1 2 3 4 5 6 7 8}
+narray new vector 1 {1 2 3 4 5 6 7 8}
 # Remove all odd numbers
-$vector remove [find [nexpr {$@vector % 2}]]
+$vector remove [find [nexpr {$.vector % 2}]]
 puts [$vector]
 puts -nonewline {}
 } -output {
@@ -561,7 +561,7 @@ puts -nonewline {}
 
 test {Example 49} {Map a command over a list} -body {
 puts {}
-narray new 1 text {The quick brown fox jumps over the lazy dog}
+narray new text 1 {The quick brown fox jumps over the lazy dog}
 puts [$text apply {string length}]; # Print the length of each word
 puts -nonewline {}
 } -output {
@@ -570,7 +570,7 @@ puts -nonewline {}
 
 test {Example 50} {Get column statistics of a matrix} -body {
 puts {}
-narray new 2 matrix {{1 2 3} {4 5 6} {7 8 9}}
+narray new matrix 2 {{1 2 3} {4 5 6} {7 8 9}}
 # Convert to double-precision floating point
 $matrix = [$matrix apply ::tcl::mathfunc::double]
 # Get maximum and minimum of each column
@@ -585,9 +585,9 @@ puts -nonewline {}
 test {Example 51} {Temporary object value} -body {
 puts {}
 # Create a matrix
-narray new 2 x {{1 2 3} {4 5 6}}
+narray new x 2 {{1 2 3} {4 5 6}}
 # Print value with first row doubled.
-puts [$x | @ 0* : := {$@ * 2}]
+puts [$x | @ 0* : := {$. * 2}]
 # Source object was not modified
 puts [$x]
 puts -nonewline {}
@@ -599,7 +599,7 @@ puts -nonewline {}
 test {Example 52} {Appending a vector} -body {
 puts {}
 # Create a 1D list
-narray new 1 x {1 2 3}
+narray new x 1 {1 2 3}
 # Append the list
 $x & ref {lappend ref 4 5 6}
 puts [$x]

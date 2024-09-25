@@ -1,7 +1,7 @@
 package require tin 1.0
 tin import assert from tin
 tin import tcltest
-set version 0.8.1
+set version 0.9
 set config ""
 dict set config VERSION $version
 dict set config VUTIL_VERSION 4.0
