@@ -199,6 +199,18 @@ $tblCopy cset x foo
 assert [$tblCopy cget x] eq {foo foo foo foo foo}
 } -result {}
 
+test @operator {
+	# Test out the capabilities of the @ operator
+} -body {
+	$tblObj --> tblCopy
+	assert [$tblCopy @ x] eq {3.44 4.61 8.25 5.20 3.26}
+	set a 5
+	$tblCopy @ x := {@x + $a}
+	assert [$tblCopy @ x] eq {8.44 9.61 13.25 10.2 8.26}
+	$tblCopy @ x = {foo bar foo bar foo}
+	assert [$tblCopy @ x] eq {foo bar foo bar foo}
+}
+
 test height_width {
     # Get height and width
 } -body {

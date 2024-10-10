@@ -778,7 +778,20 @@ puts -nonewline {}
 {bob 175} {frank 180} {sue 165}
 }
 
-test {Example 64} {Searching and sorting} -body {
+test {Example 64} {Accessing and modifying table columns} -body {
+puts {}
+table new myTable
+$myTable define keys {1 2 3}
+$myTable @ x = {1.0 2.0 3.0}
+set a 20.0
+$myTable @ y := {@x*2 + $a}
+puts [$myTable @ y]
+puts -nonewline {}
+} -output {
+22.0 24.0 26.0
+}
+
+test {Example 65} {Searching and sorting} -body {
 puts {}
 # Use zip command to make a one-column table
 table new data [zip {key 1 2 3 4 5} {x 3.0 2.3 5.0 2.0 1.8}]
@@ -793,7 +806,7 @@ puts -nonewline {}
 {5 1.8} {4 2.0} {2 2.3} {1 3.0} {3 5.0}
 }
 
-test {Example 65} {Merging data from other tables} -body {
+test {Example 66} {Merging data from other tables} -body {
 puts {}
 table new table1 {{key A B} {1 foo bar} {2 hello world}}
 table new table2 {{key B} {1 foo} {2 there}}
@@ -804,7 +817,7 @@ puts -nonewline {}
 {key A B} {1 foo foo} {2 hello there}
 }
 
-test {Example 66} {Re-keying a table} -body {
+test {Example 67} {Re-keying a table} -body {
 puts {}
 table new tableObj {{ID A B C} {1 1 2 3} {2 4 5 6} {3 7 8 9}}
 $tableObj mkkey A
@@ -814,7 +827,7 @@ puts -nonewline {}
 {A B C ID} {1 2 3 1} {4 5 6 2} {7 8 9 3}
 }
 
-test {Example 67} {Renaming fields} -body {
+test {Example 68} {Renaming fields} -body {
 puts {}
 table new tableObj {{key A B C} {1 1 2 3}}
 $tableObj rename fields {x y z}
@@ -824,7 +837,7 @@ puts -nonewline {}
 {key x y z} {1 1 2 3}
 }
 
-test {Example 68} {Swapping table rows} -body {
+test {Example 69} {Swapping table rows} -body {
 puts {}
 table new tableObj
 $tableObj define keys {1 2 3 4}
@@ -836,7 +849,7 @@ puts -nonewline {}
 {key A} {4 16.0} {2 4.0} {3 8.0} {1 2.0}
 }
 
-test {Example 69} {File import/export} -body {
+test {Example 70} {File import/export} -body {
 puts {}
 # Export matrix to file (converts to csv)
 writeMatrix example.csv {{foo bar} {hello world}}
@@ -851,7 +864,7 @@ hello,world
 {foo bar} {hello world}
 }
 
-test {Example 70} {Data conversions} -body {
+test {Example 71} {Data conversions} -body {
 puts {}
 set matrix {{A B C} {{hello world} foo,bar {"hi"}}}
 puts {TXT format:}

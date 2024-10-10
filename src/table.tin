@@ -512,7 +512,46 @@ namespace eval ::ndlist {
         # Return object name
         return [self]
     }
-
+	
+	# $tblObj @ --
+    # 
+    # Field access and modification
+    #
+    # Syntax:
+    # $tblObj @ $field <$filler> <= $column | := $expr>
+    #
+    # Arguments:
+    # field:        field to query or modify
+    # filler:       filler for missing values (default "")
+    # column:       List of values (length must match height, or be scalar)
+    # expr:    		Tcl expression, but with @ symbol for fields
+	
+	method @ {field args} {
+		# Check arity
+		if {[llength $args] > 2} {
+			return -code error 
+					"wrong # args: want \"[self] @ field ?op arg?\""
+		}
+		# Access
+		# $tblObj @ $field <$filler>
+		if {[llength $args] <= 1} {
+			tailcall my cget $field {*}$args
+		}
+		# Modification
+		lassign $args op arg
+		switch $op {
+			= { # $tblObj @ $field = $column
+				tailcall my cset $field $arg
+			}
+			:= { # $tblObj @ $field := $expr
+				tailcall my cset $field [uplevel 1 [list [self] expr $arg]]
+			}
+			default {
+				return -code error "unknown operator \"$op\""
+			}
+		}
+	}
+	export @
     
     # Table access
     ########################################################################
