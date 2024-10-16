@@ -13,6 +13,7 @@
 namespace eval ::ndlist {
     variable ref; # Reference map for ndlists.
     namespace export narray neval nexpr
+    namespace export scalar vector matrix; # Shorthand
 }
 
 # ValidateRefName --
@@ -24,6 +25,18 @@ proc ::ndlist::ValidateRefName {refName} {
         return -code error "invalid object reference name \"$refName\""
     }
     return $refName
+}
+
+proc ::ndlist::scalar {varName {value ""}} {
+    tailcall narray new $varName 0 $value
+}
+
+proc ::ndlist::vector {varName {value ""}} {
+    tailcall narray new $varName 1 $value
+}
+
+proc ::ndlist::matrix {varName {value ""}} {
+    tailcall narray new $varName 2 $value
 }
 
 # Create narray class.
