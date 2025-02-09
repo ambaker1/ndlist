@@ -472,6 +472,41 @@ puts [$classData mget [$classData query {@{height (cm)} > 160}] {name {height (c
 \end{example}
 
 \clearpage
+\subsection{Table Index Operator}
+The ``\texttt{@}'' operator is a short-hand way to access or modify table columns.
+\begin{syntax}
+\index{table methods!@} \$tableObj @ \$field = \$column
+\end{syntax}
+\begin{syntax}
+\$tableObj @ \$field := \$expr 
+\end{syntax}
+\begin{syntax}
+\$tableObj @ \$field <\$filler>
+\end{syntax}
+
+\begin{args}
+\$field & Field of column to set/get. \\
+\$column & List of values (or scalar) to set. \\
+\$expr & Field expression. \\
+\$filler & Filler for missing values. Default blank. 
+\end{args}
+
+\begin{example}{Accessing and modifying table columns}
+\begin{lstlisting}
+table new myTable
+$myTable define keys {1 2 3}
+$myTable @ x = {1.0 2.0 3.0}
+set a 20.0
+$myTable @ y := {@x*2 + $a}
+puts [$myTable @ y]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+22.0 24.0 26.0
+\end{lstlisting}
+\end{example}
+
+\clearpage
 
 \subsection{Searching a Table}
 Besides searching for specific field expression criteria with \methodlink{table}{query}, keys matching criteria can be found with the method \methodlink[0]{table}{search}. 

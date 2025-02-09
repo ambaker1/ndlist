@@ -1,10 +1,10 @@
-package require tin 1.0
+package require tin 2.0
 tin import assert from tin
 tin import tcltest
 set version 0.9
 set config ""
 dict set config VERSION $version
-dict set config VUTIL_VERSION 4.0
+dict set config VUTIL_VERSION 4.1
 
 puts "Building from source files..."
 tin bake src build $config
