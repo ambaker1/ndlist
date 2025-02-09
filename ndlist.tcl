@@ -10,7 +10,7 @@
 ################################################################################
 
 # Required packages
-package require vutil 4.0
+package require vutil 4.1
 
 # Define namespace
 namespace eval ::ndlist {
