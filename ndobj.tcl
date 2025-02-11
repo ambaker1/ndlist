@@ -13,6 +13,7 @@
 namespace eval ::ndlist {
     variable ref; # Reference map for ndlists.
     namespace export narray neval nexpr
+    namespace export scalar vector matrix; # wrapper narray classes
 }
 
 # ValidateRefName --
@@ -284,7 +285,7 @@ proc ::ndlist::ValidateRefName {refName} {
         # Get new rank and value.
         set rank [my GetIndexRank $indices]
         set value [my GetIndexValue $indices]
-        tailcall [self class] new $varName $rank $value
+        tailcall ::ndlist::CreateNDObject $varName $rank $value
     }
     
     # my TempIndexObject $indices $method $arg ... --
@@ -307,6 +308,66 @@ proc ::ndlist::ValidateRefName {refName} {
             set result [$temp]
         }
         return $result
+    }
+}
+
+# CreateNDObject --
+#
+# Private procedure that calls the constructors for the special-case narrays
+
+proc ::ndlist::CreateNDObject {refName rank value} {
+    switch $rank {
+        0 {
+            tailcall ::ndlist::scalar new $refName $value
+        }
+        1 {
+            tailcall ::ndlist::vector new $refName $value
+        }
+        2 {
+            tailcall ::ndlist::matrix new $refName $value
+        }
+        default {
+            tailcall ::ndlist::narray new $refName $rank $value
+        }
+    }
+}
+
+# Special-case classes for different ranks
+# Currently just simple wrapper classes, may include more methods in the future.
+
+# scalar --
+#
+# Wrapper class for a scalar value (any Tcl string)
+
+oo::class create ::ndlist::scalar {
+    superclass ::ndlist::narray
+    variable myValue myRank
+    constructor {refName {value {}}} {
+        next $refName 0D $value
+    }
+}
+
+# vector --
+#
+# Wrapper class for a vector/list
+
+oo::class create ::ndlist::vector {
+    superclass ::ndlist::narray
+    variable myValue myRank
+    constructor {refName {value {}}} {
+        next $refName 1D $value
+    }
+}
+
+# matrix --
+#
+# Wrapper class for a matrix
+
+oo::class create ::ndlist::matrix {
+    superclass ::ndlist::narray
+    variable myValue myRank
+    constructor {refName {value {}}} {
+        next $refName 2D $value
     }
 }
 
