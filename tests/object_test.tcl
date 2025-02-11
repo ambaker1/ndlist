@@ -191,3 +191,19 @@ test other_methods {
     assert [$y reduce max] eq {4 5 6}
     assert [$y reduce max 1] eq {3 6}
 } -result {}
+
+test lowD-aliases {
+    # Create a matrix object, and extract a vector object and a scalar object
+} -body {
+    narray new w 3D {{{1 2 3} {4 5 6}} {{7 8 9} {10 11 12}}}
+    $w @ 0* : : --> x
+    assert [info object class $x] eq ::ndlist::matrix
+    $x @ 0* : --> y
+    assert [info object class $y] eq ::ndlist::vector
+    $y @ 0* --> z
+    assert [info object class $z] eq ::ndlist::scalar
+    matrix new x [$x]
+    vector new y [$y]
+    scalar new z [$z]
+    list [$x] [$y] [$z]
+} -result {{{1 2 3} {4 5 6}} {1 2 3} 1}
