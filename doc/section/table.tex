@@ -17,7 +17,7 @@ The conceptual layout of the table is illustrated in the figure below.
     \label{fig:table_props}
 \end{figure}
 
-The command \cmdlink{table} is a TclOO class based on the superclass \textit{::vutil::ValueContainer}, from the package \textcolor{blue}{\href{https://github.com/ambaker1/vutil}{vutil}}. 
+The command \cmdlink{table} is a TclOO class based on the superclass \cmdlink{::ndlist::ValueContainer}.
 It is an object-oriented approach to tabular data manipulation.
 \begin{syntax}
 \command{table} new \$varName <\$value>
@@ -46,7 +46,7 @@ puts [$tableObj]
 \clearpage
 
 \subsection{Basic Operators}
-Because the table class is a subclass of \textit{::vutil::ValueContainer}, it has the same operator methods. 
+Because the table class is a subclass of \cmdlink{::ndlist::ValueContainer}, it has the same operator methods. 
 
 The copy operator, ``\texttt{-{}->}'', copies the table to a new variable, and returns the new object.
 \begin{syntax}

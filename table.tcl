@@ -26,7 +26,7 @@ namespace eval ::ndlist {
 # matrix        Value of table (matrix representation)
 
 ::oo::class create ::ndlist::table {
-    superclass ::vutil::ValueContainer
+    superclass ::ndlist::ValueContainer
     # Additional variables used in all methods
     variable keyname keys keymap fields fieldmap datamap
 

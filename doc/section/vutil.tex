@@ -1,0 +1,218 @@
+\section{Utilities for Object-Oriented Programming}
+As of Tcl version 8.6, there is no garbage collection for Tcl objects, they have to be removed manually with the \textit{\href{https://www.tcl.tk/man/tcl8.6/TclCmd/object.html}{destroy}} method. 
+The command \cmdlink{tie} is a solution for this problem, using variable traces to destroy the corresponding object when the variable is unset or modified. 
+For example, if an object is tied to a local procedure variable, the object will be destroyed when the procedure returns.
+
+\begin{syntax}
+\command{tie} \$varName <\$object>
+\end{syntax}
+\begin{args}
+\$varName & Name of variable for garbage collection. \\
+\$object & Object to tie variable to. Default self-ties (uses current value).
+\end{args}
+
+Tied variables can be untied with the command \cmdlink{untie}. 
+Renaming or destroying an object also unties all variables tied to it. 
+\begin{syntax}
+\command{untie} \$name1 \$name2 …
+\end{syntax}
+\begin{args}
+\$name1 \$name2 … & Variables to untie.
+\end{args}
+
+\begin{example}{Variable-object ties}
+\begin{lstlisting}
+oo::class create foo {
+    method sayhello {} {
+        puts {hello world}
+    }
+}
+tie a [foo create bar]
+set b $a; # object alias
+$a sayhello
+$b sayhello
+unset a; # destroys object
+$b sayhello; # throws error
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+hello world
+hello world
+invalid command name "::bar"
+\end{lstlisting}
+\end{example}
+Note: You can tie array elements, but not an entire array, and you cannot tie a locked variable.
+
+\clearpage
+\section{Garbage Collection Superclass}
+The class \cmdlink{::ndlist::GarbageCollector} is a TclOO superclass that includes garbage collection by tying the object to a specified variable using \cmdlink{tie}.
+This class is not exported.
+
+Below is the syntax for the superclass constructor.
+
+\begin{syntax}
+\command{::ndlist::GarbageCollector} new \$varName
+\end{syntax}
+\begin{syntax}
+::ndlist::GarbageCollector create \$name \$varName
+\end{syntax}
+\begin{args}
+\$varName & Name of variable for garbage collection. \\
+\$name & Name of object (for ``create'' method).
+\end{args}
+In addition to tying the object to a variable in the constructor, the \cmdlink{::ndlist::GarbageCollector} superclass provides a public copy method: ``\texttt{-{}->}'', which calls the private method \textit{CopyObject}.
+\begin{syntax}
+\method{gc}{-{}->} \$varName
+\end{syntax}
+\begin{syntax}
+my CopyObject \$varName
+\end{syntax}
+\begin{args}
+\$varName & Name of variable for garbage collection.
+\end{args}
+
+Below is an example of how this superclass can be used to build garbage collection into a TclOO class.
+This process is formalized with the superclass \cmdlink{::ndlist::ValueContainer}.
+\begin{example}{Simple value container class}
+\begin{lstlisting}
+oo::class create value {
+    superclass ::ndlist::GarbageCollector
+    variable myValue
+    method set {value} {set myValue $value}
+    method value {} {return $myValue}
+}
+[value new x] --> y; # create x, and copy to y.
+$y set {hello world}; # modify $y
+unset x; # destroys $x
+puts [$y value]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+hello world
+\end{lstlisting}
+\end{example}
+
+\section{Container Superclass}
+The class \cmdlink{::ndlist::ValueContainer} is a TclOO superclass, built on-top of the \cmdlink{::ndlist::GarbageCollector} superclass.
+In addition to the copy method ``\texttt{-{}->}'', this class stores a value in the variable ``myValue'', which can be accessed with the methods \textit{GetValue} and \textit{SetValue}.
+This class is not exported.
+
+Below is the syntax for the superclass constructor.
+
+\begin{syntax}
+\command{::ndlist::ValueContainer} new \$varName <\$value>
+\end{syntax}
+\begin{syntax}
+::ndlist::ValueContainer create \$name \$varName <\$value> 
+\end{syntax}
+\begin{args}
+\$name & Name of object (for ``create'' method). \\
+\$varName & Name of variable for garbage collection. \\
+\$value & Value to store in object. Default blank. 
+\end{args}
+
+\subsection{Getting and Setting}
+Calling the object by itself calls the \textit{GetValue} method, which simply queries the value in the container.
+The assignment operator, ``\texttt{=}'', calls the \textit{SetValue} method, which sets the value in the container.
+\begin{syntax}
+\method{vc}{=} \$value
+\end{syntax}
+\begin{syntax}
+my SetValue \$value
+\end{syntax}
+\begin{args}
+\$value & Value to store in container. 
+\end{args}
+
+\begin{example}{Simple container}
+\begin{lstlisting}
+::ndlist::ValueContainer new x
+$x = {hello world}
+puts [$x]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+hello world
+\end{lstlisting}
+\end{example}
+
+\clearpage
+\subsection{Math Assignment Operator}
+The math assignment operator, ``\texttt{:=}'', calls the \textit{SetValue} method after evaluating the expression passed through the Tcl \textit{expr} command.
+\begin{syntax}
+\method{vc}{:=} \$expr
+\end{syntax}
+\begin{args}
+\$expr & Expression to evaluate and assign to object.
+\end{args}
+
+The math assignment operator makes use of the private method \textit{Uplevel}, which evaluates the body of script at a specified level, while making the object command name available through the alias ``\texttt{\$.}''. This can be nested, as it restores the old alias after evaluation.
+\begin{syntax}
+my Uplevel \$level \$body
+\end{syntax}
+
+\begin{syntax}
+\command{\$.} \$arg ...
+\end{syntax}
+\begin{args}
+\$arg ... & Method arguments for object.
+\end{args}
+
+\begin{example}{Modifying a container object}
+\begin{lstlisting}
+[::ndlist::ValueContainer new x] = 5.0
+$x := {[$.] + 5}
+puts [$x]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+10.0
+\end{lstlisting}
+\end{example}
+
+\clearpage
+\subsection{Advanced Operators}
+The pipe operator, ``\texttt{|}'', calls the \textit{TempObject} method, which copies the object and evaluates the method, returning the result or the value of the temporary object if the result is the object.
+\begin{syntax}
+\method{vc}{$\vert$} \$method \$arg ... 
+\end{syntax}
+\begin{syntax}
+my TempObject \$method \$arg ...
+\end{syntax}
+
+\begin{args}
+\$method & Method to evaluate in temporary object. \\
+\$arg ... & Arguments for method.
+\end{args}
+
+The ampersand operator ``\texttt{\&}'', calls the \textit{RefEval} method, which copies the value to a variable, and evaluates a body of script. 
+The changes made to the variable will be applied to the object, and if the variable is unset, the object will be deleted.
+Returns the result of the script.
+
+\begin{syntax}
+\method{vc}{\&} \$varName \$body
+\end{syntax}
+\begin{syntax}
+my RefEval \$varName \$body
+\end{syntax}
+\begin{args}
+\$varName & Variable name to use for reference. \\
+\$body & Body to evaluate.
+\end{args}
+\begin{example}{Advanced methods}
+\begin{lstlisting}
+[::ndlist::ValueContainer new x] = {1 2 3}
+# Use ampersand method to use commands that take variable name as input
+$x & ref {
+    lappend ref 4
+}
+puts [$x | = {hello world}]; # operates on temp object
+puts [$x]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+hello world
+1 2 3 4
+\end{lstlisting}
+\end{example}
+

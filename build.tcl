@@ -4,7 +4,6 @@ tin import tcltest
 set version 0.10
 set config ""
 dict set config VERSION $version
-dict set config VUTIL_VERSION 4.1
 
 puts "Building from source files..."
 tin bake src build $config
@@ -23,6 +22,7 @@ source tests/tensor_test.tcl
 source tests/object_test.tcl
 source tests/fileio_test.tcl
 source tests/table_test.tcl
+source tests/vutil_test.tcl
 source tests/examples.tcl
 
 # Check number of failed tests

@@ -10,7 +10,6 @@
 ################################################################################
 
 # Required packages
-package require vutil 4.1
 
 # Define namespace
 namespace eval ::ndlist {
@@ -20,6 +19,7 @@ namespace eval ::ndlist {
     source [file join $dir matrix.tcl]
     source [file join $dir tensor.tcl]
     source [file join $dir ndapi.tcl]
+    source [file join $dir vutil.tcl]
     source [file join $dir ndobj.tcl]
     source [file join $dir table.tcl]
     source [file join $dir fileio.tcl]

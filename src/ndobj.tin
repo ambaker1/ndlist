@@ -30,7 +30,7 @@ proc ::ndlist::ValidateRefName {refName} {
 # Create narray class.
 
 ::oo::class create ::ndlist::narray {
-    superclass ::vutil::ValueContainer
+    superclass ::ndlist::ValueContainer
     variable myValue myRank
    
     # Constructor

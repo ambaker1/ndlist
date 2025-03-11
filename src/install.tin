@@ -1,7 +1,6 @@
 package require tin 2.0
-tin add vutil @VUTIL_VERSION@ https://github.com/ambaker1/vutil v@VUTIL_VERSION@ install.tcl 
-tin depend vutil @VUTIL_VERSION@
 set dir [tin mkdir -force ndlist @VERSION@]
 file copy pkgIndex.tcl ndlist.tcl ndapi.tcl ndobj.tcl $dir
 file copy vector.tcl matrix.tcl tensor.tcl table.tcl fileio.tcl $dir
+file copy vutil.tcl $dir
 file copy README.md LICENSE $dir
