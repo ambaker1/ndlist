@@ -10,6 +10,7 @@
 ################################################################################
 
 # Required packages
+package require sqlite3; # For converting to/from SQLite database
 
 # Define namespace
 namespace eval ::ndlist {

@@ -13,7 +13,7 @@
 namespace eval ::ndlist {
     # File import/export commands
     namespace export readFile writeFile readMatrix writeMatrix
-    # Data conversion commands
+    namespace export readTable writeTable; # sqlite3 read/write
     namespace export mat2txt txt2mat mat2csv csv2mat
 }
 
@@ -160,6 +160,57 @@ proc ::ndlist::writeMatrix {args} {
         set data [mat2txt $matrix]
     }
     writeFile {*}$options $file $data
+}
+
+# readTable --
+#
+# Using the sqlite3 package, extract a table to a matrix, 
+# with the first row being headers and the remaining rows being entries.
+# To extract part of a table, try "CREATE TEMPORARY TABLE ... AS SELECT ..."
+#
+# Syntax:
+# readTable $db $table
+#
+# Arguments:
+# db:           sqlite3 database command
+# table:        name of existing table within database
+
+proc ::ndlist::readTable {db table} {
+    set header [$db eval {SELECT name FROM PRAGMA_TABLE_INFO($table);}]
+    set values [$db eval "SELECT * FROM $table;"]
+    set m [llength $header]
+    set n [expr {[llength $values]/$m}]
+    concat [list $header] [nreshape $values $n $m]
+}
+
+# writeTable --
+#
+# Writes a matrix to an SQL table, returns blank
+#
+# Syntax:
+# writeTable $db $table $matrix
+#
+# Arguments:
+# matrix:       Matrix to convert
+# db:           sqlite3 database command
+# table:        name of new table within database
+
+proc ::ndlist::writeTable {db table matrix} {
+    # Get header from matrix, and wrap in quotes in case of spaces in names.
+    # Currently does not support double quotes in field names
+    set header [lmap field [lindex $matrix 0] {string cat "\"" $field "\""}]
+    # Create the table with the specified name and column names
+    $db eval "CREATE TABLE $table ([join $header ,]);\n"
+    # Get value rows from matrix
+    set rows [lmap row [lrange $matrix 1 end] {
+        set row [lmap value $row {
+            # Escape single quotes and wrap with single quotes
+            string cat "'" [string map {' ''} $value] "'"
+        }]
+        join $row ,
+    }]
+    $db eval "INSERT INTO $table VALUES ([join $rows {),(}]);"
+    return
 }
 
 # Datatype conversions
