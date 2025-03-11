@@ -2,7 +2,7 @@
 ################################################################################
 # Constant-time tabular data format, using TclOO and Tcl dictionaries.
 
-# Copyright (C) 2024 Alex Baker, ambaker1@mtu.edu
+# Copyright (C) 2025 Alex Baker, ambaker1@mtu.edu
 # All rights reserved. 
 
 # See the file "LICENSE" in the top level directory for information on usage, 
@@ -26,7 +26,7 @@ namespace eval ::ndlist {
 # matrix        Value of table (matrix representation)
 
 ::oo::class create ::ndlist::table {
-    superclass ::vutil::ValueContainer
+    superclass ::ndlist::ValueContainer
     # Additional variables used in all methods
     variable keyname keys keymap fields fieldmap datamap
 

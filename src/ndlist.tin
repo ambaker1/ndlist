@@ -2,7 +2,7 @@
 ################################################################################
 # Main file for ND list package. 
 
-# Copyright (C) 2024 Alex Baker, ambaker1@mtu.edu
+# Copyright (C) 2025 Alex Baker, ambaker1@mtu.edu
 # All rights reserved. 
 
 # See the file "LICENSE" in the top level directory for information on usage, 
@@ -10,7 +10,7 @@
 ################################################################################
 
 # Required packages
-package require vutil @VUTIL_VERSION@
+package require sqlite3; # For converting to/from SQLite database
 
 # Define namespace
 namespace eval ::ndlist {
@@ -20,6 +20,7 @@ namespace eval ::ndlist {
     source [file join $dir matrix.tcl]
     source [file join $dir tensor.tcl]
     source [file join $dir ndapi.tcl]
+    source [file join $dir vutil.tcl]
     source [file join $dir ndobj.tcl]
     source [file join $dir table.tcl]
     source [file join $dir fileio.tcl]

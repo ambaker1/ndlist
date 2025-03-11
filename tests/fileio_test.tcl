@@ -101,3 +101,39 @@ test csvacidtest_write {
     assert [mat2csv $mat9] eq $csv9
     assert [mat2csv $mat10] eq $csv10
 }
+
+# Delete database if it exists
+if {[file exists tests/test.db]} {
+    file delete tests/test.db
+}
+
+test sql {
+    # Write a matrix to SQL
+} -body {
+    set myMatrix {
+    {first last address city zip} 
+    {John Doe {120 any st.} {Anytown, WW} 08123}
+    {Jane Doe {123 Main St.} {Somewhere, ZZ} 12345}
+    }
+    sqlite3 db tests/test.db
+    writeTable db People1 $myMatrix
+    readTable db People1
+} -result {{first last address city zip} {John Doe {120 any st.} {Anytown, WW} 08123} {Jane Doe {123 Main St.} {Somewhere, ZZ} 12345}}
+
+test sql_null {
+    # Write a matrix to SQL with nulls
+} -body {
+    set myMatrix {
+    {first last address city zip} 
+    {John Doe {120 any st.} {Anytown, WW} 08123}
+    {Jane Doe {123 Main St.} {Somewhere, ZZ} 12345}
+    {{} {} {} {} 54321}
+    }
+    sqlite3 db tests/test.db
+    writeTable db People2 $myMatrix
+    readTable db People2
+} -result {{first last address city zip} {John Doe {120 any st.} {Anytown, WW} 08123} {Jane Doe {123 Main St.} {Somewhere, ZZ} 12345} {{} {} {} {} 54321}}
+
+# Clean up sqlite test database
+db close
+file delete tests/test.db

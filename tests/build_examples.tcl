@@ -14,7 +14,7 @@ proc GetLstListing {fid} {
     return $lines
 }
 
-# Find examples in file
+# Find examples in file (omit vutil)
 set examples ""
 foreach section {vector matrix tensor object table fileio} {
     set filename "doc/section/$section.tex"

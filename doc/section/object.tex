@@ -1,5 +1,5 @@
 \section{ND-Arrays}
-The command \cmdlink{narray} is a TclOO class based on the superclass \textit{::vutil::ValueContainer}, from the package \textcolor{blue}{\href{https://github.com/ambaker1/vutil}{vutil}}. 
+The command \cmdlink{narray} is a TclOO class based on the superclass \cmdlink{::ndlist::ValueContainer}.
 It is an object-oriented approach to array manipulation and processing.
 
 \begin{syntax}
@@ -16,7 +16,7 @@ Variable names are restricted to word characters and namespace delimiters only.\
 \$name & Name of object if using ``create'' method.
 \end{args}
 \subsection{Wrapper Classes for Scalars, Vectors, and Matrices}
-To simplify things, three wrapper classes have been added, \cmdlink{scalar} for 0D objects, \cmdlink{vector} for 1D objects, and \cmdlink{matrix} for 2D objects. 
+For convenience, three wrapper classes have been added: \cmdlink{scalar} for 0D objects, \cmdlink{vector} for 1D objects, and \cmdlink{matrix} for 2D objects. 
 These wrapper classes use the \cmdlink{narray} class as a superclass, so all the methods for \cmdlink{narray} apply. 
 For brevity, only the ``new'' constructor method is documented here.
 \begin{syntax}

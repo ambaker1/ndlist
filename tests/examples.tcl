@@ -885,3 +885,33 @@ CSV format:
 A,B,C
 hello world,"foo,bar","""hi"""
 }
+
+test {Example 72} {Writing a table to SQLite} -body {
+puts {}
+# Matrix of data used for table (https://www.tutorialspoint.com/sqlite/company.sql)
+set matrix [txt2mat {\
+ID          NAME        AGE         ADDRESS     SALARY
+1           Paul        32          California  20000.0
+2           Allen       25          Texas       15000.0
+3           Teddy       23          Norway      20000.0
+4           Mark        25          Rich-Mond   65000.0
+5           David       27          Texas       85000.0
+6           Kim         22          South-Hall  45000.0
+7           James       24          Houston     10000.0}]
+
+# Write the data to an SQL table and a Tcl table
+package require sqlite3; # required for sqlite3 command
+sqlite3 db myDatabase.db; # open SQL database
+db eval {DROP TABLE IF EXISTS People}; # delete table if exists
+writeTable db People $matrix; # write to SQL table
+table new People $matrix; # write to Tcl table
+
+# Example of a query, both with SQL and Tcl table commands
+puts [db eval {SELECT NAME FROM People WHERE SALARY > 40000.0;}]
+puts [$People mget [$People query {@SALARY > 40000.0}] NAME]
+db close; # close SQL database
+puts -nonewline {}
+} -output {
+Mark David Kim
+Mark David Kim
+}
