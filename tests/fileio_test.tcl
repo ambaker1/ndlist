@@ -102,7 +102,11 @@ test csvacidtest_write {
     assert [mat2csv $mat10] eq $csv10
 }
 
-file delete tests/test.db
+# Delete database if it exists
+if {[file exists tests/test.db]} {
+    file delete tests/test.db
+}
+
 test sql {
     # Write a matrix to SQL
 } -body {
@@ -129,3 +133,7 @@ test sql_null {
     writeTable db People2 $myMatrix
     readTable db People2
 } -result {{first last address city zip} {John Doe {120 any st.} {Anytown, WW} 08123} {Jane Doe {123 Main St.} {Somewhere, ZZ} 12345} {{} {} {} {} 54321}}
+
+# Clean up sqlite test database
+db close
+file delete tests/test.db
