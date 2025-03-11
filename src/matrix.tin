@@ -2,7 +2,7 @@
 ################################################################################
 # Utilities for matrices (2D lists)
 
-# Copyright (C) 2024 Alex Baker, ambaker1@mtu.edu
+# Copyright (C) 2025 Alex Baker, ambaker1@mtu.edu
 # All rights reserved. 
 
 # See the file "LICENSE" in the top level directory for information on usage, 
