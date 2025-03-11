@@ -24,6 +24,7 @@ source tests/fileio_test.tcl
 source tests/table_test.tcl
 source tests/vutil_test.tcl
 source tests/examples.tcl
+file delete myDatabase.db; # from examples.tcl
 
 # Check number of failed tests
 set nFailed $::tcltest::numTests(Failed)
