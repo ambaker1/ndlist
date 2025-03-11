@@ -200,16 +200,20 @@ proc ::ndlist::writeTable {db table matrix} {
     # Currently does not support double quotes in field names
     set header [lmap field [lindex $matrix 0] {string cat "\"" $field "\""}]
     # Create the table with the specified name and column names
-    $db eval "CREATE TABLE $table ([join $header ,]);\n"
+    $db eval "CREATE TABLE $table ([join $header ,]);"
     # Get value rows from matrix
-    set rows [lmap row [lrange $matrix 1 end] {
+    foreach row [lrange $matrix 1 end] {
         set row [lmap value $row {
-            # Escape single quotes and wrap with single quotes
-            string cat "'" [string map {' ''} $value] "'"
+            if {[string is double -strict $value]} {
+                # store numbers as is
+                set value
+            } else {
+                # for strings, escape single quotes and wrap with single quotes
+                string cat "'" [string map {' ''} $value] "'"
+            }
         }]
-        join $row ,
-    }]
-    $db eval "INSERT INTO $table VALUES ([join $rows {),(}]);"
+        $db eval "INSERT INTO $table VALUES ([join $row ,]);"
+    }
     return
 }
 
