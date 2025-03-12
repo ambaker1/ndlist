@@ -79,14 +79,14 @@ test neval {
 } -body {
     narray new x 2 {{1 2 3} {4 5 6}}
     narray new y 2 {2 3}
-    neval {string cat $.y $.x}
+    neval {string cat @y @x}
 } -result {{21 22 23} {34 35 36}}
 
 test nexpr {
     # Version of neval, but for math
 } -body {
     narray new x 2 {{1 2 3} {4 5 6}}
-    nexpr {$.x * 2.0}
+    nexpr {@x * 2.0}
 } -result {{2.0 4.0 6.0} {8.0 10.0 12.0}}
 
 test nexpr_advanced {
@@ -94,7 +94,7 @@ test nexpr_advanced {
 } -body {
     narray new x 2 {{1 2 3} {4 5 6}}
     narray new y 1 {0.1 0.2 0.3}
-    narray new z 1 [nexpr {$.(1*,:) + $.y} $x rank]
+    narray new z 1 [nexpr {@.(1*,:) + @y} $x rank]
     assert $rank == 1
     $z
 } -result {4.1 5.2 6.3}
@@ -104,7 +104,7 @@ test nexpr_assignment {
 } -body {
     narray new x 1 {1 2 3}
     narray new y 1 {4 5 6}
-    [narray new z 1] := {$.x + $.y}
+    [narray new z 1] := {@x + @y}
     $z
 } -result {5 7 9}
 
@@ -121,7 +121,7 @@ test nexpr_error1 {
 } -body {
     narray new x 2 {1 2 3}
     narray new y 1 {1 2 3}
-    catch {nexpr {$.x + $.y}}
+    catch {nexpr {@x + @y}}
 } -result {1}
 
 test nexpr_error2 {
@@ -129,7 +129,7 @@ test nexpr_error2 {
 } -body {
     narray new x 1 {1 2 3}
     narray new y 1 {1 2 3 4}
-    catch {nexpr {$.x + $.y}}
+    catch {nexpr {@x + @y}}
 } -result {1}
 
 test index_methods {
@@ -153,7 +153,7 @@ test index_methods {
     assert [$y shape] eq {1 1}
     assert [$y size] == 1
     # Math assignment operator
-    assert [$x @ 0 1 := {$. + 2.0}] eq $x
+    assert [$x @ 0 1 := {@. + 2.0}] eq $x
     assert [$x @ 0 1] eq {8.0}
     $x
 } -result {{1 8.0 3} {4 5 6}}
@@ -166,7 +166,7 @@ test all_operators {
     $x = {{1 2 3} {4 5 6}}
     assert [$x] eq {{1 2 3} {4 5 6}}
     # Math Assignment
-    $x := {double($.x)}
+    $x := {double(@x)}
     assert [$x] eq {{1.0 2.0 3.0} {4.0 5.0 6.0}}
     # Copying
     $x --> y

@@ -119,8 +119,8 @@ puts "[$y rank], [$y]"
 \subsection{Evaluation/Mapping}
 The command \cmdlink{neval} maps over ND-arrays using \cmdlink{nmap}. 
 The command \cmdlink{nexpr} is a special case that passes input through the Tcl \textit{expr} command.
-ND-arrays can be referred to with ``\texttt{\$.ref}'', where ``ref'' is the name of the ND-array variable.
-Portions of an ND-array can be mapped over with the notation ``\texttt{\$.ref(\$i,...)}''.
+ND-arrays can be referred to with ``\texttt{@ref}'', where ``ref'' is the name of the ND-array variable.
+Portions of an ND-array can be mapped over with the notation ``\texttt{@ref(\$i,...)}''.
 Input ND-arrays must all agree in rank or be scalar. 
 Additionally, they must have compatible dimensions.
 \begin{syntax}
@@ -130,16 +130,16 @@ Additionally, they must have compatible dimensions.
 \command{nexpr} \$expr <\$self> <\$rankVar>
 \end{syntax}
 \begin{args}
-\$body & Script to evaluate, with ``\texttt{\$.ref}'' notation for object references. \\
-\$expr & Expression to evaluate, with ``\texttt{\$.ref}'' notation for object references. \\
-\$self & Object to refer to with ``\texttt{\$.}''. Default blank. \\
+\$body & Script to evaluate, with ``\texttt{@ref}'' notation for object references. \\
+\$expr & Expression to evaluate, with ``\texttt{@ref}'' notation for object references. \\
+\$self & Object to refer to with ``\texttt{@.}''. Default blank. \\
 \$rankVar & Variable to store resulting rank in. Default blank.
 \end{args}
 
 \begin{example}{Get distance between elements in a vector}
 \begin{lstlisting}
 vector new x {1 2 4 7 11 16}
-puts [nexpr {$.x(1:end) - $.x(0:end-1)}]
+puts [nexpr {@x(1:end) - @x(0:end-1)}]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
@@ -151,7 +151,7 @@ puts [nexpr {$.x(1:end) - $.x(0:end-1)}]
 \begin{lstlisting}
 matrix new x {1 2 3}
 matrix new y {{4 5 6}}
-puts [nexpr {$.x * $.y}]
+puts [nexpr {@x * @y}]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
@@ -177,7 +177,7 @@ Both assignment operators return the object.
 \$expr & Expression to evaluate.
 \end{args}
 
-If using the math assignment operator, the ND-array or indexed range can be accessed with the alias ``\texttt{\$.}'', and the elements of the array or indexed range can be accessed with ``\texttt{\$.}''.
+If using the math assignment operator, the ND-array or indexed range can be accessed with the alias ``\texttt{\$.}'', and the elements of the array or indexed range can be accessed with ``\texttt{@.}''.
 \begin{syntax}
 \$. \$arg ...
 \end{syntax}
@@ -191,11 +191,11 @@ If using the math assignment operator, the ND-array or indexed range can be acce
 [vector new x] = {1 2 3}
 [vector new y] = {10 20 30}
 # Add one to each element
-puts [[$x := {$. + 1}]]
+puts [[$x := {@. + 1}]]
 # Double the last element
-puts [[$x @ end := {$. * 2}]]
+puts [[$x @ end := {@. * 2}]]
 # Element-wise addition of vectors
-puts [[$x := {$. + $.y}]]
+puts [[$x := {@. + @y}]]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
@@ -226,7 +226,7 @@ Both methods modify the object and return the object.
 \begin{lstlisting}
 vector new vector {1 2 3 4 5 6 7 8}
 # Remove all odd numbers
-$vector remove [find [nexpr {$.vector % 2}]]
+$vector remove [find [nexpr {@vector % 2}]]
 puts [$vector]
 \end{lstlisting}
 \tcblower
@@ -310,7 +310,7 @@ This operator is useful for converting methods that modify the object to methods
 # Create a matrix
 matrix new x {{1 2 3} {4 5 6}}
 # Print value with first row doubled.
-puts [$x | @ 0* : := {$. * 2}]
+puts [$x | @ 0* : := {@. * 2}]
 # Source object was not modified
 puts [$x]
 \end{lstlisting}

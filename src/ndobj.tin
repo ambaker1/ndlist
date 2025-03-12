@@ -373,21 +373,19 @@ oo::class create ::ndlist::matrix {
 
 # RefSub --
 #
-# Search for pattern $.ref(index)
+# Search for pattern @ref(index)
 # Returns body substituted with array references, and list of refs.
 # Reference list has two parts: name and index.
 # name:     Variable name that contains object. Blank for "self".
 # index:    Index for narray. Blank for all.
 
 proc ::ndlist::RefSub {body} {
-    set exp {\$\.(?!\.)((::+|\w+)+)?(\(([^\(]*)\))?}
+    set exp {@((::+|\w+)+|\.)?(\(([^\(]*)\))?}
     set refMap ""
     foreach {match name ~ ~ index} [regexp -all -inline $exp $body] {
         dict set refMap [list $name $index] ""
     }
     set body [regsub -all $exp $body {$::ndlist::ref(\1.\4)}]
-    # Handle recursion for escaped object references, and trim
-    set body [string map {$.. $.} $body]
     set refNames [concat {*}[dict keys $refMap]]
     return [list $body $refNames]
 }
@@ -401,13 +399,13 @@ proc ::ndlist::RefSub {body} {
 # neval $body <$self> <$rankVar>
 #
 # Arguments:
-# body          Tcl script, with $.ref notation for object references.
-# self          Object to refer to with "$.". Default blank.
+# body          Tcl script, with @ref notation for object references.
+# self          Object to refer to with "@.". Default blank.
 # rankVar       Variable to store resulting rank in. Default blank.
 
 # Example:
 # [narray new x 1D] = {{hello world} {foo bar}}
-# neval {string toupper $.x}; # {{HELLO WORLD} {FOO BAR}}
+# neval {string toupper @x}; # {{HELLO WORLD} {FOO BAR}}
 
 proc ::ndlist::neval {body {self ""} {rankVar ""}} {
     variable ref; # Reference array
@@ -418,7 +416,7 @@ proc ::ndlist::neval {body {self ""} {rankVar ""}} {
     set refValues "" 
     foreach {refName index} $refNames {
         # Get object for reference
-        if {$refName eq ""} {
+        if {$refName eq "."} {
             # Self-reference
             if {$self eq ""} {
                 return -code error "no self reference object provided"
@@ -503,14 +501,14 @@ proc ::ndlist::neval {body {self ""} {rankVar ""}} {
 # nexpr $expr <$self> <$rankVar>
 #
 # Arguments:
-# expr          Math expression, with $.ref notation for object references.
-# self          Object to refer to with "$.". Default blank.
+# expr          Math expression, with @ref notation for object references.
+# self          Object to refer to with "@.". Default blank.
 # rankVar       Variable to store resulting rank in. Default blank.
 
 # Example:
-# narray new x 1D {1.0 2.0 3.0}
-# narray new y 0D 5.0
-# nexpr {$.x + $.y}; # {6.0 7.0 8.0}
+# vector new x {1.0 2.0 3.0}
+# scalar new y 5.0
+# nexpr {@x + @y}; # {6.0 7.0 8.0}
 
 proc ::ndlist::nexpr {expr {self ""} {rankVar ""}} {
     tailcall neval [list expr $expr] $self $rankVar
