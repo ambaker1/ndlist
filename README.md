@@ -1,5 +1,5 @@
 # N-Dimensional Lists (ndlist)
-A pure Tcl implementation of arbitrary rank tensors.
+Vectors, Matrices, Tables and Tensors
 
 
 ## Installation
