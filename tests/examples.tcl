@@ -519,7 +519,7 @@ puts -nonewline {}
 test {Example 45} {Get distance between elements in a vector} -body {
 puts {}
 vector new x {1 2 4 7 11 16}
-puts [nexpr {$.x(1:end) - $.x(0:end-1)}]
+puts [nexpr {@x(1:end) - @x(0:end-1)}]
 puts -nonewline {}
 } -output {
 1 2 3 4 5
@@ -529,7 +529,7 @@ test {Example 46} {Outer product of two vectors} -body {
 puts {}
 matrix new x {1 2 3}
 matrix new y {{4 5 6}}
-puts [nexpr {$.x * $.y}]
+puts [nexpr {@x * @y}]
 puts -nonewline {}
 } -output {
 {4 5 6} {8 10 12} {12 15 18}
@@ -541,11 +541,11 @@ puts {}
 [vector new x] = {1 2 3}
 [vector new y] = {10 20 30}
 # Add one to each element
-puts [[$x := {$. + 1}]]
+puts [[$x := {@. + 1}]]
 # Double the last element
-puts [[$x @ end := {$. * 2}]]
+puts [[$x @ end := {@. * 2}]]
 # Element-wise addition of vectors
-puts [[$x := {$. + $.y}]]
+puts [[$x := {@. + @y}]]
 puts -nonewline {}
 } -output {
 2 3 4
@@ -557,7 +557,7 @@ test {Example 48} {Removing elements from a vector} -body {
 puts {}
 vector new vector {1 2 3 4 5 6 7 8}
 # Remove all odd numbers
-$vector remove [find [nexpr {$.vector % 2}]]
+$vector remove [find [nexpr {@vector % 2}]]
 puts [$vector]
 puts -nonewline {}
 } -output {
@@ -592,7 +592,7 @@ puts {}
 # Create a matrix
 matrix new x {{1 2 3} {4 5 6}}
 # Print value with first row doubled.
-puts [$x | @ 0* : := {$. * 2}]
+puts [$x | @ 0* : := {@. * 2}]
 # Source object was not modified
 puts [$x]
 puts -nonewline {}
