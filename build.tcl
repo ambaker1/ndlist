@@ -1,9 +1,11 @@
-package require tin 2.0
+set tin_version 2.1
+package require tin $tin_version
 tin import assert from tin
 tin import tcltest
 set version 0.10
 set config ""
 dict set config VERSION $version
+dict set config TIN_VERSION $tin_version
 
 puts "Building from source files..."
 tin bake src build $config
