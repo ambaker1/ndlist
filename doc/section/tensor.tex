@@ -187,11 +187,11 @@ Sizes must be compatible.
 \end{syntax}
 \begin{args}
 \$vector & Vector (1D-list) to reshape. \\
-\$n ... & Shape (list of dimensions) of ND-list. 
+\$n ... & Shape (list of dimensions) of ND-list. One axis may be dynamic, denoted with a "*".
 \end{args}
-\begin{example}{Reshape a vector to a matrix}
+\begin{example}{Reshape a vector to a matrix with three columns}
 \begin{lstlisting}
-puts [nreshape {1 2 3 4 5 6} 2 3]
+puts [nreshape {1 2 3 4 5 6} * 3]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}

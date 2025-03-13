@@ -99,11 +99,23 @@ test nreshape_error {
     nreshape {1 2 3 4 5 6} 3 3
 } -returnCodes {1} -result {incompatible dimensions}
 
+test nreshape_error2 {
+    # incompatible length error (dynamic)
+} -body {
+    nreshape {1 2 3 4 5 6} 4 *
+} -returnCodes {1} -result {incompatible dimensions}
+
 test nreshape2 {
     # Check that nreshape works for higher dimensions
 } -body {
     nreshape {1 2 3 4 5 6 7 8} 2 2 2
 } -result {{{1 2} {3 4}} {{5 6} {7 8}}}
+
+test nreshape_error3 {
+    # too many dynamic axes (higher dimensions too)
+} -body {
+    nreshape {1 2 3 4 5 6 7 8 9} 3 * *
+} -returnCodes {1} -result {can only make one axis dynamic}
 
 test nrepeat {
     # Repeat along a dimension

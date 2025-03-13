@@ -298,9 +298,9 @@ puts -nonewline {}
 {{1 2} {3 4}} {{5 6} {7 8}}
 }
 
-test {Example 27} {Reshape a vector to a matrix} -body {
+test {Example 27} {Reshape a vector to a matrix with three columns} -body {
 puts {}
-puts [nreshape {1 2 3 4 5 6} 2 3]
+puts [nreshape {1 2 3 4 5 6} * 3]
 puts -nonewline {}
 } -output {
 {1 2 3} {4 5 6}

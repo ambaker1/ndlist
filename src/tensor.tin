@@ -151,27 +151,37 @@ proc ::ndlist::nrand {args} {
 #
 # Arguments:
 # vector        1D list to reshape into matrix or higher-dimensional tensor
-# arg ...       New shape (and dimensions)
+# arg ...       New shape (and dimensions). One axis may be dynamic (*)
 
 proc ::ndlist::nreshape {vector args} {
+    set size [llength $vector]
     # Scalar case
     if {[llength $args] == 0} {
-        if {[llength $vector] != 1} {
+        if {$size != 1} {
             return -code error "incompatible dimensions"
         }
         # Note: 1 element list can be converted to scalar.
         return [lindex $vector 0]
     }
-    # Vector case
+    # Vector case (allow for dynamic "*")
     if {[llength $args] == 1} {
-        if {[llength $vector] != [lindex $args 0]} {
+        set arg [lindex $args 0]
+        if {$size != $arg && $arg ne "*"} {
             return -code error "incompatible dimensions"
         }
         return $vector
     }
-    # Matrix and higher-dimensional case
-    set size [product $args]
-    if {[llength $vector] != $size} {
+    # Matrix and higher-dimensional case (allow for one dynamic axis)
+    set dynamic [lsearch -all -exact $args "*"]
+    if {[llength $dynamic] > 1} {
+        return -code error "can only make one axis dynamic"
+    }
+    if {[llength $dynamic] == 1} {
+        set subsize [product [lreplace $args $dynamic $dynamic]]
+        lset args $dynamic [expr {$size/$subsize}]
+    }
+    # Check compatibility
+    if {[product $args] != $size} {
         return -code error "incompatible dimensions"
     }
     # Call recursive handler
