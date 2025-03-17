@@ -178,9 +178,7 @@ proc ::ndlist::writeMatrix {args} {
 proc ::ndlist::readTable {db table} {
     set header [$db eval {SELECT name FROM PRAGMA_TABLE_INFO($table);}]
     set values [$db eval "SELECT * FROM $table;"]
-    set m [llength $header]
-    set n [expr {[llength $values]/$m}]
-    concat [list $header] [nreshape $values $n $m]
+    concat [list $header] [nreshape $values * [llength $header]]
 }
 
 # writeTable --
