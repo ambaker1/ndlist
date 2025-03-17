@@ -1,6 +1,3 @@
 package require tin 2.1
 set dir [tin mkdir -force ndlist 0.10.1]
-file copy pkgIndex.tcl ndlist.tcl ndapi.tcl ndobj.tcl $dir
-file copy vector.tcl matrix.tcl tensor.tcl table.tcl fileio.tcl $dir
-file copy vutil.tcl $dir
-file copy README.md LICENSE $dir
+file copy README.md LICENSE pkgIndex.tcl ndlist.tcl lib $dir

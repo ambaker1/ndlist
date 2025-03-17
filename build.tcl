@@ -8,12 +8,12 @@ dict set config VERSION $version
 dict set config TIN_VERSION $tin_version
 
 puts "Building from source files..."
-tin bake src build $config
+tin bake src . $config
 tin bake doc/template/version.tin doc/template/version.tex $config
 source tests/build_examples.tcl
 
-puts "Loading package from build folder..."
-source build/ndlist.tcl 
+puts "Loading package ..."
+source ndlist.tcl 
 namespace import ndlist::*
 
 # Source all test files
@@ -40,8 +40,6 @@ if {$nFailed > 0} {
 }
 
 puts "Tests passed, installing..."
-# Tests passed, copy build files to main folder and install
-file copy -force {*}[glob -directory build *] [pwd]
 exec tclsh install.tcl
 
 # Verify installation
