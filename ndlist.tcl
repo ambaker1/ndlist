@@ -24,4 +24,4 @@ namespace eval ::ndlist {
 }
 
 # Finally, provide the package
-package provide ndlist 0.10.1
+package provide ndlist 0.11
