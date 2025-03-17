@@ -9,9 +9,6 @@
 # redistribution, and for a DISCLAIMER OF ALL WARRANTIES.
 ################################################################################
 
-# Required packages
-package require sqlite3; # For converting to/from SQLite database
-
 # Define namespace
 namespace eval ::ndlist {
     # Source all required files

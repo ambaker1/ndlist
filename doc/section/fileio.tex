@@ -90,7 +90,7 @@ The sqlite3 Tcl package provides access to SQL commands within a Tcl interpreter
 SQL databases are a powerful way to manipulate and query data, so to aid in using this powerful tool, the following commands were added to the ndlist package: \cmdlink{readTable} and \cmdlink{writeTable}. 
 The command \cmdlink{readTable} reads a specified table from a SQL database, returning a matrix. 
 The command \cmdlink{writeTable} writes a matrix to a new table (must not exist) in a SQL database. 
-
+If sqlite3 is not loaded before calling these commands, they will throw an error.
 \begin{syntax}
 \command{readTable} \$db \$table
 \end{syntax}

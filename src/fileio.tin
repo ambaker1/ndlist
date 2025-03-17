@@ -176,6 +176,8 @@ proc ::ndlist::writeMatrix {args} {
 # table:        name of existing table within database
 
 proc ::ndlist::readTable {db table} {
+    # Ensure that the package sqlite3 is already loaded
+    package present sqlite3 3.45.2
     set header [$db eval {SELECT name FROM PRAGMA_TABLE_INFO($table);}]
     set values [$db eval "SELECT * FROM $table;"]
     concat [list $header] [nreshape $values * [llength $header]]
@@ -194,6 +196,8 @@ proc ::ndlist::readTable {db table} {
 # table:        name of new table within database
 
 proc ::ndlist::writeTable {db table matrix} {
+    # Ensure that the package sqlite3 is already loaded
+    package present sqlite3 3.45.2
     # Get header from matrix, and wrap in quotes in case of spaces in names.
     # Currently does not support double quotes in field names
     set header [lmap field [lindex $matrix 0] {string cat "\"" $field "\""}]
