@@ -50,8 +50,4 @@ tin forget ndlist
 tin clear
 tin import ndlist -exact $version
 
-# Build documentation
-puts "Building documentation..."
-cd doc
-exec -ignorestderr pdflatex ndlist.tex
-cd ..
+puts "Installation Successful"
