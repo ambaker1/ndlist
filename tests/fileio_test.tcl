@@ -107,6 +107,20 @@ if {[file exists tests/test.db]} {
     file delete tests/test.db
 }
 
+test sql_not_loaded1 {
+    # If sqlite3 is not loaded, an error message will occur
+} -body {
+    readTable foo bar
+} -returnCodes 1 -result {package sqlite3 3.45.2 is not present}
+
+test sql_not_loaded2 {
+    # If sqlite3 is not loaded, an error message will occur
+} -body {
+    writeTable foo bar "hello world"
+} -returnCodes 1 -result {package sqlite3 3.45.2 is not present}
+
+package require sqlite3 3.45.2
+
 test sql {
     # Write a matrix to SQL
 } -body {
