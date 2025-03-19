@@ -2,7 +2,8 @@ set tin_version 2.1
 package require tin $tin_version
 tin import assert from tin
 tin import tcltest
-tin import flytrap
+tin add flytrap 1.2 https://github.com/ambaker1/flytrap v1.2 install.tcl
+tin import flytrap -exact 1.2
 set version 0.11
 set config ""
 dict set config VERSION $version
