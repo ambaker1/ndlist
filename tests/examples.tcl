@@ -902,7 +902,6 @@ ID          NAME        AGE         ADDRESS     SALARY
 # Write the data to an SQL table and a Tcl table
 package require sqlite3; # required for sqlite3 command
 sqlite3 db myDatabase.db; # open SQL database
-db eval {DROP TABLE IF EXISTS People}; # delete table if exists
 writeTable db People $matrix; # write to SQL table
 table new People $matrix; # write to Tcl table
 
@@ -914,4 +913,21 @@ puts -nonewline {}
 } -output {
 Mark David Kim
 Mark David Kim
+}
+
+test {Example 73} {Reading and writing an entire SQL database} -body {
+puts {}
+package require sqlite3; # required for sqlite3 command
+sqlite3 db myDatabase.db; # open SQL database
+readDatabase db t
+$t(People) @ AGE := {@AGE + 1}; # add one to people's ages
+writeDatabase db t
+db close; # close SQL database
+# Verifying that data was modified
+sqlite3 db myDatabase.db; # open SQL database
+puts [db eval {SELECT NAME,AGE FROM People}]
+db close; # close SQL database
+puts -nonewline {}
+} -output {
+Paul 33 Allen 26 Teddy 24 Mark 26 David 28 Kim 23 James 25
 }

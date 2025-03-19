@@ -2,6 +2,7 @@ set tin_version 2.1
 package require tin $tin_version
 tin import assert from tin
 tin import tcltest
+tin import flytrap
 set version 0.11
 set config ""
 dict set config VERSION $version
