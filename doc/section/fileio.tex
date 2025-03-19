@@ -89,7 +89,7 @@ hello world,"foo,bar","""hi"""
 The sqlite3 Tcl package provides access to SQL commands within a Tcl interpreter. 
 SQL databases are a powerful way to manipulate and query data, so to aid in using this powerful tool, the following commands were added to the ndlist package: \cmdlink{readTable} and \cmdlink{writeTable}. 
 The command \cmdlink{readTable} reads a specified table from a SQL database, returning a matrix. 
-The command \cmdlink{writeTable} writes a matrix to a new table (must not exist) in a SQL database. 
+The command \cmdlink{writeTable} writes a matrix to a table in a SQL database. If the table exists, it will be overwritten.
 If sqlite3 is not loaded before calling these commands, they will throw an error.
 \begin{syntax}
 \command{readTable} \$db \$table
@@ -118,7 +118,6 @@ ID          NAME        AGE         ADDRESS     SALARY
 # Write the data to an SQL table and a Tcl table
 package require sqlite3; # required for sqlite3 command
 sqlite3 db myDatabase.db; # open SQL database
-db eval {DROP TABLE IF EXISTS People}; # delete table if exists
 writeTable db People $matrix; # write to SQL table
 table new People $matrix; # write to Tcl table
 
@@ -131,6 +130,39 @@ db close; # close SQL database
 \begin{lstlisting}
 Mark David Kim
 Mark David Kim
+\end{lstlisting}
+\end{example}
+\clearpage
+\subsubsection{Reading and Writing SQL Databases}
+The command \cmdlink{readDatabase} reads all the tables in an SQLite database to a Tcl array of table objects.
+Likewise, the command \cmdlink{writeDatabase} writes all the tables in a Tcl array to tables in a SQLite database, overwriting those tables if they exist. 
+\begin{syntax}
+\command{readDatabase} \$db \$arrayName
+\end{syntax}
+\begin{syntax}
+\command{writeDatabase} \$db \$arrayName
+\end{syntax}
+\begin{args}
+\$db & sqlite3 database command \\
+\$arrayName & Variable name of array with keys corresponding to table names, and values corresponding to table objects.
+\end{args}
+
+\begin{example}{Reading and writing an entire SQL database}
+\begin{lstlisting}
+package require sqlite3; # required for sqlite3 command
+sqlite3 db myDatabase.db; # open SQL database
+readDatabase db t
+$t(People) @ AGE := {@AGE + 1}; # add one to people's ages
+writeDatabase db t
+db close; # close SQL database
+# Verifying that data was modified
+sqlite3 db myDatabase.db; # open SQL database
+puts [db eval {SELECT NAME,AGE FROM People}]
+db close; # close SQL database
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+Paul 33 Allen 26 Teddy 24 Mark 26 David 28 Kim 23 James 25
 \end{lstlisting}
 \end{example}
 \clearpage

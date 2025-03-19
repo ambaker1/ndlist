@@ -138,16 +138,40 @@ test sql_null {
     # Write a matrix to SQL with nulls
 } -body {
     set myMatrix {
-    {first last address city zip} 
-    {John Doe {120 any st.} {Anytown, WW} 08123}
-    {Jane Doe {123 Main St.} {Somewhere, ZZ} 12345}
-    {{} {} {} {} 54321}
+    {ID first last address city zip} 
+    {1 John Doe {120 any st.} {Anytown, WW} 08123}
+    {2 Jane Doe {123 Main St.} {Somewhere, ZZ} 12345}
+    {3 {} {} {} {} 54321}
     }
     sqlite3 db tests/test.db
     writeTable db People2 $myMatrix
     readTable db People2
-} -result {{first last address city zip} {John Doe {120 any st.} {Anytown, WW} 08123} {Jane Doe {123 Main St.} {Somewhere, ZZ} 12345} {{} {} {} {} 54321}}
+} -result {{ID first last address city zip} {1 John Doe {120 any st.} {Anytown, WW} 08123} {2 Jane Doe {123 Main St.} {Somewhere, ZZ} 12345} {3 {} {} {} {} 54321}}
+
+test sql_tablenamespaces {
+    # Write a matrix to SQL with a name with spaces
+} -body {
+    set myMatrix {
+    {ID first last address city zip} 
+    {1 John Doe {120 any st.} {Anytown, WW} 08123}
+    {2 Jane Doe {123 Main St.} {Somewhere, ZZ} 12345}
+    }
+    sqlite3 db tests/test.db
+    writeTable db {People 3} $myMatrix
+    readTable db {People 3}
+} -result {{ID first last address city zip} {1 John Doe {120 any st.} {Anytown, WW} 08123} {2 Jane Doe {123 Main St.} {Somewhere, ZZ} 12345}}
+
+test sql_database {
+    # Testing the sqldatabase read/write functions
+} -body {
+    readDatabase db t
+    assert [lsort [array names t]] eq [lsort {People1 People2 {People 3}}]
+    $t(People 3) set 2 last Dot
+    writeDatabase db t
+    readTable db {People 3}
+} -result {{ID first last address city zip} {1 John Doe {120 any st.} {Anytown, WW} 08123} {2 Jane Dot {123 Main St.} {Somewhere, ZZ} 12345}}
 
 # Clean up sqlite test database
 db close
 file delete tests/test.db
+
