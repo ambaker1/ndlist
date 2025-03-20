@@ -1,6 +1,6 @@
 # table.tcl
 ################################################################################
-# Constant-time tabular data format, using TclOO and Tcl dictionaries.
+# Tcl equivalent of SQLite tables
 
 # Copyright (C) 2025 Alex Baker, ambaker1@mtu.edu
 # All rights reserved. 
@@ -27,131 +27,39 @@ namespace eval ::ndlist {
 
 ::oo::class create ::ndlist::table {
     superclass ::ndlist::ValueContainer
-    # Additional variables used in all methods
-    variable keyname keys keymap fields fieldmap datamap
-
+    variable myValue fieldMap
+    
     # SetValue --
     # 
-    # Set value of table from matrix representation.
+    # Verify that the input value is correct
 
     method SetValue {matrix} {
-        # Null case (wipe the table)
-        if {$matrix eq ""} {
-            my wipe
-            return [self]
-        }
         # Validate input before setting value.
         set matrix [::ndlist::ndlist 2 $matrix]; # verifies that it is a matrix
-        # Check uniqueness of keyname/fields
-        set header [lindex $matrix 0]
-        if {![my IsUniqueList $header]} {
-            return -code error "invalid input: duplicates in header"
-        }
-        # Check uniqueness of keys
-        set firstcolumn [lmap row [lrange $matrix 1 end] {lindex $row 0}]
-        if {![my IsUniqueList $firstcolumn]} {
-            return -code error "invalid input: duplicates in first column"
-        }
-        # Define table
-        my wipe
-        my define keyname [lindex $header 0]
-        my define fields [lrange $header 1 end]
-        my define keys $firstcolumn
-        foreach row [lrange $matrix 1 end] key [my keys] {
-            foreach value [lrange $row 1 end] field [my fields] {
-                my set $key $field $value
+        # Initialize fieldMap (must be unique)
+        set fieldMap ""
+        set i 0
+        foreach field [lindex $matrix 0] {
+            if {[dict exists $fieldMap $field]} {
+                return -code error "invalid input: duplicates fields"
             }
+            dict set fieldMap $field $i
+            incr i
         }
-        return [self]
-    }
-
-    # GetValue --
-    #
-    # Gets matrix representation of table.
-
-    method GetValue {} {
-        set matrix [list [linsert $fields 0 $keyname]]
-        foreach key $keys {
-            set row $key
-            foreach field $fields {
-                lappend row [my get $key $field]
-            }
-            lappend matrix $row
-        }
-        return $matrix
-    }
-
-    # my IsUniqueList --
-    #
-    # Private method for checking uniqueness of key/field inputs.
-    #
-    # Syntax:
-    # my IsUniqueList $list
-    #
-    # Arguments:
-    # list:             List to check for uniqueness
-
-    method IsUniqueList {list} {
-        set map ""
-        foreach item $list {
-            if {[dict exists $map $item]} {
-                return 0
-            }
-            dict set map $item ""
-        }
-        return 1
-    }
-    
-    # $tblObj wipe --
-    #
-    # Reset table entirely to defaults
-
-    method wipe {} {
-        my clear
-        set fields ""; # Ordered list of fields
-        set fieldmap ""; # Dictionary of fields and indices
-        set keyname key; # Name of keys (first column name)
-        return [self]
+        next $matrix
     }
 
     # $tblObj clear --
     #
-    # Clear out all data in table (keeps keyname and fields/fieldmap)
+    # Clear out all data in table (keeps header)
 
     method clear {} {
-        set datamap ""; # Double-nested dictionary of table data
-        set keys ""; # Ordered list of keys
-        set keymap ""; # dictionary of keys and indices
+        set myValue [list [lindex $myValue 0]]
         return [self]
     }
 
     # Table property access/modification
     ########################################################################
-
-    # $tblObj keyname --
-    # 
-    # Access keyname of table.
-    #
-    # Syntax:
-    # $tblObj keyname
-
-    method keyname {} {
-        return $keyname
-    }
-
-    # $tblObj keys --
-    # 
-    # Access table keys
-    #
-    # Syntax:
-    # $tblObj keys <$pattern>
-
-    method keys {{pattern *}} {
-        if {$pattern eq "*"} {
-            return $keys
-        }
-        lsearch -inline -all $keys $pattern
-    }
 
     # $tblObj fields --
     # 
@@ -165,38 +73,47 @@ namespace eval ::ndlist {
 
     method fields {{pattern *}} {
         if {$pattern eq "*"} {
-            return $fields
+            return [dict keys $fieldMap]
         }
-        lsearch -inline -all $fields $pattern
+        dict keys $fieldMap $pattern
     }
     
-    # $tblObj values --
+    # $tblObj exists --
     # 
-    # Access matrix of values (excluding the header and first column)
+    # Returns if a table field exists
+    #
+    # Syntax:
+    # $tblObj exists $field
     #
     # Arguments:
-    # filler:           Filler for missing values. Default blank.
+    # field:            Name of field
     
-    method values {{filler ""}} {
-        lmap key $keys {
-            my rget $key $filler
-        }
+    method exists {field} {
+        dict exists $fieldMap $field
     }
     
-    # $tblObj dict --
+    # my AssertFieldExists --
     #
-    # Get raw table dict (double-nested dictionary, first level keys)
+    # Asserts that field exists
+    #
+    # Syntax:
+    # my AssertFieldExists $field
+    #
+    # Arguments:
+    # field:            Field to check
     
-    method dict {} {
-        return $datamap
+    method AssertFieldExists {field} {
+        if {![dict exists $fieldMap $field]} {
+            return -code error "field \"$field\" not in table"
+        }
     }
 
     # $tblObj height --
     #
-    # Number of keys in table
+    # Number of entries
 
     method height {} {
-        llength $keys
+        expr {[llength $myValue] - 1}
     }
 
     # $tblObj width --
@@ -204,313 +121,137 @@ namespace eval ::ndlist {
     # Number of fields in table
 
     method width {} {
-        llength $fields
+        llength [lindex $myValue 0]
     }
-
-    # $tblObj exists --
-    #
-    # Check if key/field or key/field pairing exists, using hashmaps
-    #
-    # Syntax:
-    # $tblObj exists key $key
-    # $tblObj exists field $field
-    # $tblObj exists value $key $field
-    # 
-    # Arguments:
-    # key:          Key to look up
-    # field:        Field to look up
-
-    method exists {type args} {
-        switch $type {
-            key { # $tblObj exists key $key
-                if {[llength $args] != 1} {
-                    return -code error "wrong # args: should be\
-                            \"[self] exists key name\""
-                }
-                return [dict exists $keymap [lindex $args 0]]
-            }
-            field { # $tblObj exists field $field
-                if {[llength $args] != 1} {
-                    return -code error "wrong # args: should be\
-                            \"[self] exists field name\""
-                }
-                return [dict exists $fieldmap [lindex $args 0]]
-            }
-            value { # $tblObj exists value $key $field
-                if {[llength $args] != 2} {
-                    return -code error "wrong # args: should be\
-                            \"[self] exists value key field\""
-                }
-                return [dict exists $datamap {*}$args]
-            }
-            default {
-                return -code error "unknown option \"$type\": want\
-                        \"key\", \"field\" or \"value\""
-            }
-        }; # end switch type
-    }
-
-    # $tblObj find --
-    #
-    # Find index of key/field.
-    #
-    # Syntax:
-    # $tblObj find key $key
-    # $tblObj find field $field
-    #
-    # Arguments:
-    # key/field:        Key/field to look up
-
-    method find {type value} {
-        switch $type {
-            key { # $tblObj find key $key
-                set key $value
-                if {[my exists key $key]} {
-                    return [dict get $keymap $key]
-                } else {
-                    return -code error "key \"$key\" not found in table"
-                }
-            }
-            field { # $tblObj find field $field
-                set field $value
-                if {[my exists field $field]} {
-                    return [dict get $fieldmap $field]
-                } else {
-                    return -code error "field \"$field\" not found in table"
-                }
-            }
-            default {
-                return -code error "unknown option \"$type\": want\
-                        \"key\" or \"field\""
-            }
-        }
-    }
-
+    
     # Table entry
     ########################################################################
+    
+    $table set [$table where {@Shape == "W12x50"}] 
 
     # $tblObj set --
     #
-    # Set single values in a table (single or dictionary form)
+    # Set values in a table (single or dictionary form)
     # Allows for multiple value inputs for record-style entry
     #
     # Syntax:
-    # $tblObj set $key $field $value ...
+    # $tblObj set $row $field $value ...
     #
     # Arguments:
     # key:          Row key
     # field:        Column field(s)
     # value:        Value(s) to set
 
-    method set {key args} {
+    method set {row args} {
         # Check arity
-        if {[llength $args] % 2} {
-            # Default syntax
-            return -code error "wrong # args: should be \"[self] set key field\
+        if {[llength $args] % 2 || [llength $args] == 0} {
+            return -code error "wrong # args: should be \"[self] set row field\
                     value ?field value ...?\""
         }
-        # Add keys and fields
-        my add keys $key
-        my add fields {*}[dict keys $args]
-        # Add data
+        # Check for valid row input
+        if {![string is integer -strict $row]} {
+            return -code error "row ID must be integer"
+        }
+        if {$row < 1 || $row > [my height]} {
+            return -code error "row ID out of range"
+        }
+        # Assert that fields exist
+        foreach field [dict keys $args] {
+            my AssertFieldExists $field
+        }
+        # Modify data
         dict for {field value} $args {
-            # Handle blanks
-            if {$value eq ""} {
-                dict unset datamap $key $field
-            } else {
-                dict set datamap $key $field $value
-            }; # end if blank
+            lset myValue $row [dict get $fieldMap $field] $value
         }
         # Return self
         return [self]
     }
     
-    # $tblObj rset --
-    #
-    # Set entire row
-    #
-    # Syntax:
-    # $tblObj rset $key $row
-    #
-    # Arguments:
-    # key:          Key associated with row
-    # row:          List of values (length must match table width, or be scalar)
-
-    method rset {key row} {
-        # Get input and target dimensions and check for error
-        set m0 [my width]
-        set m1 [llength $row]
-        if {$m1 == 0} {
-            set type blank
-        } elseif {$m1 == 1} {
-            set value [lindex $row 0]
-            if {$value eq ""} {
-                set type blank
-            } else {
-                set type scalar
-            }
-        } elseif {$m1 == $m0} {
-            set type values
-        } else {
-            return -code error "inconsistent number of fields/columns"
-        }
-        
-        # Add key
-        my add keys $key
-        
-        # Switch for input type (blank, scalar, or values)
-        switch $type {
-            blank {
-                dict set datamap $key ""
-            }
-            scalar {
-                foreach field $fields {
-                    dict set datamap $key $field $value
-                }; # end foreach field
-            }
-            values {
-                foreach value $row field $fields {
-                    # Handle blanks
-                    if {$value eq ""} {
-                        dict unset datamap $key $field
-                    } else {
-                        dict set datamap $key $field $value
-                    }; # end if blank
-                }; # end foreach value/field
-            }
-        }; # end switch input type
-        # Return object name
-        return [self]
-    }
-
-    # $tblObj cset --
-    #
-    # Set entire column
-    #
-    # Syntax:
-    # $tblObj cset $field $column
+    # $tblObj get --
     # 
+    # Get a single value from a table
+    # If a key/field pairing does not exist, returns blank.
+    # Return error if a key or field does not exist
+    #
+    # Syntax:
+    # $tblObj get $row $field
+    #
     # Arguments:
-    # field:        Field associated with column
-    # column:       List of values (length must match height, or be scalar)
+    # row:          row index (1 to height)
+    # field:        field to query
 
-    method cset {field column} {
-        # Get source and input dimensions and get input type
-        set n0 [my height]
-        set n1 [llength $column]
-        if {$n1 == 0} {
-            set type blank
-        } elseif {$n1 == 1} {
-            set value [lindex $column 0]
-            if {$value eq ""} {
-                set type blank
-            } else {
-                set type scalar
-            }
-        } elseif {$n1 == $n0} {
-            set type values
-        } else {
-            return -code error "inconsistent number of keys/rows"
+    method get {row field} {
+        # Check for valid row input
+        if {![string is integer -strict $row]} {
+            return -code error "row ID must be integer"
         }
-        
-        # Add to field list
-        my add fields $field
-        
-        # Switch for input type (blank, scalar, or column)
-        switch $type {
-            blank {
-                foreach key $keys {
-                    dict unset datamap $key $field
-                }; # end foreach value/field
-            }
-            scalar {
-                foreach key $keys {
-                    dict set datamap $key $field $value
-                }; # end foreach key
-            }
-            values {
-                foreach value $column key $keys {
-                    # Handle blanks
-                    if {$value eq ""} {
-                        dict unset datamap $key $field
-                    } else {
-                        dict set datamap $key $field $value
-                    }; # end if blank
-                }; # end foreach value/field
-            }
-        }; # end switch input type
-        # Return object name
-        return [self]
+        if {$row < 1 || $row > [my height]} {
+            return -code error "row ID out of range"
+        }
+        # Assert if field exists
+        my AssertFieldExists $field
+        # Return value in table
+        return [lindex $myValue $row [dict get $fieldMap $field]]
     }
     
-    # $tblObj mset --
+    # $tblObj expr --
     #
-    # Set range of table
+    # Perform a field expression, return list of values
+    # 
+    # Arguments:
+    # fieldExpr:    Tcl expression, but with @ symbol for fields
+
+    method expr {fieldExpr} {
+        # Get list of fields in fieldExpr
+        set exp {@\w+|@{(\\\{|\\\}|[^\\}{]|\\\\)*}}
+        set map ""
+        foreach {match submatch} [regexp -inline -all $exp $fieldExpr] {
+            lappend map [join [string range $match 1 end]] ""
+        }
+        set fields [dict keys $map]
+        
+        # Check validity of fields in field expression
+        foreach field $fields {
+            my AssertFieldExists $field
+        }
+        
+        # Now, we know that the fields are valid, and we will loop through 
+        # the rows and get values according to the field expression
+        set values ""
+        foreach entry [lrange $myValue 1 end] {
+            # Perform regular expression substitution
+            set subExpr $fieldExpr
+            set valid 1
+            foreach field $fields {
+                set value [lindex $entry [dict get $fieldMap $field]]
+                if {$value eq ""} {
+                    # No data here. Skip.
+                    set valid 0
+                    break
+                }
+                set subExpr [regsub $exp $subExpr "{$value}"]
+            }; # end foreach fieldmap pair
+            if {$valid} {
+                # Only add data if all required fields exist.
+                lappend values [uplevel 1 [list expr $subExpr]]
+            } else {
+                lappend values ""
+            }; # end if valid
+        }; # end foreach key
+        
+        # Return values created by field expression
+        return $values
+    }
+    
+    # $tblObj where --
     #
-    # Syntax:
-    # $tblObj mset $keys $fields $matrix
+    # Get row IDs where a field expression is true
     #
     # Arguments:
-    # keys:         Keys associated with rows
-    # field:        Fields associated with columns
-    # matrix:       Matrix of values (dimensions must match table or be scalar)
+    # expr:         Field expression that results in a boolean value
 
-    method mset {keyset fieldset matrix} {
-        # Get source and input dimensions and get input type
-        set n0 [llength $keyset]
-        set m0 [llength $fieldset]
-        set n1 [llength $matrix]
-        set m1 [llength [lindex $matrix 0]]
-        if {$n1 == 0 && $m1 == 0} {
-            set type blank
-        } elseif {$n1 == 1 && $m1 == 1} {
-            set value [lindex $matrix 0 0]
-            if {$value eq ""} {
-                set type blank
-            } else {
-                set type scalar
-            }
-        } elseif {$n1 == $n0 && $m1 == $m0} {
-            set type values
-        } else {
-            return -code error "input must be 0x0, 1x1 or ${n0}x${m0}"
-        }
-     
-        # Add to key/field lists
-        my add keys {*}$keyset
-        my add fields {*}$fieldset
-        
-        # Switch for input type (blank, scalar, or matrix)
-        switch $type {
-            blank {
-                foreach key $keyset {
-                    foreach field $fieldset {
-                        dict unset datamap $key $field
-                    }; # end foreach value/field
-                }; # end foreach row/key
-            }
-            scalar {
-                foreach key $keyset {
-                    foreach field $fieldset {
-                        dict set datamap $key $field $value
-                    }; # end foreach value/field
-                }; # end foreach row/key
-            }
-            values {
-                foreach row $matrix key $keyset {
-                    foreach value $row field $fieldset {
-                        # Handle blanks
-                        if {$value eq ""} {
-                            dict unset datamap $key $field
-                        } else {
-                            dict set datamap $key $field $value
-                        }; # end if blank
-                    }; # end foreach value/field
-                }; # end foreach row/key
-            }
-        }; # end switch input type
-        # Return object name
-        return [self]
+    method where {expr} {
+        ::ndlist::find [concat 0 [uplevel 1 [list [self] expr $expr]]]
     }
 	
 	# $tblObj @ --
@@ -518,7 +259,7 @@ namespace eval ::ndlist {
     # Field access and modification
     #
     # Syntax:
-    # $tblObj @ $field <$filler> <= $column | := $expr>
+    # $tblObj @ $field <= $column | := $expr>
     #
     # Arguments:
     # field:        field to query or modify
@@ -552,149 +293,8 @@ namespace eval ::ndlist {
 		}
 	}
 	export @
-    
-    # Table access
-    ########################################################################
 
-    # $tblObj get --
-    # 
-    # Get a value from a table
-    # If a key/field pairing does not exist, returns blank.
-    # Return error if a key or field does not exist
-    #
-    # Syntax:
-    # $tblObj get $key $field <$filler>
-    #
-    # Arguments:
-    # key:          key to query
-    # field:        field to query
-    # filler:       filler for missing values (default "")
 
-    method get {key field {filler ""}} {
-        # Check if key-field pairing exists
-        if {![my exists key $key]} {
-            return -code error "key \"$key\" not found in table"
-        }
-        if {![my exists field $field]} {
-            return -code error "field \"$field\" not found in table"
-        }
-        # Return value or blank if does not exist
-        if {[my exists value $key $field]} {
-            return [dict get $datamap $key $field]
-        } else {
-            return $filler
-        } 
-    }
-    
-    # $tblObj rget --
-    #
-    # Get a list of row values
-    #
-    # Syntax:
-    # $tblObj rget $key <$filler>
-    #
-    # Arguments:
-    # key:          key to query
-    # filler:       filler for missing values (default "")
-
-    method rget {key {filler ""}} {
-        lmap field $fields {
-            my get $key $field $filler
-        }
-    }
-
-    # $tblObj cget --
-    #
-    # Get a list of column values
-    #
-    # Syntax:
-    # $tblObj cget $field <$filler>
-    #
-    # Arguments:
-    # field:        field to query
-    # filler:       filler for missing values (default "")
-
-    method cget {field {filler ""}} {
-        # Loop through all keys, and return vector
-        lmap key $keys {
-            my get $key $field $filler
-        }
-    }
-    
-    # $tblObj mget --
-    #
-    # Get a matrix of table values 
-    #
-    # Syntax:
-    # $tblObj mget $keys $fields <$filler>
-    #
-    # Arguments:
-    # keys:         Keys to query
-    # fields:       Fields to query
-    # filler:       filler for missing values (default "")
-
-    method mget {keyset fieldset {filler ""}} {
-        # Loop through keys and fields and return matrix
-        lmap key $keyset {
-            lmap field $fieldset {
-                my get $key $field $filler
-            }
-        }
-    }
-
-    # $tblObj expr --
-    #
-    # Perform a field expression, return list of values
-    # 
-    # Arguments:
-    # fieldExpr:    Tcl expression, but with @ symbol for fields
-
-    method expr {fieldExpr {filler ""}} {
-        # Get mapping of fields in fieldExpr
-        set exp {@\w+|@{(\\\{|\\\}|[^\\}{]|\\\\)*}}
-        set fieldMap ""
-        foreach {match submatch} [regexp -inline -all $exp $fieldExpr] {
-            lappend fieldMap [join [string range $match 1 end]] $match
-        }
-        
-        # Check validity of fields in field expression
-        dict for {field match} $fieldMap {
-            if {![dict exists $fieldmap $field] && $field ne $keyname} {
-                return -code error "field \"$field\" not found in table"
-            }
-        }
-        
-        # Now, we know that the fields are valid, and we will loop through 
-        # the list of keys, and use "catch"
-        # Get values according to field expression
-        set values ""
-        foreach key $keys {
-            # Perform regular expression substitution
-            set subExpr $fieldExpr
-            set valid 1
-            foreach {field match} $fieldMap {
-                if {![my exists value $key $field]} {
-                    if {$field eq $keyname} {
-                        set subExpr [regsub $exp $subExpr "{$key}"]
-                        continue
-                    }
-                    # No data for this key/field combo. Skip.
-                    set valid 0
-                    break
-                }
-                set subExpr [regsub $exp $subExpr "{[my get $key $field]}"]
-            }; # end foreach fieldmap pair
-            if {$valid} {
-                # Only add data if all required fields exist.
-                lappend values [uplevel 1 [list expr $subExpr]]
-            } else {
-                lappend values $filler
-            }; # end if valid
-        }; # end foreach key
-        
-        # Return values created by field expression
-        return $values
-    }
 
     # $tblObj query --
     #
