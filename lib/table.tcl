@@ -126,8 +126,6 @@ namespace eval ::ndlist {
     
     # Table entry
     ########################################################################
-    
-    $table set [$table where {@Shape == "W12x50"}] 
 
     # $tblObj set --
     #
@@ -259,7 +257,7 @@ namespace eval ::ndlist {
     # Field access and modification
     #
     # Syntax:
-    # $tblObj @ $field <= $column | := $expr>
+    # $tblObj @ <$rowIndices> $field <= $column | := $expr>
     #
     # Arguments:
     # field:        field to query or modify
