@@ -14,6 +14,22 @@ namespace eval ::ndlist {
     namespace export table
 }
 
+brainstorming:
+$table @ 0:end * | expr {@A + @B}
+
+$table @ [$table where {@first eq "foo"}] last = "bar"
+
+# A table is simply a matrix with the first row being fields.
+# The fields must be unique, and an index map is created
+
+$table = [nreplace [$table] : {1 2} [nget [$table] : {2 1}]]
+$table fields
+
+# Tables should be able to be modified in the same way as matrices, but with field names instead of column IDs.
+# I need to totally reimagine how tables work in ndlist.
+
+$t add 
+
 # table --
 #
 # Object variable class for tables.
