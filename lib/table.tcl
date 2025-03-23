@@ -14,6 +14,9 @@ namespace eval ::ndlist {
     namespace export table
 }
 
+Table format: 
+field column field column ...
+
 brainstorming:
 $table @ 0:end * | expr {@A + @B}
 
@@ -43,37 +46,40 @@ $t add
 
 ::oo::class create ::ndlist::table {
     superclass ::ndlist::ValueContainer
-    variable myValue fieldMap
+    variable myValue
     
     # SetValue --
     # 
     # Verify that the input value is correct
 
-    method SetValue {matrix} {
-        # Validate input before setting value.
-        set matrix [::ndlist::ndlist 2 $matrix]; # verifies that it is a matrix
-        # Initialize fieldMap (must be unique)
-        set map ""
-        set i 0
-        foreach field [lindex $matrix 0] {
-            if {[dict exists $map $field]} {
-                return -code error "invalid input: duplicates fields"
-            }
-            dict set map $field $i
-            incr i
+    method SetValue {value} {
+        # Ensure input is a dictionary
+        if {[catch {dict size $value}]} {
+            return -code error "table must be a valid Tcl dictionary"
         }
-        # No errors, set values
-        set myValue $matrix
-        set fieldMap $map
-        return [self]
+        # Ensure that values in dictionary are lists of same length
+        set n ""
+        dict for {field column} $value {
+            if {![string is list $column]} {
+                return -code error "columns must be valid Tcl lists"
+            }
+            if {$n eq ""} {
+                set n [llength $column]
+                continue
+            }
+            if {$n != [llength $column]} {
+                return -code error "columns must all be same length"
+            }
+        }
+        next $value
     }
     
     # $tblObj clear --
     #
-    # Clear out all data in table (keeps header)
+    # Clear out all data in table (keeps fields)
 
     method clear {} {
-        set myValue [list [lindex $myValue 0]]
+        set myValue [dict map {field column} $myValue {set column ""}] 
         return [self]
     }
     
@@ -81,38 +87,38 @@ $t add
     #
     # Clear entries and fields that have no data
 
-    method clean {} {
-        # Remove blank entries
-        set myValue [lmap row $myValue {
-            if {[my IsNull $row]} {
-                continue
-            }
-            set row
-        }]
-        # Remove blank fields
-        foreach field [my fields] {
-            if {[my IsNull [my @ : $field]]} {
-                my remove $field
-            }
-        }
-        # Return object name
-        return [self]
-    }
+    # method clean {} {
+        # # Remove blank entries
+        # set myValue [lmap row $myValue {
+            # if {[my IsNull $row]} {
+                # continue
+            # }
+            # set row
+        # }]
+        # # Remove blank fields
+        # foreach field [my fields] {
+            # if {[my IsNull [my @ : $field]]} {
+                # my remove $field
+            # }
+        # }
+        # # Return object name
+        # return [self]
+    # }
     
-    # my IsNull --
-    #
-    # Returns if a list is all blanks or not
+    # # my IsNull --
+    # #
+    # # Returns if a list is all blanks or not
     
-    method IsNull {list} {
-        set isNull 1
-        foreach value $list {
-            if {$value ne ""} {
-                set isNull 0
-                break
-            }
-        }
-        return $isNull
-    }
+    # method IsNull {list} {
+        # set isNull 1
+        # foreach value $list {
+            # if {$value ne ""} {
+                # set isNull 0
+                # break
+            # }
+        # }
+        # return $isNull
+    # }
 
     # Table property access/modification
     ########################################################################
@@ -125,13 +131,10 @@ $t add
     # $tblObj fields <$pattern>
     #
     # Arguments:
-    # pattern:          Optional glob pattern
+    # pattern:          Optional glob pattern. Default "*"
 
     method fields {{pattern *}} {
-        if {$pattern eq "*"} {
-            return [lindex $myValue 0]
-        }
-        dict keys $fieldMap $pattern
+        dict keys $myValue $pattern
     }
     
     # $tblObj exists --
@@ -145,7 +148,7 @@ $t add
     # field:            Name of field
     
     method exists {field} {
-        dict exists $fieldMap $field
+        dict exists $myValue $field
     }
     
     # $tblObj add --
@@ -199,7 +202,9 @@ $t add
     # Number of entries
 
     method height {} {
-        expr {[llength $myValue] - 1}
+        dict for {field column} $myValue {
+            return [llength $column]
+        }
     }
 
     # $tblObj width --
@@ -207,47 +212,99 @@ $t add
     # Number of fields in table
 
     method width {} {
-        llength [lindex $myValue 0]
+        llength [dict keys $myValue]
     }
     
     # Table entry
     ########################################################################
+    
+    # Table entry is tricky because I can't just rely on matrix indexing. The field stuff is complicated. I want there to only be a few functions. And I want the input/output to be in matrix format.
+    
+    $T set $fields $indices $values
+    $T get $fields $indices 
+    
+    # Right now, the way that matrix indexing works, I can't index outside of the bounds of the size of the matrix. So I can't expand it. This is a problem, I want to be able to add more entries to the matrix.
+    
+    # Should 
+    
+    
+    
+    $t set : 
+    
+    $t @ : {{hello there}}
+    
+    $t set 2* A $value B $value
+    
+    $t lappend A foo B bar
+    $t lappend 
+    $t lappend 
+    
+    $t get {1 2} A B 
+    
+    
 
     # $tblObj set --
     #
-    # Set values in a table (single or dictionary form)
-    # Allows for multiple value inputs for record-style entry
-    # Setting nothing is also valid.
+    # Set values in a table
     #
     # Syntax:
-    # $tblObj set $row <$field $value ...>
+    # $tblObj set $indices $field $values ...
     #
     # Arguments:
-    # key:          Row key
-    # field:        Column field(s)
-    # value:        Value(s) to set
+    # fields:       field to modify
+    # indices:      indices of column to modify (":" for all)
+    # sublist:      replacement values (uses nreplace)
 
-    method set {row args} {
-        # Check arity
-        if {[llength $args] % 2} {
-            return -code error "wrong # args: should be \"[self] set row field value ...\""
-        }
-        # Check for valid row input
-        set row [::ndlist::Index2Integer [my height] $row]
-        incr row; # offset for header
-        # Assert that fields exist
-        foreach field [dict keys $args] {
+    method set {indices args} {
+        set myCopy $myValue
+        dict for {field values} $args {
             my AssertFieldExists $field
+            set column [dict get $myValue $field]
+            ::ndlist::nset column $indices $values
+            dict set myCopy $field $column
         }
-        # Modify data
-        dict for {field value} $args {
-            lset myValue $row [dict get $fieldMap $field] $value
-        }
-        # Return self
+        my SetValue $myCopy
         return [self]
     }
     
-    # $tblObj append --
+    # $tblObj get --
+    # 
+    # Get column values from a table
+    #
+    # Syntax:
+    # $tblObj get $indices $field
+    #
+    # Arguments:
+    # field:        field to get
+    # indices:      indices of column to get (":" for all)
+
+    method get {indices field} {
+        my AssertFieldExists $field
+        return [::ndlist::nget [dict get $myValue $field] $indices]
+    }
+    
+    # $tblObj rset --
+    #
+    # Set values, row-wise, in a table
+    #
+    # Syntax:
+    # $tblObj rset $fields $indices
+    #
+    # Arguments:
+    # field:        field to get
+    # indices:      indices of column to get (":" for all)
+    
+    $table @ field : = foo
+    
+    $table set A [$table where {@A > 3}] 
+    
+    # $tblObj rset --
+    #
+    # Set row values in table
+    
+    # $tblObj rset $index $field $value $field $value 
+    
+    # $tblObj lappend --
     # 
     # Append a row to the table.
     

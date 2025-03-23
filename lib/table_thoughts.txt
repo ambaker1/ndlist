@@ -1,0 +1,11 @@
+Table thoughts
+
+I thought about it more and more, and I really think that the table format should just be a matrix with the first row being the fields. It will cause the least amount of shimmering, and it is the format I was already using. I can keep a lot of what I already had, just modified for the new internal format. 
+
+First column will be the primary key.
+I am not going to change the table module much. Just going to update the internal format and have a keymap and fieldmap for indexing. 
+
+
+$t mkkey $field 
+
+$t set $index $field 
