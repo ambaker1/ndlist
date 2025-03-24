@@ -1,6 +1,6 @@
 # table.tcl
 ################################################################################
-# Constant-time tabular data format, using TclOO and Tcl dictionaries.
+# Tabular data structure
 
 # Copyright (C) 2025 Alex Baker, ambaker1@mtu.edu
 # All rights reserved. 
@@ -27,117 +27,84 @@ namespace eval ::ndlist {
 
 ::oo::class create ::ndlist::table {
     superclass ::ndlist::ValueContainer
-    # Additional variables used in all methods
-    variable keyname keys keymap fields fieldmap datamap
+    # Variables used in all methods
+    variable myValue keyname keymap fieldmap
 
     # SetValue --
     # 
     # Set value of table from matrix representation.
+    # Validates input and initializes keymap and fieldmap
 
     method SetValue {matrix} {
-        # Null case (wipe the table)
-        if {$matrix eq ""} {
-            my wipe
-            return [self]
-        }
-        # Validate input before setting value.
-        set matrix [::ndlist::ndlist 2 $matrix]; # verifies that it is a matrix
-        # Check uniqueness of keyname/fields
-        set header [lindex $matrix 0]
-        if {![my IsUniqueList $header]} {
-            return -code error "invalid input: duplicates in header"
-        }
-        # Check uniqueness of keys
-        set firstcolumn [lmap row [lrange $matrix 1 end] {lindex $row 0}]
-        if {![my IsUniqueList $firstcolumn]} {
-            return -code error "invalid input: duplicates in first column"
-        }
-        # Define table
-        my wipe
-        my define keyname [lindex $header 0]
-        my define fields [lrange $header 1 end]
-        my define keys $firstcolumn
-        foreach row [lrange $matrix 1 end] key [my keys] {
-            foreach value [lrange $row 1 end] field [my fields] {
-                my set $key $field $value
+        # Validate input
+        ::ndlist::ndlist 2 $matrix
+        
+        # Create fieldmap (duplicates are ignored after first)
+        set fieldmap ""
+        set j 0
+        foreach field [lindex $matrix 0] {
+            if {$field eq ""} {
+                return -code error "fields cannot be blank"
             }
-        }
-        return [self]
-    }
-
-    # GetValue --
-    #
-    # Gets matrix representation of table.
-
-    method GetValue {} {
-        set matrix [list [linsert $fields 0 $keyname]]
-        foreach key $keys {
-            set row $key
-            foreach field $fields {
-                lappend row [my get $key $field]
+            if {[dict exists $fieldmap $field]} {
+                return -code error "fields must be unique"
             }
-            lappend matrix $row
+            dict set fieldmap $field $j
+            incr j
         }
-        return $matrix
-    }
-
-    # my IsUniqueList --
-    #
-    # Private method for checking uniqueness of key/field inputs.
-    #
-    # Syntax:
-    # my IsUniqueList $list
-    #
-    # Arguments:
-    # list:             List to check for uniqueness
-
-    method IsUniqueList {list} {
-        set map ""
-        foreach item $list {
-            if {[dict exists $map $item]} {
-                return 0
-            }
-            dict set map $item ""
-        }
-        return 1
+        
+        # Start with no keyname (uses indices instead)
+        set keyname ""
+        set keymap ""
+        
+        next $matrix
     }
     
-    # $tblObj wipe --
+    # $tblObj keyname --
     #
-    # Reset table entirely to defaults
-
-    method wipe {} {
-        my clear
-        set fields ""; # Ordered list of fields
-        set fieldmap ""; # Dictionary of fields and indices
-        set keyname key; # Name of keys (first column name)
-        return [self]
-    }
-
-    # $tblObj clear --
-    #
-    # Clear out all data in table (keeps keyname and fields/fieldmap)
-
-    method clear {} {
-        set datamap ""; # Double-nested dictionary of table data
-        set keys ""; # Ordered list of keys
-        set keymap ""; # dictionary of keys and indices
-        return [self]
+    # Method for querying or modifying the keyname
+    # If no keyname is defined, row indexing will be used instead.
+    
+    method keyname {args} {
+        # Syntax guard clause
+        if {[llength $args] > 1} {
+            return -code error "wrong # args: want \"[self] keyname ?field?\""
+        }
+        # Query case
+        if {[llength $args] == 0} {
+            return $keyname
+        }
+        # Modification case ($tblObj keyname $field)
+        set field [lindex $args 0]
+        # Case where you delete the keyname.
+        if {$field eq ""} {
+            set keyname ""
+            set keymap ""
+            return
+        }
+        # Case where field does not exist.
+        if {![dict exists $fieldmap $field]} {
+            return -code error "field \"$field\" does not exist"
+        }
+        # Check if field is full and valid for being the key
+        set j [dict get $fieldmap $field]
+        set newKeymap ""
+        set i 1
+        foreach entry [lrange $myValue 1 end] {
+            set key [lindex $entry $j]
+            if {[dict exists $newKeymap $key]} {
+                return -code error "field \"$field\" has duplicate entries"
+            }
+            dict set newKeymap $key $i
+            incr i
+        }
+        set keymap $newKeymap
+        set keyname $field
+        return $keyname
     }
 
     # Table property access/modification
     ########################################################################
-
-    # $tblObj keyname --
-    # 
-    # Access keyname of table.
-    #
-    # Syntax:
-    # $tblObj keyname
-
-    method keyname {} {
-        return $keyname
-    }
 
     # $tblObj keys --
     # 
@@ -147,10 +114,7 @@ namespace eval ::ndlist {
     # $tblObj keys <$pattern>
 
     method keys {{pattern *}} {
-        if {$pattern eq "*"} {
-            return $keys
-        }
-        lsearch -inline -all $keys $pattern
+        dict keys $keymap $pattern 
     }
 
     # $tblObj fields --
@@ -164,10 +128,7 @@ namespace eval ::ndlist {
     # pattern:          Optional glob pattern
 
     method fields {{pattern *}} {
-        if {$pattern eq "*"} {
-            return $fields
-        }
-        lsearch -inline -all $fields $pattern
+        dict keys $fieldmap $pattern 
     }
     
     # $tblObj values --
