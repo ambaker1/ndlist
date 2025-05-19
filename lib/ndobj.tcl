@@ -76,22 +76,21 @@ proc ::ndlist::ValidateRefName {refName} {
     #           Default blank for query.
     
     method ndims {{nd ""}} {
+        # Query case
+        if {$nd eq ""} {
+            return $myDims
+        }
+        # Check input dimensions
         if {$nd eq "auto"} {
             set autoDims 1
-            set myDims [::ndlist::GetNDims $nd $myValue]
+            set ndims [::ndlist::GetNDims $nd $myValue]
         } elseif {$nd ne ""} {
             set autoDims 0
-            set myDims [::ndlist::GetNDims $nd]
+            set ndims [::ndlist::GetNDims $nd]
         }
-        return $myDims
-    }
-    
-    # $object auto_dims --
-    #
-    # Returns whether ndims is auto-determined or not 
-
-    method auto_dims {} {
-        return $autoDims
+        # Check validity of new dimensions
+        ::ndlist::ndlist $myValue $ndims
+        set myDims $ndims
     }
     
     # $object shape --

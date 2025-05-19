@@ -15,20 +15,19 @@ tin import ndlist
 
 ## Examples
 The ndlist package has support for vectors, matrices, tables, and higher-dimensional tensors.
-It is designed to be a one-stop shop for data processing in Tcl.
 
 Below are just a few examples of what is possible with ndlist. 
 
 ```tcl
 # Get distance between elements in a vector
-vector new x {1 2 4 7 11 16}
+narray new x {1 2 4 7 11 16}
 puts [nexpr {@x(1:end) - @x(0:end-1)}]; # 1 2 3 4 5
 ```
 
 ```tcl
 # Element-wise multiplication of column and row matrices
-matrix new x {1 2 3}
-matrix new y {{4 5 6}}
+narray new x {1 2 3}
+narray new y {{4 5 6}}
 puts [nexpr {@x * @y}]; # {4 5 6} {8 10 12} {12 15 18}
 ```
 
@@ -36,7 +35,7 @@ puts [nexpr {@x * @y}]; # {4 5 6} {8 10 12} {12 15 18}
 # Multi-dimensional mapping of Tcl nested lists
 set x {{1 2 3} {4 5 6} {7 8 9}}
 set indices {}
-nmap 2D xi $x {
+nmap xi $x {
     if {$xi > 4} {
         lappend indices [list [i] [j]]
     }
