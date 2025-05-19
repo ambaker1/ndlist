@@ -15,7 +15,7 @@ test ndlist {
 test ndlist_error {
     # Throws error if ragged.
 } -body {
-    ndlist {1 {2 3}} 2D
+    ndlist {1 {2 3}} 2
 } -returnCodes {1} -result {not a valid 2D-list}
 
 # nshape
@@ -26,9 +26,9 @@ test nshape {
 } -result {3 2}
 
 # Blanks must be contained within a list, unless if entire ndlist is blank.
-test nshape_blank0 {} -body {nshape "" 2D} -result {0 0}
-test nshape_blank1 {} -body {nshape {{}} 2D} -returnCodes {1} -result {null dimension along non-zero axis}
-test nshape_blank2 {} {nshape {{{}}} 2D} {1 1}
+test nshape_blank0 {} -body {nshape "" 2} -result {0 0}
+test nshape_blank1 {} -body {nshape {{}} 2} -returnCodes {1} -result {null dimension along non-zero axis}
+test nshape_blank2 {} {nshape {{{}}} 2} {1 1}
 
 # nsize
 test nsize0D {
@@ -435,7 +435,7 @@ test ninsert2D_0 {
 test ninsert2D_1 {
     # Augment matrices (simple concat)
 } -body {
-    ninsert {1 2 3} end {4 5 6} 1 2D
+    ninsert {1 2 3} end {4 5 6} 1 2
 } -result {{1 4} {2 5} {3 6}}
 
 test ninsert3D_2 {
@@ -443,7 +443,7 @@ test ninsert3D_2 {
 } -body {
     set x [nreshape {1 2 3 4 5 6 7 8 9} 3 3 1]; # Create tensor
     set y [nreshape {A B C D E F G H I} 3 3 1]; # 
-    ninsert $x end $y 2 3D 
+    ninsert $x end $y 2 3 
 } -result {{{1 A} {2 B} {3 C}} {{4 D} {5 E} {6 F}} {{7 G} {8 H} {9 I}}}
 
 # ncat
@@ -451,8 +451,8 @@ test ncat {
     # ncat is simply a special case of ninsert.
 } -body {
     assert [ninsert {1 2 3} end {4 5 6} 0] eq [ncat {1 2 3} {4 5 6} 0]
-    assert [ninsert {1 2 3} end {4 5 6} 1 2D] eq [ncat {1 2 3} {4 5 6} 1 2D]
-    assert [ninsert $x end $y 2 3D] eq [ncat $x $y 2 3D]
+    assert [ninsert {1 2 3} end {4 5 6} 1 2] eq [ncat {1 2 3} {4 5 6} 1 2]
+    assert [ninsert $x end $y 2 3] eq [ncat $x $y 2 3]
 } -result {}
 
 # nflatten/nswapaxes
@@ -462,13 +462,13 @@ test ncat {
 test nflatten0D {
     # Turn scalar into vector
 } -body {
-    nflatten {hello world} 0D
+    nflatten {hello world} 0
 } -result {{hello world}}
 
 test nflatten1D {
     # Verify vector
 } -body {
-    nflatten {hello world} 1D
+    nflatten {hello world} 1
 } -result {hello world}
 
 test nflatten2D {
@@ -613,7 +613,7 @@ test napply0D {
 test napply1D {
     # Map over a list
 } -body {
-    napply lindex $testmat 0 1D
+    napply lindex $testmat 0 1
 } -result {1 4 7}
 
 test napply2D {
@@ -626,7 +626,7 @@ test napply2D {
 test reduce0D_error {
     # Reduce a scalar (produces error)
 } -body {
-    catch {nreduce max 5 {} 0D}
+    catch {nreduce max 5 {} 0}
 } -result {1}
 
 test reduce1D_max {
@@ -747,8 +747,8 @@ test nmap_index3 {
 test nmap_index_nested {
    # Verify that the nmap indices can be nested.
 } -body {
-    nmap 1D x {{1 2} {1 2 3} {1 2 3 4}} {
-        list [i] [nmap 1D xi $x {expr {[i] * $xi}}]
+    nmap 1 x {{1 2} {1 2 3} {1 2 3 4}} {
+        list [i] [nmap 1 xi $x {expr {[i] * $xi}}]
     }
 } -result {{0 {0 2}} {1 {0 2 6}} {2 {0 2 6 12}}}
 
@@ -757,7 +757,7 @@ test nmap_index_blank {
 } -body {
     assert $::ndlist::map_index eq ""
     assert $::ndlist::map_shape eq ""
-    catch {nmap 1D x {1 2 3} {expr 1/0}}
+    catch {nmap 1 x {1 2 3} {expr 1/0}}
     assert $::ndlist::map_index eq ""
     assert $::ndlist::map_shape eq ""
 } -result {}

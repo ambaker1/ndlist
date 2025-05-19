@@ -36,7 +36,7 @@ namespace eval ::ndlist {
 #
 # Arguments:
 # value         Value to check for ndlist validity.
-# nd            Number of dimensions (e.g. 2D). Default blank for auto
+# nd            Number of dimensions. Default blank for auto
 
 proc ::ndlist::ndlist {value {nd auto}} {
     # Interpret input
@@ -59,7 +59,7 @@ proc ::ndlist::ndlist {value {nd auto}} {
 # Arguments:
 # ndlist            ND-list to get dimensions of
 # axis              Axis to get dimension along. Default blank for all.
-# nd                Number of dimensions (e.g. 2D). Default auto.
+# nd                Number of dimensions. Default auto.
 
 proc ::ndlist::nshape {ndlist {nd auto}} {
     GetShape [GetNDims $nd $ndlist] $ndlist

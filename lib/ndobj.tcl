@@ -32,7 +32,7 @@ proc ::ndlist::ValidateRefName {refName} {
 
 ::oo::class create ::ndlist::narray {
     superclass ::ndlist::ValueContainer
-    variable myValue myRank autoRank
+    variable myValue myDims autoDims
    
     # Constructor
     # ::ndlist::narray new $refName <$value> <$nd>
@@ -40,17 +40,17 @@ proc ::ndlist::ValidateRefName {refName} {
     # Arguments:
     # refName       Variable for garbage collection
 	# value			Value for ndlist. Default ""
-    # nd            Number of dimensions. "auto" for auto.
+    # ndims         Number of dimensions. "auto" for auto.
     
-    constructor {refName {value ""} {nd "auto"}} {
+    constructor {refName {value ""} {ndims "auto"}} {
         # Validate reference name
         ::ndlist::ValidateRefName $refName
-        # Determine rank (or autoRank)
-        if {$nd eq "auto"} {
-            set autoRank 1
+        # Determine ndims (or autoDims)
+        if {$ndims eq "auto"} {
+            set autoDims 1
         } else {
-            set autoRank 0
-            set myRank [::ndlist::GetNDims $nd]
+            set autoDims 0
+            set myDims [::ndlist::GetNDims $ndims]
         }
         next $refName $value
     }
@@ -60,41 +60,38 @@ proc ::ndlist::ValidateRefName {refName} {
         next $level [list ::ndlist::neval $body [self]]
     }
     
-    # SetValue is modified to determine ND-list rank.
+    # SetValue is modified to determine ND-list dimensions.
     method SetValue {value} {
-        if {$autoRank} {
-            set myRank [::ndlist::GetNDims auto $value]
+        if {$autoDims} {
+            set myDims [::ndlist::GetNDims auto $value]
         }
-        next [::ndlist::ndlist $value $myRank]
+        next [::ndlist::ndlist $value $myDims]
     }
 
-    # $object rank --
+    # $object ndims --
     #
-    # Query or set the number of dimensions of the object. Same as rank.
+    # Query or set the number of dimensions of the object.
     #
-    # nd        Number of dimensions. Blank for query, "auto" for auto-rank.
+    # nd        Number of dimensions. Blank for query, "auto" for auto-dims.
     #           Default blank for query.
     
-    method GetRank {} {
-        return $myRank
-    }
-    method rank {{nd ""}} {
+    method ndims {{nd ""}} {
         if {$nd eq "auto"} {
-            set autoRank 1
-            set myRank [::ndlist::GetNDims $nd $myValue]
+            set autoDims 1
+            set myDims [::ndlist::GetNDims $nd $myValue]
         } elseif {$nd ne ""} {
-            set autoRank 0
-            set myRank [::ndlist::GetNDims $nd]
+            set autoDims 0
+            set myDims [::ndlist::GetNDims $nd]
         }
-        my GetRank
+        return $myDims
     }
     
-    # $object auto_rank --
+    # $object auto_dims --
     #
-    # Returns whether rank is auto-determined or not 
+    # Returns whether ndims is auto-determined or not 
 
-    method auto_rank {} {
-        return $autoRank
+    method auto_dims {} {
+        return $autoDims
     }
     
     # $object shape --
@@ -104,7 +101,7 @@ proc ::ndlist::ValidateRefName {refName} {
     # axis      Axis to get dimension along. Default blank for all.
     
     method shape {} {
-        ::ndlist::GetShape $myRank $myValue
+        ::ndlist::GetShape $myDims $myValue
     }
     
     # $object size --
@@ -112,7 +109,7 @@ proc ::ndlist::ValidateRefName {refName} {
     # Get size of ND-array
     
     method size {} {
-        ::ndlist::nsize $myValue $myRank
+        ::ndlist::nsize $myValue $myDims
     }
         
     # $object remove $index <$axis> --
@@ -132,7 +129,7 @@ proc ::ndlist::ValidateRefName {refName} {
     # axis      Axis to insert at. Default 0
     
     method insert {index sublist {axis 0}} {
-        my SetValue [::ndlist::ninsert $myValue $index $sublist $axis $myRank]
+        my SetValue [::ndlist::ninsert $myValue $index $sublist $axis $myDims]
     }
     
     # $object @ $i ... <$op $arg ...> --
@@ -140,7 +137,7 @@ proc ::ndlist::ValidateRefName {refName} {
     # Index into the object
     #
     # Arguments:
-    # i ...         Index arguments. Must match rank.
+    # i ...         Index arguments. Must match ndims.
     # op arg ...    Index operators, explained below:
     #   = value             Value assignment.
     #   := expr             Expression assignment.
@@ -150,11 +147,11 @@ proc ::ndlist::ValidateRefName {refName} {
     
     method @ {args} {
         # Get indices from input
-        if {[llength $args] < $myRank} {
-            return -code error "wrong # of indices: want $myRank"
+        if {[llength $args] < $myDims} {
+            return -code error "wrong # of indices: want $myDims"
         }
-        set indices [lrange $args 0 $myRank-1]
-        set args [lrange $args $myRank end]
+        set indices [lrange $args 0 $myDims-1]
+        set args [lrange $args $myDims end]
         # Check arity
         if {[llength $args] == 0} {
             tailcall my GetIndexValue $indices
@@ -223,8 +220,8 @@ proc ::ndlist::ValidateRefName {refName} {
     
     method GetIndexValue {indices} {
         # Interpret input
-        if {[llength $indices] != $myRank} {
-            return -code error "wrong # of indices: want $myRank"
+        if {[llength $indices] != $myDims} {
+            return -code error "wrong # of indices: want $myDims"
         }
         ::ndlist::nget $myValue {*}$indices
     }
@@ -239,23 +236,23 @@ proc ::ndlist::ValidateRefName {refName} {
     
     method SetIndexValue {indices value} {
         # Interpret input
-        if {[llength $indices] != $myRank} {
-            return -code error "wrong # of indices: want $myRank"
+        if {[llength $indices] != $myDims} {
+            return -code error "wrong # of indices: want $myDims"
         }
         # Validate input, and call nset.
-        set rank [my GetIndexRank $indices]
-        ::ndlist::nset myValue {*}$indices [::ndlist::ndlist $value $rank]
+        set ndims [my GetIndexDims $indices]
+        ::ndlist::nset myValue {*}$indices [::ndlist::ndlist $value $ndims]
         return [self]
     }
     
-    # my GetIndexRank $indices --
+    # my GetIndexDims $indices --
     #
-    # Get rank of index input
+    # Get dimensions of index input
     #
     # Arguments:
     # indices       Index inputs
     
-    method GetIndexRank {indices} {
+    method GetIndexDims {indices} {
         set myShape [my shape]
         set indexArgs [::ndlist::ParseIndices $myShape {*}$indices]
         set indexShape [::ndlist::GetIndexShape $myShape {*}$indexArgs]
@@ -272,17 +269,17 @@ proc ::ndlist::ValidateRefName {refName} {
     
     method CopyIndexObject {indices varName} {
         # Interpret input
-        if {[llength $indices] != $myRank} {
-            return -code error "wrong # of indices: want $myRank"
+        if {[llength $indices] != $myDims} {
+            return -code error "wrong # of indices: want $myDims"
         }
-        # Get new rank and value.
+        # Get new ndims and value.
         set value [my GetIndexValue $indices]
-        if {$autoRank} {
-            set rank auto
+        if {$autoDims} {
+            set ndims auto
         } else {
-            set rank [my GetIndexRank $indices]
+            set ndims [my GetIndexDims $indices]
         }
-        tailcall [self class] new $varName $value $rank
+        tailcall [self class] new $varName $value $ndims
     }
     
     # my TempIndexObject $indices $method $arg ... --
@@ -296,8 +293,8 @@ proc ::ndlist::ValidateRefName {refName} {
     
     method TempIndexObject {indices method args} {
         # Interpret input
-        if {[llength $indices] != $myRank} {
-            return -code error "wrong # of indices: want $myRank"
+        if {[llength $indices] != $myDims} {
+            return -code error "wrong # of indices: want $myDims"
         }
         my CopyIndexObject $indices temp
         set result [uplevel 1 [list $temp $method {*}$args]]
@@ -330,21 +327,21 @@ proc ::ndlist::RefSub {body} {
 # neval --
 #
 # Map over ND objects. 
-# References must have matching rank or be scalar.
+# References must have matching dimensions or be scalar.
 #
 # Syntax:
-# neval $body <$self> <$rankVar>
+# neval $body <$self> <$ndimsVar>
 #
 # Arguments:
 # body          Tcl script, with @ref notation for object references.
 # self          Object to refer to with "@.". Default blank.
-# rankVar       Variable to store resulting rank in. Default blank.
+# ndimsVar       Variable to store resulting ndims in. Default blank.
 
 # Example:
 # narray new x {{hello world} {foo bar}} 1D
 # neval {string toupper @x}; # {{HELLO WORLD} {FOO BAR}}
 
-proc ::ndlist::neval {body {self ""} {rankVar ""}} {
+proc ::ndlist::neval {body {self ""} {ndimsVar ""}} {
     variable ref; # Reference array
     # Get references
     lassign [RefSub $body] body refNames 
@@ -381,16 +378,16 @@ proc ::ndlist::neval {body {self ""} {rankVar ""}} {
         if {$index ne ""} {
             $object @ {*}[split $index ,] --> object
         }
-        # Get object rank and value for mapping.
-        lappend refRanks [$object rank]
+        # Get object ndims and value for mapping.
+        lappend refRanks [$object ndims]
         lappend refValues [$object]
     }
-    # Get rank of mapping
-    if {$rankVar ne ""} {
-        upvar 1 $rankVar rank
+    # Get ndims of mapping
+    if {$ndimsVar ne ""} {
+        upvar 1 $ndimsVar ndims
     }
-    # Choose maximum reference rank
-    set rank [expr {[llength $refRanks] == 0 ? 0 : [max $refRanks]}]
+    # Choose maximum reference ndims
+    set ndims [expr {[llength $refRanks] == 0 ? 0 : [max $refRanks]}]
     
     # Save old reference mapping, and initialize.
     set oldRefs [array get ref]
@@ -402,7 +399,7 @@ proc ::ndlist::neval {body {self ""} {rankVar ""}} {
             # Scalar. Set value directly.
             set ::ndlist::ref($refName.$index) $refValue
         } else {
-            # Not a scalar (rank > 0)
+            # Not a scalar (ndims > 0)
             lappend varMap ::ndlist::ref($refName.$index) $refValue
         }
     }
@@ -411,7 +408,7 @@ proc ::ndlist::neval {body {self ""} {rankVar ""}} {
         if {[llength $varMap] == 0} {
             uplevel 1 $body
         } else {
-            uplevel 1 [list ::ndlist::nmap $rank {*}$varMap $body]
+            uplevel 1 [list ::ndlist::nmap $ndims {*}$varMap $body]
         }
     } finally {
         # Reset refs (even if mapping failed)
@@ -425,18 +422,18 @@ proc ::ndlist::neval {body {self ""} {rankVar ""}} {
 # Version of neval, but for math.
 #
 # Syntax:
-# nexpr $expr <$self> <$rankVar>
+# nexpr $expr <$self> <$ndimsVar>
 #
 # Arguments:
 # expr          Math expression, with @ref notation for object references.
 # self          Object to refer to with "@.". Default blank.
-# rankVar       Variable to store resulting rank in. Default blank.
+# ndimsVar      Variable to store resulting ndims in. Default blank.
 
 # Example:
 # narray new x {1.0 2.0 3.0}
 # narray new y 5.0
 # nexpr {@x + @y}; # {6.0 7.0 8.0}
 
-proc ::ndlist::nexpr {expr {self ""} {rankVar ""}} {
-    tailcall neval [list expr $expr] $self $rankVar
+proc ::ndlist::nexpr {expr {self ""} {ndimsVar ""}} {
+    tailcall neval [list expr $expr] $self $ndimsVar
 }

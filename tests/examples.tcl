@@ -449,10 +449,10 @@ puts -nonewline {}
 
 test {Example 40} {Expand and map over matrices} -body {
 puts {}
-set phrases [nmap 2D greeting {{hello goodbye}} subject {world moon} {
+set phrases [nmap 2 greeting {{hello goodbye}} subject {world moon} {
     list $greeting $subject
 }]
-napply puts $phrases {} 2D 
+napply puts $phrases {} 2 
 puts -nonewline {}
 } -output {
 hello world
@@ -485,7 +485,7 @@ narray new c {{1 2 3} {4 5 6}}
 narray new d {{{a b} {c d}} {{e f} {g h}}}
 # Print rank and value of ND-arrays
 foreach object [list $a $b $c $d] {
-    puts [list [$object rank] [$object shape]]
+    puts [list [$object ndims] [$object shape]]
 }
 puts -nonewline {}
 } -output {
@@ -510,7 +510,7 @@ test {Example 44} {Copying a portion of an ND-array} -body {
 puts {}
 narray new x {{1 2 3} {4 5 6}}
 $x @ 0* : --> y; # Row vector (flattened to 1D)
-puts "[$y rank], [$y]"
+puts "[$y ndims], [$y]"
 puts -nonewline {}
 } -output {
 1, 1 2 3

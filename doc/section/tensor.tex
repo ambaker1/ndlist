@@ -12,7 +12,7 @@ All other ND-list commands assume a valid ND-list.
 \end{syntax}
 \begin{args}
 \$value & List to interpret as an ndlist. \\
-\$nd & Rank of ND-list (e.g. 2D) or "auto" for auto-rank. Default "auto".
+\$nd & Rank of ND-list (e.g. 2 for matrix) or ``auto'' for auto-rank. Default ``auto''.
 \end{args}
 \subsection{Shape and Size}
 The commands \cmdlink{nshape} and \cmdlink{nsize} return the shape and size of an ND-list, respectively.
@@ -26,7 +26,7 @@ The shape is a list of the dimensions, and the size is the product of the shape.
 \begin{args}
 \$ndlist & ND-list to get shape/size of. \\
 \$axis & Axis to get dimension along. Default blank for all. \\
-\$nd & Rank of ND-list (e.g. 2D) or "auto" for auto-rank. Default "auto".
+\$nd & Rank of ND-list (e.g. 2 for matrix) or ``auto'' for auto-rank. Default ``auto''.
 \end{args}
 \begin{example}{Getting shape and size of an ND-list}
 \begin{lstlisting}
@@ -167,7 +167,7 @@ The command \cmdlink{nflatten} flattens an ND-list to a vector.
 \end{syntax}
 \begin{args}
 \$ndlist & ND-list to flatten. \\
-\$nd & Rank of ND-list (e.g. 2D) or "auto" for auto-rank. Default "auto".
+\$nd & Rank of ND-list (e.g. 2 for matrix) or ``auto'' for auto-rank. Default ``auto''.
 \end{args}
 \begin{example}{Reshape a matrix to a 3D tensor}
 \begin{lstlisting}
@@ -359,20 +359,20 @@ The command \cmdlink{ncat} is shorthand for inserting at ``end'', and concatenat
 \command{ninsert} \$ndlist1 \$index \$ndlist2 <\$axis> <\$nd>
 \end{syntax}
 \begin{syntax}
-\command{ncat} \$ndlist1 \$ndlist2 <\$axis> \$nd 
+\command{ncat} \$ndlist1 \$ndlist2 <\$axis> <\$nd> 
 \end{syntax}
 \begin{args}
 \$ndlist1 \$ndlist2 & ND-lists to combine. \\
 \$index & Index to insert at. \\
-\$axis & Axis to insert/concatenate at (default 0).
-\$nd & Rank of ND-list (e.g. 2D) or "auto" for auto-rank. Default "auto".
+\$axis & Axis to insert/concatenate at (default 0). \\
+\$nd & Rank of ND-list (e.g. 2 for matrix) or ``auto'' for auto-rank. Default ``auto''.
 \end{args}
 
 \begin{example}{Inserting a column into a matrix}
 \begin{lstlisting}
 set matrix {{1 2} {3 4} {5 6}}
 set column {A B C}
-puts [ninsert 2D $matrix 1 $column 1]
+puts [ninsert $matrix 1 $column 1 2]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
@@ -447,14 +447,14 @@ If the input lists have different shapes, they will be expanded to their maximum
 \command{napply} \$command \$ndlist <\$suffix> <\$nd>
 \end{syntax}
 \begin{syntax}
-\command{napply2} \$command \$ndlist1 \$ndlist2 <\$suffix> \$nd 
+\command{napply2} \$command \$ndlist1 \$ndlist2 <\$suffix> <\$nd> 
 \end{syntax}
 \begin{args}
 \$ndlist & ND-list to map over. \\
 \$ndlist1 \$ndlist2 & ND-lists to map over, element-wise. \\
 \$command & Command prefix to map with. \\
 \$suffix & Additional arguments to append to command after ND-list elements. Default blank. \\
-\$nd & Rank of ND-list (e.g. 2D) or "auto" for auto-rank. Default "auto".
+\$nd & Rank of ND-list (e.g. 2 for matrix) or ``auto'' for auto-rank. Default ``auto''.
 \end{args}
 \begin{example}{Chained functional mapping over a matrix}
 \begin{lstlisting}
@@ -490,7 +490,7 @@ The command \cmdlink{nreduce} combines \cmdlink{nmoveaxis} and \cmdlink{napply} 
 \$ndlist & ND-list to map over. \\
 \$axis & Axis to reduce. Default 0. \\
 \$suffix & Additional arguments to append to command after ND-list elements. Default blank. \\
-\$nd & Rank of ND-list (e.g. 2D) or "auto" for auto-rank. Default "auto".
+\$nd & Rank of ND-list (e.g. 2 for matrix) or ``auto'' for auto-rank. Default ``auto''.
 \end{args}
 \begin{example}{Matrix row and column statistics}
 \begin{lstlisting}
@@ -520,7 +520,7 @@ So, if ``continue'' or ``break'' are used in the map body, it will return an err
 \command{nmap} <\$nd> \$varName \$ndlist <\$varName \$ndlist ...> \$body
 \end{syntax}
 \begin{args}
-\$nd & Rank of ND-list (e.g. 2D) or "auto" for auto-rank. Default "auto".  \\
+\$nd & Rank of ND-list (e.g. 2 for matrix) or ``auto'' for auto-rank. Default ``auto''.  \\
 \$varName & Variable name to iterate with. \\
 \$ndlist & ND-list to iterate over. \\
 \$body & Tcl script to evaluate at every loop iteration. 
@@ -528,10 +528,10 @@ So, if ``continue'' or ``break'' are used in the map body, it will return an err
 
 \begin{example}{Expand and map over matrices}
 \begin{lstlisting}
-set phrases [nmap 2D greeting {{hello goodbye}} subject {world moon} {
+set phrases [nmap 2 greeting {{hello goodbye}} subject {world moon} {
     list $greeting $subject
 }]
-napply puts $phrases {} 2D 
+napply puts $phrases {} 2 
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}

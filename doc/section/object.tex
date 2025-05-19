@@ -16,9 +16,9 @@ Variable names are restricted to word characters and namespace delimiters only.\
 \end{args}
 \clearpage
 \subsection{Value, Rank, Shape, and Size}
-The value is accessed by calling the object by itself, the rank is accessed with the method \methodlink[0]{narray}{rank}, and the shape and size are accessed with the methods \methodlink[0]{narray}{shape} and \methodlink[0]{narray}{size}.
+The value is accessed by calling the object by itself, the rank is accessed with the method \methodlink[0]{narray}{ndims}, and the shape and size are accessed with the methods \methodlink[0]{narray}{shape} and \methodlink[0]{narray}{size}.
 \begin{syntax}
-\method{narray}{rank}
+\method{narray}{ndims}
 \end{syntax}
 \begin{syntax}
 \method{narray}{shape} <\$axis>
@@ -38,7 +38,7 @@ narray new c {{1 2 3} {4 5 6}}
 narray new d {{{a b} {c d}} {{e f} {g h}}}
 # Print rank and value of ND-arrays
 foreach object [list $a $b $c $d] {
-    puts [list [$object rank] [$object shape]]
+    puts [list [$object ndims] [$object shape]]
 }
 \end{lstlisting}
 \tcblower
@@ -89,7 +89,7 @@ Variable names are restricted to word characters and namespace delimiters only.
 \begin{lstlisting}
 narray new x {{1 2 3} {4 5 6}}
 $x @ 0* : --> y; # Row vector (flattened to 1D)
-puts "[$y rank], [$y]"
+puts "[$y ndims], [$y]"
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}

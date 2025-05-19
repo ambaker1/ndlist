@@ -18,7 +18,7 @@
 #   &       Y
 #   =       Y
 #   :=      Y
-# rank      Y
+# ndims      Y
 # shape     Y
 # size      Y
 # remove    Y
@@ -31,9 +31,8 @@
 test narray0D {
     # Create a scalar
 } -body {
-    
-    
-    assert [$x rank] == 0
+    narray new x {hello}
+    assert [$x ndims] == 0
     assert [$x shape] eq {}
     assert [$x size] eq {}
     $x
@@ -43,7 +42,7 @@ test narray1D {
     # Create a vector
 } -body {
     narray new x {hello world}
-    assert [$x rank] == 1
+    assert [$x ndims] == 1
     assert [$x shape] eq 2
     assert [$x size] == 2
     assert [$x @ 0] eq {hello}
@@ -54,8 +53,8 @@ test narray1D {
 test narray2D {
     # Create a matrix
 } -body {
-    narray new x {{1 2} {3 4} {5 6}} 2D
-    assert [$x rank] == 2
+    narray new x {{1 2} {3 4} {5 6}} 2
+    assert [$x ndims] == 2
     assert [$x shape] eq {3 2}
     assert [$x size] == 6
     assert [$x @ 0 :] eq {{1 2}}
@@ -67,7 +66,7 @@ test narray3D {
     # Tensor
 } -body {
     narray new x {{{1 2} {3 4}} {{5 6} {7 8}} {{9 10} {11 12}}}
-    assert [$x rank] == 3
+    assert [$x ndims] == 3
     assert [$x shape] eq {3 2 2}
     assert [$x size] == 12
     assert [$x @ 0 : 1] eq {{2 4}}
@@ -95,8 +94,8 @@ test nexpr_advanced {
 } -body {
     narray new x {{1 2 3} {4 5 6}}
     narray new y {0.1 0.2 0.3}
-    narray new z [nexpr {@.(1*,:) + @y} $x rank]
-    assert $rank == 1
+    narray new z [nexpr {@.(1*,:) + @y} $x ndims]
+    assert $ndims == 1
     $z
 } -result {4.1 5.2 6.3}
 
@@ -141,13 +140,13 @@ test index_methods {
     assert [$x @ 0 1 & ref {incr ref}] eq {6}
     assert [$x @ 0 1] == 6
     # Copy operator
-    $x rank auto
-    assert [$x rank] == 2
+    $x ndims auto
+    assert [$x ndims] == 2
     $x @ 0 1 --> y
-    assert [$y rank] == 0
-    $x rank 2 
+    assert [$y ndims] == 0
+    $x ndims 2 
     $x @ 0 1 --> y
-    assert [$y rank] == 2
+    assert [$y ndims] == 2
     assert [$y shape] eq {1 1}
     assert [$y size] eq 1
     # Math assignment operator
@@ -159,7 +158,7 @@ test index_methods {
 test all_operators {
     # Test all operators (except index method)
 } -body {
-    narray new x {} 2D
+    narray new x {} 2
     # Assignment
     $x = {{1 2 3} {4 5 6}}
     assert [$x] eq {{1 2 3} {4 5 6}}
