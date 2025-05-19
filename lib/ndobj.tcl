@@ -80,16 +80,10 @@ proc ::ndlist::ValidateRefName {refName} {
         if {$nd eq ""} {
             return $myDims
         }
-        # Check input dimensions
-        if {$nd eq "auto"} {
-            set autoDims 1
-            set ndims [::ndlist::GetNDims $nd $myValue]
-        } elseif {$nd ne ""} {
-            set autoDims 0
-            set ndims [::ndlist::GetNDims $nd]
-        }
-        # Check validity of new dimensions
+        # Modify dimensions
+        set ndims [::ndlist::GetNDims $nd $myValue]
         ::ndlist::ndlist $myValue $ndims
+        set autoDims [expr {$nd eq "auto"}]
         set myDims $ndims
     }
     
