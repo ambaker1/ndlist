@@ -32,15 +32,15 @@ namespace eval ::ndlist {
 # Validates an ND-list, and returns the ND-list.
 #
 # Syntax:
-# ndlist $nd $value
+# ndlist $value <$nd>
 #
 # Arguments:
-# nd            Number of dimensions (e.g. 1D, 2D, etc.)
-# value         Value to create an ndlist from.
+# value         Value to check for ndlist validity.
+# nd            Number of dimensions (e.g. 2D). Default blank for auto
 
-proc ::ndlist::ndlist {nd value} {
+proc ::ndlist::ndlist {value {nd ""}} {
     # Interpret input
-    set ndims [GetNDims $nd]
+    set ndims [GetNDims $nd $value]
     set ndlist $value
     # Check if it is a valid ND-list, and try to shape it into one.
     if {![IsShape $ndlist {*}[GetShape $ndims $ndlist]]} {
@@ -54,16 +54,16 @@ proc ::ndlist::ndlist {nd value} {
 # Get shape of ND-list
 #
 # Syntax:
-# nshape $nd $ndlist <$axis>
+# nshape $ndlist <$axis> <$nd>
 #
 # Arguments:
-# nd                Number of dimensions (e.g. 1D, 2D, etc.)
 # ndlist            ND-list to get dimensions of
-# axis              Axis to get dimension along. Blank for all.
+# axis              Axis to get dimension along. Default blank for all.
+# nd                Number of dimensions (e.g. 2D). Default blank for auto.
 
-proc ::ndlist::nshape {nd ndlist {axis ""}} {
+proc ::ndlist::nshape {ndlist {axis ""} {nd ""}} {
     # Interpret and validate input
-    set ndims [GetNDims $nd]
+    set ndims [GetNDims $nd $ndlist]
     # Switch for output type
     if {$axis eq ""} {
         return [GetShape $ndims $ndlist]
@@ -79,14 +79,14 @@ proc ::ndlist::nshape {nd ndlist {axis ""}} {
 # For rank 0, it returns blank.
 #
 # Syntax:
-# nsize $nd $ndlist
+# nsize $ndlist <$nd>
 #
 # Arguments:
-# nd:               Number of dimensions (e.g. 1D, 2D, etc.)
 # ndlist:           ND-list to get dimensions of
+# nd:               Number of dimensions (e.g. 2D). Default blank for auto.
 
-proc ::ndlist::nsize {nd ndlist} {
-    set ndims [GetNDims $nd]
+proc ::ndlist::nsize {ndlist {nd ""}} {
+    set ndims [GetNDims $nd $ndlist]
     # Scalar case (no size)
     if {$ndims == 0} {
         return
@@ -224,15 +224,15 @@ proc ::ndlist::RecReshape {vector n m args} {
 # If rank is 0, it creates a 1D-list with one element.
 #
 # Syntax:
-# nflatten $nd $ndlist
+# nflatten $ndlist <$nd>
 #
 # Arguments:
-# nd            Number of dimensions (e.g. 1D, 2D, etc.)
 # ndlist        ND-list to reshape dimensions of
+# nd            Number of dimensions (e.g. 2D). Default blank for auto.
 
-proc ::ndlist::nflatten {nd ndlist} {
+proc ::ndlist::nflatten {ndlist {nd ""}} {
     # Interpret input and get dimensionality
-    set ndims [GetNDims $nd]
+    set ndims [GetNDims $nd $ndlist]
     # Handle scalar case
     if {$ndims == 0} {
         # Create a one-element list
@@ -688,7 +688,7 @@ proc ::ndlist::Replace {list sublist iType iList} {
 
 proc ::ndlist::nremove {ndlist index {axis 0}} {
     # Get removal type
-    set dim [nshape [expr {$axis + 1}] $ndlist $axis]
+    set dim [nshape $ndlist $axis [expr {$axis + 1}]]
     lassign [ParseIndex $dim $index] iType iList
     
     # Trivial case (remove all)
@@ -782,18 +782,18 @@ proc ::ndlist::Remove {list iType iList} {
 # If referencing from end, it inserts after.
 #
 # Syntax:
-# ninsert $nd $ndlist $index $sublist <$axis>
+# ninsert $ndlist $index $sublist <$axis> <$nd>
 #
 # Arguments:
-# nd            Number of dimensions
 # ndlist        ND-list to modify
 # index         Index to insert at
 # sublist       ND-list to insert
 # axis          Axis to insert along. Default 0.
+# nd            Number of dimensions (e.g. 2D). Default blank for auto.
 
-proc ::ndlist::ninsert {nd ndlist index sublist {axis 0}} {
+proc ::ndlist::ninsert {ndlist index sublist {axis 0} {nd ""}} {
     # Get number of dimensions, axis, shape, and insertion index.
-    set ndims [GetNDims $nd]
+    set ndims [GetNDims $nd $ndlist]
     ValidateAxis $ndims $axis
     set dims [GetShape $ndims $ndlist]
     set i [Index2Integer [expr {[lindex $dims $axis] + 1}] $index]
@@ -841,15 +841,15 @@ proc ::ndlist::RecInsert {ndlist i sublist axis} {
 # Special case of ninsert.
 #
 # Syntax:
-# ncat $nd $ndlist1 $ndlist2 <$axis>
+# ncat $ndlist1 $ndlist2 <$axis> <$nd>
 #
 # Arguments:
-# nd                Number of dimensions
 # ndlist1 ndlist2   ND-lists to stack
 # axis              Axis to stack along. Default 0.
+# nd                Number of dimensions (e.g. 2D). Default blank for auto.
 
-proc ::ndlist::ncat {nd ndlist1 ndlist2 {axis 0}} {
-    ninsert $nd $ndlist1 end $ndlist2 $axis
+proc ::ndlist::ncat {ndlist1 ndlist2 {axis 0} {nd ""}} {
+    ninsert $ndlist1 end $ndlist2 $axis $nd
 }
 
 # NDLIST AXIS MANIPULATION
@@ -1061,16 +1061,16 @@ proc ::ndlist::npermute {ndlist args} {
 # Apply a function to a ND-list
 #
 # Syntax:
-# napply $nd $command $ndlist $arg ...
+# napply $command $ndlist <$suffix> <$nd>
 #
 # Arguments:
-# nd                Number of dimensions (e.g. 1D, 2D, etc.)
 # command           Command prefix
 # ndlist            ND-list to iterate over
-# arg ...           Additional arguments to append to command.
+# suffix            Additional arguments to append to command. Default blank.
+# nd                Number of dimensions (e.g. 2D). Default blank for auto.
 
-proc ::ndlist::napply {nd command ndlist args} {
-    RecApply 1 [GetNDims $nd] $command $ndlist {*}$args
+proc ::ndlist::napply {command ndlist {suffix ""} {nd ""}} {
+    RecApply 1 [GetNDims $nd] $command $ndlist {*}$suffix
 }
 
 # RecApply --
@@ -1106,20 +1106,22 @@ proc ::ndlist::RecApply {level ndims command ndlist args} {
 # Apply a function over two ND-lists
 #
 # Syntax:
-# napply2 $nd $command $ndlist1 $ndlist2 $arg ...
+# napply2 $command $ndlist $ndlist2 <$suffix> <$nd>
 #
 # Arguments:
-# nd                Number of dimensions (e.g. 1D, 2D, etc.)
 # command           Command prefix
 # ndlist1 ndlist2   ND-lists to iterate over
-# arg ...           Additional arguments to append to command.
+# suffix            Additional arguments to append to command. Default none.
+# nd                Number of dimensions (e.g. 2D). Default blank for auto.
 
-proc ::ndlist::napply2 {nd command ndlist1 ndlist2 args} {
-    set ndims [GetNDims $nd]
+proc ::ndlist::napply2 {command ndlist1 ndlist2 {suffix ""} {nd ""}} {
+    set ndims1 [GetNDims $nd $ndlist1]
+    set ndims2 [GetNDims $nd $ndlist2]
+    set ndims [max [list $ndims1 $ndims2]]
     set dims [GetMaxShape $ndims $ndlist1 $ndlist2]
     set ndlist1 [nexpand $ndlist1 {*}$dims]
     set ndlist2 [nexpand $ndlist2 {*}$dims]
-    RecApply2 1 $ndims $command $ndlist1 $ndlist2 {*}$args
+    RecApply2 1 $ndims $command $ndlist1 $ndlist2 {*}$suffix
 }
 
 # RecApply2 --
@@ -1156,29 +1158,29 @@ proc ::ndlist::RecApply2 {level ndims command ndlist1 ndlist2 args} {
 # Function must take a 1D list as an input and return a value.
 #
 # Syntax:
-# nreduce $nd $command $ndlist <$axis> <$arg ...>
+# nreduce $command $ndlist <$axis> <$suffix> <$nd>
 #
 # Arguments:
-# nd                Number of dimensions (e.g. 1D, 2D, etc.)
 # command           Function to apply along axis.
 # ndlist            ND-list to reduce.
 # axis              Axis to reduce along over. Default 0.
-# arg ...           Additional arguments to append to command.
+# arg ...           Additional arguments to append to command. Default none.
+# nd                Number of dimensions (e.g. 2D). Default blank for auto.
 # 
 # Example:
-# nreduce 2 max $x; # Gets maximum values for each column.
-# nreduce 2 max $x 1; # Gets maximum values for each row.
+# nreduce max $x; # Gets maximum values for each column.
+# nreduce max $x 1; # Gets maximum values for each row.
 
-proc ::ndlist::nreduce {nd command ndlist {axis 0} args} {
+proc ::ndlist::nreduce {command ndlist {axis 0} {suffix ""} {nd ""}} {
     # Interpret input
-    set ndims [GetNDims $nd]
+    set ndims [GetNDims $nd $ndlist]
     if {$ndims == 0} {
         return -code error "cannot reduce a scalar"
     }
     ValidateAxis $ndims $axis
     # Move axis to reduce to back of ND-list, and reduce.
     set ndlist [nmoveaxis $ndlist $axis [expr {$ndims - 1}]]
-    napply [expr {$ndims - 1}] $command $ndlist {*}$args
+    napply $command $ndlist {*}$suffix [expr {$ndims - 1}]
 }
 
 # ND-LIST LOOPING
@@ -1189,28 +1191,41 @@ proc ::ndlist::nreduce {nd command ndlist {axis 0} args} {
 # General purpose mapping function for ND-lists
 #
 # Syntax:
-# nmap $nd $varName $ndlist ... $body; # lmap style, returns value.
+# nmap <$nd> $varName $ndlist ... $body; # lmap style, returns value.
 # 
 # Arguments:
-# nd            Number of dimensions (e.g. 1D, 2D, etc.)
+# nd            Number of dimensions (e.g. 2D). Default blank for auto.
 # varName       Variable name to iterate with (lmap style)
 # ndlist        ND-list to iterate over (lmap style)
 # body          Body to evaluate at every iteration
 
-proc ::ndlist::nmap {nd args} {
+proc ::ndlist::nmap {args} {
     variable map_index
     variable map_shape
     # Check arity
-    if {[llength $args] == 1 || [llength $args] % 2 == 0} {
+    if {[llength $args] < 3} {
         return -code error "wrong # args: should be\
-                \"nmap nd varName ndlist ?varName ndlist ...? body\""
+                \"nmap ?nd? varName ndlist ?varName ndlist ...? body\""
+    }
+    # Get optional nd input
+    if {[llength $args] % 2 == 0} {
+        set args [lassign $args nd]
+    } else {
+        set nd ""
     }
     # Interpret input
-    set ndims [GetNDims $nd]
     set varMap [lrange $args 0 end-1]
     set varNames [dict keys $varMap]
     set ndlists [dict values $varMap]
     set body [lindex $args end]
+    if {$nd eq ""} {
+        set ndims 0
+        foreach ndlist $ndlists {
+            set ndims [expr {max($ndims,[GetNDims $nd $ndlist])}]
+        }
+    } else {
+        set ndims [GetNDims $nd]
+    }
     # Handle scalar case
     if {$ndims == 0} {
         uplevel 1 [list lassign $ndlists {*}$varNames]
@@ -1219,7 +1234,7 @@ proc ::ndlist::nmap {nd args} {
     # Expand all ndlists to have the same shape, and then flatten.
     set dims [GetMaxShape $ndims {*}$ndlists]
     set ndlists [lmap ndlist $ndlists {nexpand $ndlist {*}$dims}]
-    set ndlists [lmap ndlist $ndlists {nflatten $ndims $ndlist}]
+    set ndlists [lmap ndlist $ndlists {nflatten $ndlist $ndims}]
     # Create varName-ndlist mapping with flattened ndlists.
     foreach varName $varNames ndlist $ndlists {
         lappend varMap [list $varName] $ndlist

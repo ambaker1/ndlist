@@ -14,15 +14,26 @@
 # Get dimensionality from ND string (uses regex pattern).
 # Either a single digit or with a "D" after.
 # e.g. "0" or "0D", or "3" or "3d"
+# Alternatively, if nd is blank, it dynamically chooses the rank from the
+# value provided.
 # Returns error if invalid syntax
 #
 # Syntax:
-# GetNDims $nd
+# GetNDims $nd <$value>
 #
 # Arguments:
 # nd        Number of dimensions (e.g. 1D, 2D, etc.)
+# value     ndlist for dynamically determining rank
 
-proc ::ndlist::GetNDims {nd} {
+proc ::ndlist::GetNDims {nd {value ""}} {
+    if {$nd eq ""} {
+        set rank 0
+        while {[string is list $value] && $value ne [lindex $value 0]} {
+            set value [lindex $value 0]
+            incr rank
+        }
+        return $rank
+    }
     if {![IsNDType $nd]} {
         return -code error "invalid ND syntax"
     }

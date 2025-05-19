@@ -26,17 +26,6 @@ proc ::ndlist::ValidateRefName {refName} {
     return $refName
 }
 
-# Dynamically determine rank of ndlist 
-
-proc ::ndlist::GetRank {value} {
-    set rank 0
-    while {$value ne [lindex $value 0]} {
-        set value [lindex $value 0]
-        incr rank
-    }
-    return $rank
-}
-
 # Create narray class.
 
 ::oo::class create ::ndlist::narray {
@@ -44,13 +33,13 @@ proc ::ndlist::GetRank {value} {
     variable myValue myRank
    
     # Constructor
-    # ::ndlist::narray new $refName <$value>
+    # ::ndlist::narray new $refName <$value> <$nd>
     #
     # Arguments:
     # refName       Variable for garbage collection
 	# value			Value for ndlist. Default ""
     
-    constructor {refName {value ""}} {
+    constructor {refName {value ""} {nd ""}} {
         # Validate reference name
         ::ndlist::ValidateRefName $refName
         next $refName $value
@@ -62,8 +51,8 @@ proc ::ndlist::GetRank {value} {
     }
     
     # SetValue is modified to validate ND-list rank.
-    method SetValue {value} {
-        set myRank [::ndlist::GetRank $value]
+    method SetValue {value {nd ""}} {
+        set myRank [::ndlist::GetNDims $nd $value]
         next [::ndlist::ndlist $myRank $value]
     }
 
