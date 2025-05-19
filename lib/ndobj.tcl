@@ -13,7 +13,6 @@
 namespace eval ::ndlist {
     variable ref; # Reference map for ndlists.
     namespace export narray neval nexpr
-    namespace export scalar vector matrix; # wrapper narray classes
 }
 
 # ValidateRefName --
@@ -27,6 +26,17 @@ proc ::ndlist::ValidateRefName {refName} {
     return $refName
 }
 
+# Dynamically determine rank of ndlist 
+
+proc ::ndlist::GetRank {value} {
+    set rank 0
+    while {$value ne [lindex $value 0]} {
+        set value [lindex $value 0]
+        incr rank
+    }
+    return $rank
+}
+
 # Create narray class.
 
 ::oo::class create ::ndlist::narray {
@@ -34,15 +44,13 @@ proc ::ndlist::ValidateRefName {refName} {
     variable myValue myRank
    
     # Constructor
-    # ::ndlist::narray new $refName $nd <$value>
+    # ::ndlist::narray new $refName <$value>
     #
     # Arguments:
-	# nd            Number of dimensions.
     # refName       Variable for garbage collection
 	# value			Value for ndlist. Default ""
     
-    constructor {refName nd {value ""}} {
-        set myRank [::ndlist::GetNDims $nd]
+    constructor {refName {value ""}} {
         # Validate reference name
         ::ndlist::ValidateRefName $refName
         next $refName $value
@@ -55,6 +63,7 @@ proc ::ndlist::ValidateRefName {refName} {
     
     # SetValue is modified to validate ND-list rank.
     method SetValue {value} {
+        set myRank [::ndlist::GetRank $value]
         next [::ndlist::ndlist $myRank $value]
     }
 
@@ -283,9 +292,8 @@ proc ::ndlist::ValidateRefName {refName} {
             return -code error "wrong # of indices: want $myRank"
         }
         # Get new rank and value.
-        set rank [my GetIndexRank $indices]
         set value [my GetIndexValue $indices]
-        tailcall ::ndlist::CreateNDObject $varName $rank $value
+        tailcall [self class] new $varName $value
     }
     
     # my TempIndexObject $indices $method $arg ... --
@@ -308,66 +316,6 @@ proc ::ndlist::ValidateRefName {refName} {
             set result [$temp]
         }
         return $result
-    }
-}
-
-# CreateNDObject --
-#
-# Private procedure that calls the constructors for the special-case narrays
-
-proc ::ndlist::CreateNDObject {refName rank value} {
-    switch $rank {
-        0 {
-            tailcall ::ndlist::scalar new $refName $value
-        }
-        1 {
-            tailcall ::ndlist::vector new $refName $value
-        }
-        2 {
-            tailcall ::ndlist::matrix new $refName $value
-        }
-        default {
-            tailcall ::ndlist::narray new $refName $rank $value
-        }
-    }
-}
-
-# Special-case classes for different ranks
-# Currently just simple wrapper classes, may include more methods in the future.
-
-# scalar --
-#
-# Wrapper class for a scalar value (any Tcl string)
-
-oo::class create ::ndlist::scalar {
-    superclass ::ndlist::narray
-    variable myValue myRank
-    constructor {refName {value {}}} {
-        next $refName 0D $value
-    }
-}
-
-# vector --
-#
-# Wrapper class for a vector/list
-
-oo::class create ::ndlist::vector {
-    superclass ::ndlist::narray
-    variable myValue myRank
-    constructor {refName {value {}}} {
-        next $refName 1D $value
-    }
-}
-
-# matrix --
-#
-# Wrapper class for a matrix
-
-oo::class create ::ndlist::matrix {
-    superclass ::ndlist::narray
-    variable myValue myRank
-    constructor {refName {value {}}} {
-        next $refName 2D $value
     }
 }
 
@@ -452,19 +400,9 @@ proc ::ndlist::neval {body {self ""} {rankVar ""}} {
     if {$rankVar ne ""} {
         upvar 1 $rankVar rank
     }
-    set rank 0
-    foreach refRank $refRanks {
-        # Skip scalars
-        if {$refRank == 0} {
-            continue
-        }
-        # Check for mismatch
-        if {$rank == 0} {
-            set rank $refRank
-        } elseif {$rank != $refRank} {
-            return -code error "mismatched reference ranks"
-        }
-    }
+    # Choose maximum reference rank
+    set rank [expr {[llength $refRanks] == 0 ? 0 : [max $refRanks]}]
+    
     # Save old reference mapping, and initialize.
     set oldRefs [array get ref]
     array unset ref
@@ -506,8 +444,8 @@ proc ::ndlist::neval {body {self ""} {rankVar ""}} {
 # rankVar       Variable to store resulting rank in. Default blank.
 
 # Example:
-# vector new x {1.0 2.0 3.0}
-# scalar new y 5.0
+# narray new x {1.0 2.0 3.0}
+# narray new y 5.0
 # nexpr {@x + @y}; # {6.0 7.0 8.0}
 
 proc ::ndlist::nexpr {expr {self ""} {rankVar ""}} {

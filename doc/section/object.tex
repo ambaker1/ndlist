@@ -3,35 +3,16 @@ The command \cmdlink{narray} is a TclOO class based on the superclass \cmdlink{:
 It is an object-oriented approach to array manipulation and processing.
 
 \begin{syntax}
-\command{narray} new \$nd \$varName <\$value>
+\command{narray} new \$varName <\$value>
 \end{syntax}
 \begin{syntax}
-narray create \$name \$nd \$varName <\$value>
+narray create \$name \$varName <\$value>
 \end{syntax}
 \begin{args}
-\$nd & Rank of ND-array (e.g. 2D, 2d, or 2 for a matrix). \\
 \$varName & Variable to store object name for access and garbage collection. 
 Variable names are restricted to word characters and namespace delimiters only.\\
 \$value & ND-list value to store in ND-array. Default blank. \\
 \$name & Name of object if using ``create'' method.
-\end{args}
-\subsection{Wrapper Classes for Scalars, Vectors, and Matrices}
-For convenience, three wrapper classes have been added: \cmdlink{scalar} for 0D objects, \cmdlink{vector} for 1D objects, and \cmdlink{matrix} for 2D objects. 
-These wrapper classes use the \cmdlink{narray} class as a superclass, so all the methods for \cmdlink{narray} apply. 
-For brevity, only the ``new'' constructor method is documented here.
-\begin{syntax}
-\command{scalar} new \$varName <\$value>
-\end{syntax}
-\begin{syntax}
-\command{vector} new \$varName <\$value>
-\end{syntax}
-\begin{syntax}
-\command{matrix} new \$varName <\$value>
-\end{syntax}
-\begin{args}
-\$varName & Variable to store object name for access and garbage collection. 
-Variable names are restricted to word characters and namespace delimiters only.\\
-\$value & ND-list value to store in ND-array. Default blank. 
 \end{args}
 \clearpage
 \subsection{Value, Rank, Shape, and Size}
@@ -51,10 +32,10 @@ The value is accessed by calling the object by itself, the rank is accessed with
 \begin{example}{Creating ND-arrays}
 \begin{lstlisting}
 # Create new ND-arrays
-scalar new a {hello world}
-vector new b {1 2 3}
-matrix new c {{1 2 3} {4 5 6}}
-narray new d 3D {{{a b} {c d}} {{e f} {g h}}}
+narray new a foo
+narray new b {1 2 3}
+narray new c {{1 2 3} {4 5 6}}
+narray new d {{{a b} {c d}} {{e f} {g h}}}
 # Print rank and value of ND-arrays
 foreach object [list $a $b $c $d] {
     puts [list [$object rank] [$object shape]]
@@ -81,7 +62,7 @@ The ``\texttt{@}'' operator uses \cmdlink{nget} to access a portion of the ND-ar
 
 \begin{example}{Accessing portions of an ND-array}
 \begin{lstlisting}
-matrix new x {{1 2 3} {4 5 6} {7 8 9}}
+narray new x {{1 2 3} {4 5 6} {7 8 9}}
 puts [$x @ 0 2]
 puts [$x @ 0:end-1 {0 2}]
 \end{lstlisting}
@@ -106,7 +87,7 @@ Variable names are restricted to word characters and namespace delimiters only.
 
 \begin{example}{Copying a portion of an ND-array}
 \begin{lstlisting}
-matrix new x {{1 2 3} {4 5 6}}
+narray new x {{1 2 3} {4 5 6}}
 $x @ 0* : --> y; # Row vector (flattened to 1D)
 puts "[$y rank], [$y]"
 \end{lstlisting}
@@ -121,8 +102,7 @@ The command \cmdlink{neval} maps over ND-arrays using \cmdlink{nmap}.
 The command \cmdlink{nexpr} is a special case that passes input through the Tcl \textit{expr} command.
 ND-arrays can be referred to with ``\texttt{@ref}'', where ``ref'' is the name of the ND-array variable.
 Portions of an ND-array can be mapped over with the notation ``\texttt{@ref(\$i,...)}''.
-Input ND-arrays must all agree in rank or be scalar. 
-Additionally, they must have compatible dimensions.
+The highest-rank input will determine the output, and all input arrays must have compatible dimensions.
 \begin{syntax}
 \command{neval} \$body <\$self> <\$rankVar>
 \end{syntax}
@@ -138,7 +118,7 @@ Additionally, they must have compatible dimensions.
 
 \begin{example}{Get distance between elements in a vector}
 \begin{lstlisting}
-vector new x {1 2 4 7 11 16}
+narray new x {1 2 4 7 11 16}
 puts [nexpr {@x(1:end) - @x(0:end-1)}]
 \end{lstlisting}
 \tcblower
@@ -149,8 +129,8 @@ puts [nexpr {@x(1:end) - @x(0:end-1)}]
 
 \begin{example}{Outer product of two vectors}
 \begin{lstlisting}
-matrix new x {1 2 3}
-matrix new y {{4 5 6}}
+narray new x {1 2 3}
+narray new y {{4 5 6}}
 puts [nexpr {@x * @y}]
 \end{lstlisting}
 \tcblower
@@ -188,8 +168,8 @@ If using the math assignment operator, the ND-array or indexed range can be acce
 \begin{example}{Element-wise modification of a vector}
 \begin{lstlisting}
 # Create blank vectors and assign values
-[vector new x] = {1 2 3}
-[vector new y] = {10 20 30}
+[narray new x] = {1 2 3}
+[narray new y] = {10 20 30}
 # Add one to each element
 puts [[$x := {@. + 1}]]
 # Double the last element
@@ -224,7 +204,7 @@ Both methods modify the object and return the object.
 
 \begin{example}{Removing elements from a vector}
 \begin{lstlisting}
-vector new vector {1 2 3 4 5 6 7 8}
+narray new vector {1 2 3 4 5 6 7 8}
 # Remove all odd numbers
 $vector remove [find [nexpr {@vector % 2}]]
 puts [$vector]
@@ -237,7 +217,7 @@ puts [$vector]
 
 \begin{example}{Inserting a column into a matrix}
 \begin{lstlisting}
-matrix new matrix {{1 2} {3 4} {5 6}}
+narray new matrix {{1 2} {3 4} {5 6}}
 $matrix insert 1 {A B C} 1
 puts [$matrix]
 \end{lstlisting}
@@ -267,7 +247,7 @@ Both methods do not modify the object, but rather return values.
 
 \begin{example}{Map a command over a list}
 \begin{lstlisting}
-vector new text {The quick brown fox jumps over the lazy dog}
+narray new text {The quick brown fox jumps over the lazy dog}
 puts [$text apply {string length}]; # Print the length of each word
 \end{lstlisting}
 \tcblower
@@ -278,7 +258,7 @@ puts [$text apply {string length}]; # Print the length of each word
 
 \begin{example}{Get column statistics of a matrix}
 \begin{lstlisting}
-matrix new matrix {{1 2 3} {4 5 6} {7 8 9}}
+narray new matrix {{1 2 3} {4 5 6} {7 8 9}}
 # Convert to double-precision floating point
 $matrix = [$matrix apply ::tcl::mathfunc::double]
 # Get maximum and minimum of each column
@@ -308,7 +288,7 @@ This operator is useful for converting methods that modify the object to methods
 \begin{example}{Temporary object value}
 \begin{lstlisting}
 # Create a matrix
-matrix new x {{1 2 3} {4 5 6}}
+narray new x {{1 2 3} {4 5 6}}
 # Print value with first row doubled.
 puts [$x | @ 0* : := {@. * 2}]
 # Source object was not modified
@@ -339,7 +319,7 @@ Returns the result of the script.
 \begin{example}{Appending a vector}
 \begin{lstlisting}
 # Create a 1D list
-vector new x {1 2 3}
+narray new x {1 2 3}
 # Append the list
 $x & ref {lappend ref 4 5 6}
 puts [$x]
