@@ -14,7 +14,7 @@
 # Get dimensionality from ND string (uses regex pattern).
 # Either a single digit or with a "D" after.
 # e.g. "0" or "0D", or "3" or "3d"
-# Alternatively, if nd is blank, it dynamically chooses the rank from the
+# Alternatively, if nd is "auto", it dynamically chooses the rank from the
 # value provided.
 # Returns error if invalid syntax
 #
@@ -22,11 +22,11 @@
 # GetNDims $nd <$value>
 #
 # Arguments:
-# nd        Number of dimensions (e.g. 1D, 2D, etc.)
-# value     ndlist for dynamically determining rank
+# nd        Number of dimensions (e.g. 2D), or "auto" to dynamically get rank.
+# value     ndlist for dynamically determining rank. Default blank.
 
 proc ::ndlist::GetNDims {nd {value ""}} {
-    if {$nd eq ""} {
+    if {$nd eq "auto"} {
         set rank 0
         while {[string is list $value] && $value ne [lindex $value 0]} {
             set value [lindex $value 0]

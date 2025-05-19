@@ -227,51 +227,6 @@ puts [$matrix]
 \end{lstlisting}
 \end{example}
 
-
-\clearpage
-\subsection{Map/Reduce}
-The method \methodlink[0]{narray}{apply} maps a command over the ND-array with \cmdlink{napply}, and the method \methodlink[0]{narray}{reduce} reduces the ND-array over an axis with \cmdlink{nreduce}. 
-Both methods do not modify the object, but rather return values.
-
-\begin{syntax}
-\method{narray}{apply} \$command \$arg ...
-\end{syntax}
-\begin{syntax}
-\method{narray}{reduce} \$command <\$axis> \$arg ...
-\end{syntax}
-\begin{args}
-\$command & Command prefix to map over the ND-list object. \\
-\$arg ... & Additional arguments to append to command. \\
-\$axis & Axis to reduce at (default 0).
-\end{args}
-
-\begin{example}{Map a command over a list}
-\begin{lstlisting}
-narray new text {The quick brown fox jumps over the lazy dog}
-puts [$text apply {string length}]; # Print the length of each word
-\end{lstlisting}
-\tcblower
-\begin{lstlisting}
-3 5 5 3 5 4 3 4 3
-\end{lstlisting}
-\end{example}
-
-\begin{example}{Get column statistics of a matrix}
-\begin{lstlisting}
-narray new matrix {{1 2 3} {4 5 6} {7 8 9}}
-# Convert to double-precision floating point
-$matrix = [$matrix apply ::tcl::mathfunc::double]
-# Get maximum and minimum of each column
-puts [$matrix reduce max]
-puts [$matrix reduce min]
-\end{lstlisting}
-\tcblower
-\begin{lstlisting}
-7.0 8.0 9.0
-1.0 2.0 3.0
-\end{lstlisting}
-\end{example}
-
 \clearpage
 \subsection{Temporary Object Evaluation}
 The pipe operator, ``\texttt{|}'', copies the ND-array to a temporary object, and evaluates the method.

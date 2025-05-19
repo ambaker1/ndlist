@@ -31,7 +31,8 @@
 test narray0D {
     # Create a scalar
 } -body {
-    narray new x {hello}
+    
+    
     assert [$x rank] == 0
     assert [$x shape] eq {}
     assert [$x size] eq {}
@@ -53,7 +54,7 @@ test narray1D {
 test narray2D {
     # Create a matrix
 } -body {
-    narray new x {{1 2} {3 4} {5 6}}
+    narray new x {{1 2} {3 4} {5 6}} 2D
     assert [$x rank] == 2
     assert [$x shape] eq {3 2}
     assert [$x size] == 6
@@ -140,10 +141,15 @@ test index_methods {
     assert [$x @ 0 1 & ref {incr ref}] eq {6}
     assert [$x @ 0 1] == 6
     # Copy operator
+    $x rank auto
+    assert [$x rank] == 2
     $x @ 0 1 --> y
     assert [$y rank] == 0
-    assert [$y shape] eq {}
-    assert [$y size] eq {}
+    $x rank 2 
+    $x @ 0 1 --> y
+    assert [$y rank] == 2
+    assert [$y shape] eq {1 1}
+    assert [$y size] eq 1
     # Math assignment operator
     assert [$x @ 0 1 := {@. + 2.0}] eq $x
     assert [$x @ 0 1] eq {8.0}
@@ -153,7 +159,7 @@ test index_methods {
 test all_operators {
     # Test all operators (except index method)
 } -body {
-    narray new x 2
+    narray new x {} 2D
     # Assignment
     $x = {{1 2 3} {4 5 6}}
     assert [$x] eq {{1 2 3} {4 5 6}}
@@ -178,8 +184,4 @@ test other_methods {
     narray new x {{1 2 3} {4 5 6}}
     assert [[$x remove 1]] eq {{1 2 3}}
     assert [[$x insert 1 {{A B C}}]] eq {{1 2 3} {A B C}}
-    narray new y {{1 2 3} {4 5 6}}
-    assert [$y apply ::tcl::mathfunc::double] eq {{1.0 2.0 3.0} {4.0 5.0 6.0}}
-    assert [$y reduce max] eq {4 5 6}
-    assert [$y reduce max 1] eq {3 6}
 } -result {}

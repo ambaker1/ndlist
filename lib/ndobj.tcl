@@ -28,9 +28,11 @@ proc ::ndlist::ValidateRefName {refName} {
 
 # Create narray class.
 
+
+
 ::oo::class create ::ndlist::narray {
     superclass ::ndlist::ValueContainer
-    variable myValue myRank
+    variable myValue myRank autoRank
    
     # Constructor
     # ::ndlist::narray new $refName <$value> <$nd>
@@ -38,10 +40,18 @@ proc ::ndlist::ValidateRefName {refName} {
     # Arguments:
     # refName       Variable for garbage collection
 	# value			Value for ndlist. Default ""
+    # nd            Number of dimensions. "auto" for auto.
     
-    constructor {refName {value ""} {nd ""}} {
+    constructor {refName {value ""} {nd "auto"}} {
         # Validate reference name
         ::ndlist::ValidateRefName $refName
+        # Determine rank (or autoRank)
+        if {$nd eq "auto"} {
+            set autoRank 1
+        } else {
+            set autoRank 0
+            set myRank [::ndlist::GetNDims $nd]
+        }
         next $refName $value
     }
     
@@ -50,35 +60,51 @@ proc ::ndlist::ValidateRefName {refName} {
         next $level [list ::ndlist::neval $body [self]]
     }
     
-    # SetValue is modified to validate ND-list rank.
-    method SetValue {value {nd ""}} {
-        set myRank [::ndlist::GetNDims $nd $value]
-        next [::ndlist::ndlist $myRank $value]
+    # SetValue is modified to determine ND-list rank.
+    method SetValue {value} {
+        if {$autoRank} {
+            set myRank [::ndlist::GetNDims auto $value]
+        }
+        next [::ndlist::ndlist $value $myRank]
     }
 
     # $object rank --
     #
-    # Query the number of dimensions of the object. Same as rank.
+    # Query or set the number of dimensions of the object. Same as rank.
+    #
+    # nd        Number of dimensions. Blank for query, "auto" for auto-rank.
+    #           Default blank for query.
     
     method GetRank {} {
         return $myRank
     }
-    method rank {} {
+    method rank {{nd ""}} {
+        if {$nd eq "auto"} {
+            set autoRank 1
+            set myRank [::ndlist::GetNDims $nd $myValue]
+        } elseif {$nd ne ""} {
+            set autoRank 0
+            set myRank [::ndlist::GetNDims $nd]
+        }
         my GetRank
     }
     
-    # $object shape <$axis> --
+    # $object auto_rank --
+    #
+    # Returns whether rank is auto-determined or not 
+
+    method auto_rank {} {
+        return $autoRank
+    }
+    
+    # $object shape --
     #
     # Get dimensions of ND-array
     #
     # axis      Axis to get dimension along. Default blank for all.
     
-    method shape {{axis ""}} {
-        if {$axis eq ""} {
-            return [my GetShape]
-        }
-        ::ndlist::ValidateAxis $myRank $axis
-        lindex [my GetShape] $axis
+    method shape {} {
+        ::ndlist::GetShape $myRank $myValue
     }
     
     # $object size --
@@ -86,8 +112,8 @@ proc ::ndlist::ValidateRefName {refName} {
     # Get size of ND-array
     
     method size {} {
-        ::ndlist::nsize $myRank $myValue
-    }    
+        ::ndlist::nsize $myValue $myRank
+    }
         
     # $object remove $index <$axis> --
     #
@@ -106,30 +132,7 @@ proc ::ndlist::ValidateRefName {refName} {
     # axis      Axis to insert at. Default 0
     
     method insert {index sublist {axis 0}} {
-        my SetValue [::ndlist::ninsert $myRank $myValue $index $sublist $axis]
-    }
-    
-    # $object apply $command $arg ... --
-    #
-    # Apply command to values of ND-array, return value.
-    #
-    # command   Command prefix to apply
-    # arg ...   Additional arguments to append to command
-    
-    method apply {command args} {
-        tailcall ::ndlist::napply $myRank $command $myValue {*}$args
-    }
-     
-    # $object reduce $command <$axis> $arg ... --
-    #
-    # Apply command to axis of ND-array, return value.
-    #
-    # command   Command prefix to apply
-    # arg ...   Additional arguments to append to command
-    # axis      Axis to reduce along. Default 0.
-    
-    method reduce {command {axis 0} args} {
-        ::ndlist::nreduce $myRank $command $myValue $axis {*}$args
+        my SetValue [::ndlist::ninsert $myValue $index $sublist $axis $myRank]
     }
     
     # $object @ $i ... <$op $arg ...> --
@@ -210,14 +213,6 @@ proc ::ndlist::ValidateRefName {refName} {
         }
     }
     export @
-
-    # my GetShape --
-    #
-    # Get the shape of the ND-list.
-    
-    method GetShape {} {
-        ::ndlist::GetShape $myRank $myValue
-    }
     
     # my GetIndexValue --
     #
@@ -249,7 +244,7 @@ proc ::ndlist::ValidateRefName {refName} {
         }
         # Validate input, and call nset.
         set rank [my GetIndexRank $indices]
-        ::ndlist::nset myValue {*}$indices [::ndlist::ndlist $rank $value]
+        ::ndlist::nset myValue {*}$indices [::ndlist::ndlist $value $rank]
         return [self]
     }
     
@@ -282,7 +277,12 @@ proc ::ndlist::ValidateRefName {refName} {
         }
         # Get new rank and value.
         set value [my GetIndexValue $indices]
-        tailcall [self class] new $varName $value
+        if {$autoRank} {
+            set rank auto
+        } else {
+            set rank [my GetIndexRank $indices]
+        }
+        tailcall [self class] new $varName $value $rank
     }
     
     # my TempIndexObject $indices $method $arg ... --
@@ -341,7 +341,7 @@ proc ::ndlist::RefSub {body} {
 # rankVar       Variable to store resulting rank in. Default blank.
 
 # Example:
-# [narray new x 1D] = {{hello world} {foo bar}}
+# narray new x {{hello world} {foo bar}} 1D
 # neval {string toupper @x}; # {{HELLO WORLD} {FOO BAR}}
 
 proc ::ndlist::neval {body {self ""} {rankVar ""}} {

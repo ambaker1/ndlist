@@ -9,50 +9,50 @@ set testmat {{1 2 3} {4 5 6} {7 8 9}}
 test ndlist {
     # Create an ndlist (validates)
 } -body {
-    ndlist 2D $testmat
+    ndlist $testmat
 } -result $testmat
 
 test ndlist_error {
     # Throws error if ragged.
 } -body {
-    ndlist 2D {1 {2 3}}
+    ndlist {1 {2 3}} 2D
 } -returnCodes {1} -result {not a valid 2D-list}
 
 # nshape
 test nshape {
     # Assert that nshape works
 } -body {
-    nshape 2D {{1 2} {3 4} {5 6}}
+    nshape {{1 2} {3 4} {5 6}}
 } -result {3 2}
 
 # Blanks must be contained within a list, unless if entire ndlist is blank.
-test nshape_blank0 {} -body {nshape 2D ""} -result {0 0}
-test nshape_blank1 {} -body {nshape 2D {{}}} -returnCodes {1} -result {null dimension along non-zero axis}
-test nshape_blank2 {} {nshape 2D {{{}}}} {1 1}
+test nshape_blank0 {} -body {nshape "" 2D} -result {0 0}
+test nshape_blank1 {} -body {nshape {{}} 2D} -returnCodes {1} -result {null dimension along non-zero axis}
+test nshape_blank2 {} {nshape {{{}}} 2D} {1 1}
 
 # nsize
 test nsize0D {
     # No size for scalars
 } -body {
-    nsize 0D foo
+    nsize foo
 } -result {}
 
 test nsize1D {
     # Same as llength
 } -body {
-    nsize 1D {foo bar}
+    nsize {foo bar}
 } -result {2}
 
 test nsize2D {
     # Product of rows/columns
 } -body {
-    nsize 2D {{1 2} {3 4} {5 6}}
+    nsize {{1 2} {3 4} {5 6}}
 } -result {6}
 
 test nsize3D {
     # Product of all dimensions
 } -body {
-    nsize 3D {{{1 2} {3 4} {5 6}} {{1 2} {3 4} {5 6}}}
+    nsize {{{1 2} {3 4} {5 6}} {{1 2} {3 4} {5 6}}}
 } -result {12}
 
 # nrepeat/nreshape/nexpand
@@ -411,31 +411,31 @@ test nset_I_3D {
 test ninsert0D {
     # Error, cannot stack scalars.
 } -body {
-    ninsert 0D foo 0 bar
+    ninsert foo 0 bar
 } -returnCodes {1} -result {axis out of range}
 
 test ninsert1D {
     # Stack vectors (simple concat)
 } -body {
-    ninsert 1D {1 2 3} end {4 5 6} 0
+    ninsert {1 2 3} end {4 5 6} 0
 } -result {1 2 3 4 5 6}
 
 test ninsert1D_2 {
     # Insert before end.
 } -body {
-    ninsert 1D {1 2 3} 2 {4 5 6} 0
+    ninsert {1 2 3} 2 {4 5 6} 0
 } -result {1 2 4 5 6 3}
 
 test ninsert2D_0 {
     # Create headers
 } -body {
-    ninsert 2D $testmat 0 {{A B C}}
+    ninsert $testmat 0 {{A B C}}
 } -result {{A B C} {1 2 3} {4 5 6} {7 8 9}}
 
 test ninsert2D_1 {
     # Augment matrices (simple concat)
 } -body {
-    ninsert 2D {1 2 3} end {4 5 6} 1
+    ninsert {1 2 3} end {4 5 6} 1 2D
 } -result {{1 4} {2 5} {3 6}}
 
 test ninsert3D_2 {
@@ -443,16 +443,16 @@ test ninsert3D_2 {
 } -body {
     set x [nreshape {1 2 3 4 5 6 7 8 9} 3 3 1]; # Create tensor
     set y [nreshape {A B C D E F G H I} 3 3 1]; # 
-    ninsert 3D $x end $y 2
+    ninsert $x end $y 2 3D 
 } -result {{{1 A} {2 B} {3 C}} {{4 D} {5 E} {6 F}} {{7 G} {8 H} {9 I}}}
 
 # ncat
 test ncat {
     # ncat is simply a special case of ninsert.
 } -body {
-    assert [ninsert 1D {1 2 3} end {4 5 6} 0] eq [ncat 1D {1 2 3} {4 5 6} 0]
-    assert [ninsert 2D {1 2 3} end {4 5 6} 1] eq [ncat 2D {1 2 3} {4 5 6} 1]
-    assert [ninsert 3D $x end $y 2] eq [ncat 3D $x $y 2]
+    assert [ninsert {1 2 3} end {4 5 6} 0] eq [ncat {1 2 3} {4 5 6} 0]
+    assert [ninsert {1 2 3} end {4 5 6} 1 2D] eq [ncat {1 2 3} {4 5 6} 1 2D]
+    assert [ninsert $x end $y 2 3D] eq [ncat $x $y 2 3D]
 } -result {}
 
 # nflatten/nswapaxes
@@ -462,25 +462,25 @@ test ncat {
 test nflatten0D {
     # Turn scalar into vector
 } -body {
-    nflatten 0D {hello world}
+    nflatten {hello world} 0D
 } -result {{hello world}}
 
 test nflatten1D {
     # Verify vector
 } -body {
-    nflatten 1D {hello world}
+    nflatten {hello world} 1D
 } -result {hello world}
 
 test nflatten2D {
     # Flatten matrix to vector
 } -body {
-    nflatten 2D {{1 2} {3 4} {5 6}}
+    nflatten {{1 2} {3 4} {5 6}}
 } -result {1 2 3 4 5 6}
 
 test nflatten3D {
     # Flatten tensor to vector
 } -body {
-    nflatten 3D {{{1 2} {3 4}} {{5 6} {7 8}}}
+    nflatten {{{1 2} {3 4}} {{5 6} {7 8}}}
 } -result {1 2 3 4 5 6 7 8}
 
 # nswapaxes
@@ -607,56 +607,56 @@ test npermute5 {
 test napply0D {
     # Map over a scalar (simple eval)
 } -body {
-    napply 0D expr 2 + 2
+    napply expr 2 {+ 2}
 } -result {4}
 
 test napply1D {
     # Map over a list
 } -body {
-    napply 1D lindex $testmat 0
+    napply lindex $testmat 0 1D
 } -result {1 4 7}
 
 test napply2D {
     # Map over a matrix
 } -body {
-    napply 2D {format %.2f} $testmat
+    napply {format %.2f} $testmat
 } -result {{1.00 2.00 3.00} {4.00 5.00 6.00} {7.00 8.00 9.00}}
 
 # nreduce
 test reduce0D_error {
     # Reduce a scalar (produces error)
 } -body {
-    catch {nreduce 0D max 5}
+    catch {nreduce max 5 {} 0D}
 } -result {1}
 
 test reduce1D_max {
     # Reduce a vector
 } -body {
-    nreduce 1D max {1 2 3 4 5}
+    nreduce max {1 2 3 4 5}
 } -result {5}
 
 test reduce1D_sum {
     # Reduce a vector, with sum
 } -body {
-    nreduce 1D sum {1 2 3 4 5}
+    nreduce sum {1 2 3 4 5}
 } -result {15}
 
 test reduce1D_error {
     # Reduce a vector, along 1st dimension (returns error)
 } -body {
-    catch {nreduce 1D max {1 2 3 4 5} 1}
+    catch {nreduce max {1 2 3 4 5} 1}
 } -result {1}
 
 test reduce2D_0 {
     # Reduce a matrix along row dimension
 } -body {
-    nreduce 2D max {{1 2} {3 4} {5 6} {7 8}}
+    nreduce max {{1 2} {3 4} {5 6} {7 8}}
 } -result {7 8}
 
 test reduce2D_1 {
     # Reduce a matrix along column dimension
 } -body {
-    nreduce 2D max {{1 2} {3 4} {5 6} {7 8}} 1
+    nreduce max {{1 2} {3 4} {5 6} {7 8}} 1
 } -result {2 4 6 8}
 
 # Tensor reductions (using a 2x3x4 tensor)
@@ -665,58 +665,58 @@ set myTensor {{{1 2 3 4} {5 6 7 8} {9 10 11 12}} {{13 14 15 16} {17 18 19 20} {2
 test reduce3D_0 {
     # Reduce a tensor along 0th dimension (result is 3x4)
 } -body {
-    nreduce 3D max $myTensor 0
+    nreduce max $myTensor 0
 } -result {{13 14 15 16} {17 18 19 20} {21 22 23 24}}
 
 test reduce3D_1 {
     # Reduce a tensor along 1st dimension (result is 2x4)
 } -body {
-    nreduce 3D max $myTensor 1
+    nreduce max $myTensor 1
 } -result {{9 10 11 12} {21 22 23 24}}
 
 test reduce3D_2 {
     # Reduce a tensor along 2nd dimension (result is 2x3)
 } -body {
-    nreduce 3D max $myTensor 2
+    nreduce max $myTensor 2
 } -result {{4 8 12} {16 20 24}}
 
 # nmap
 test nmap0 {
     # 0D is just a simple mapping.
 } -body {
-    nmap 0 x foo y bar {list $x $y}
+    nmap x foo y bar {list $x $y}
 } -result {foo bar}
 
 test nmap1 {
     # 1D is a list mapping
 } -body {
-    nmap 1D x {1 2 3} {format %.2f $x}
+    nmap x {1 2 3} {format %.2f $x}
 } -result {1.00 2.00 3.00}
 
 test nmap2 {
-    # 2D is a list mapping
+    # 2D is a matrix mapping
 } -body {
-    nmap 2D x $testmat {format %.2f $x}
+    nmap x $testmat {format %.2f $x}
 } -result {{1.00 2.00 3.00} {4.00 5.00 6.00} {7.00 8.00 9.00}}
 
 # nmap
 test nmap_expr {
     # using expr
 } -body {
-    assert {[nmap 1D x {1 2 3} {expr {-$x}}] eq {-1 -2 -3}}
+    assert {[nmap x {1 2 3} {expr {-$x}}] eq {-1 -2 -3}}
     # Basic operations
-    assert {[nmap 2D x $testmat {expr {-$x}}] eq {{-1 -2 -3} {-4 -5 -6} {-7 -8 -9}}}
-    assert {[nmap 2D x $testmat {expr {$x / 2.0}}] eq {{0.5 1.0 1.5} {2.0 2.5 3.0} {3.5 4.0 4.5}}}
-    assert {[nmap 2D x $testmat y {.1 .2 .3} {expr {$x + $y}}] eq {{1.1 2.1 3.1} {4.2 5.2 6.2} {7.3 8.3 9.3}}}
-    assert {[nmap 2D x $testmat y {{.1 .2 .3}} {expr {$x + $y}}] eq {{1.1 2.2 3.3} {4.1 5.2 6.3} {7.1 8.2 9.3}}}
-    assert {[nmap 2D x $testmat y {{.1 .2 .3} {.4 .5 .6} {.7 .8 .9}} {expr {$x + $y}}] eq {{1.1 2.2 3.3} {4.4 5.5 6.6} {7.7 8.8 9.9}}}
-    assert {[nmap 2D x $testmat {expr {double($x)}}] eq {{1.0 2.0 3.0} {4.0 5.0 6.0} {7.0 8.0 9.0}}}
+    assert {[nmap x $testmat {expr {-$x}}] eq {{-1 -2 -3} {-4 -5 -6} {-7 -8 -9}}}
+    assert {[nmap x $testmat {expr {$x / 2.0}}] eq {{0.5 1.0 1.5} {2.0 2.5 3.0} {3.5 4.0 4.5}}}
+    assert {[nmap x $testmat y {.1 .2 .3} {expr {$x + $y}}] eq {{1.1 2.1 3.1} {4.2 5.2 6.2} {7.3 8.3 9.3}}}
+    assert {[nmap x $testmat y {{.1 .2 .3}} {expr {$x + $y}}] eq {{1.1 2.2 3.3} {4.1 5.2 6.3} {7.1 8.2 9.3}}}
+    assert {[nmap x $testmat y {{.1 .2 .3} {.4 .5 .6} {.7 .8 .9}} {expr {$x + $y}}] eq {{1.1 2.2 3.3} {4.4 5.5 6.6} {7.7 8.8 9.9}}}
+    assert {[nmap x $testmat {expr {double($x)}}] eq {{1.0 2.0 3.0} {4.0 5.0 6.0} {7.0 8.0 9.0}}}
 } -result {}
 
 test nmap_index2 {
     # Test out indices
 } -body {
-    nmap 2D x $testmat {expr {$x*([i]%2 + [j]%2 == 1?-1:1)}}
+    nmap x $testmat {expr {$x*([i]%2 + [j]%2 == 1?-1:1)}}
 } -result {{1 -2 3} {-4 5 -6} {7 -8 9}}
 
 test nmap_index3 {
@@ -724,7 +724,7 @@ test nmap_index3 {
 } -body {
     set y ""
     lappend y ""
-    nmap 3D x [nfull {} 2 3 2] {
+    nmap x [nfull {} 2 3 2] {
         lappend y [list [i -1] [i] [j] [k]]
     }
     lappend y ""

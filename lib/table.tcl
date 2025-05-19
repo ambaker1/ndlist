@@ -41,7 +41,7 @@ namespace eval ::ndlist {
             return [self]
         }
         # Validate input before setting value.
-        set matrix [::ndlist::ndlist 2 $matrix]; # verifies that it is a matrix
+        set matrix [::ndlist::ndlist $matrix 2]; # verifies that it is a matrix
         # Check uniqueness of keyname/fields
         set header [lindex $matrix 0]
         if {![my IsUniqueList $header]} {
