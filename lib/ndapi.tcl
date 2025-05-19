@@ -11,36 +11,32 @@
 
 # GetNDims --
 #
-# Get dimensionality from ND string (uses regex pattern).
-# Either a single digit or with a "D" after.
-# e.g. "0" or "0D", or "3" or "3d"
+# Get rank from input or determine automatically
 # Returns error if invalid syntax
 #
 # Syntax:
-# GetNDims $nd
+# GetNDims $ndims <$value>
 #
 # Arguments:
-# nd        Number of dimensions (e.g. 1D, 2D, etc.)
+# ndims     Number of dimensions or "auto" to dynamically get rank.
+# value     ND-list for dynamically determining rank. Default blank.
 
-proc ::ndlist::GetNDims {nd} {
-    if {![IsNDType $nd]} {
-        return -code error "invalid ND syntax"
+proc ::ndlist::GetNDims {ndims {value ""}} {
+    if {$ndims eq "auto"} {
+        set ndims 0
+        while {[string is list $value] && $value ne [lindex $value 0]} {
+            set value [lindex $value 0]
+            incr ndims
+        }
+        return $ndims
     }
-    string trimright $nd {dD}
-}
-
-# IsNDType --
-#
-# Returns whether an input is an ND string
-#
-# Syntax:
-# IsNDType $arg
-#
-# Arguments:
-# arg:          Argument to check
-
-proc ::ndlist::IsNDType {arg} {
-    regexp {^(0|[1-9]\d*)[dD]?$} $arg
+    if {![string is integer -strict $ndims]} {
+        return -code error "expected integer, but got \"$ndims\""
+    }
+    if {$ndims < 0} {
+        return -code error "ndims must be non-negative"
+    }
+    return $ndims
 }
 
 # ValidateAxis --

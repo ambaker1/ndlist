@@ -8,31 +8,31 @@ If the input value is ``ragged'', as in it has inconsistent dimensions, it will 
 In general, if a value is a valid for N dimensions, it will also be valid for dimensions 0 to N-1.
 All other ND-list commands assume a valid ND-list.
 \begin{syntax}
-\command{ndlist} \$nd \$value
+\command{ndlist} \$value <\$nd>
 \end{syntax}
 \begin{args}
-\$nd & Rank of ND-list (e.g. 2D, 2d, or 2 for a matrix).\\
-\$value & List to interpret as an ndlist
+\$value & List to interpret as an ndlist. \\
+\$nd & Rank of ND-list (e.g. 2 for matrix) or ``auto'' for auto-rank. Default ``auto''.
 \end{args}
 \subsection{Shape and Size}
 The commands \cmdlink{nshape} and \cmdlink{nsize} return the shape and size of an ND-list, respectively.
 The shape is a list of the dimensions, and the size is the product of the shape.
 \begin{syntax}
-\command{nshape} \$nd \$ndlist <\$axis>
+\command{nshape} \$ndlist <\$nd>
 \end{syntax}
 \begin{syntax}
-\command{nsize} \$nd \$ndlist 
+\command{nsize} \$ndlist <\$nd>
 \end{syntax}
 \begin{args}
-\$nd & Rank of ND-list (e.g. 2D, 2d, or 2 for a matrix).  \\
 \$ndlist & ND-list to get shape/size of. \\
-\$axis & Axis to get dimension along. Blank for all. 
+\$axis & Axis to get dimension along. Default blank for all. \\
+\$nd & Rank of ND-list (e.g. 2 for matrix) or ``auto'' for auto-rank. Default ``auto''.
 \end{args}
 \begin{example}{Getting shape and size of an ND-list}
 \begin{lstlisting}
 set x {{1 2 3} {4 5 6}}
-puts [nshape 2D $x]
-puts [nsize 2D $x]
+puts [nshape $x]
+puts [nsize $x]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
@@ -163,15 +163,15 @@ puts [nextend $a world -1 2]
 \subsection{Flattening and Reshaping}
 The command \cmdlink{nflatten} flattens an ND-list to a vector.
 \begin{syntax}
-\command{nflatten} \$nd \$ndlist
+\command{nflatten} \$ndlist <\$nd>
 \end{syntax}
 \begin{args}
-\$nd & Rank of ND-list (e.g. 2D, 2d, or 2 for a matrix).  \\
-\$ndlist & ND-list to flatten. 
+\$ndlist & ND-list to flatten. \\
+\$nd & Rank of ND-list (e.g. 2 for matrix) or ``auto'' for auto-rank. Default ``auto''.
 \end{args}
 \begin{example}{Reshape a matrix to a 3D tensor}
 \begin{lstlisting}
-set x [nflatten 2D {{1 2 3 4} {5 6 7 8}}]
+set x [nflatten {{1 2 3 4} {5 6 7 8}}]
 puts [nreshape $x 2 2 2]
 \end{lstlisting}
 \tcblower
@@ -356,23 +356,23 @@ If ``end'' or ``end-integer'' is used for the index, it will insert after the in
 Otherwise, it will insert before the index.
 The command \cmdlink{ncat} is shorthand for inserting at ``end'', and concatenates two ND-lists.
 \begin{syntax}
-\command{ninsert} \$nd \$ndlist1 \$index \$ndlist2 <\$axis>
+\command{ninsert} \$ndlist1 \$index \$ndlist2 <\$axis> <\$nd>
 \end{syntax}
 \begin{syntax}
-\command{ncat} \$nd \$ndlist1 \$ndlist2 <\$axis>
+\command{ncat} \$ndlist1 \$ndlist2 <\$axis> <\$nd> 
 \end{syntax}
 \begin{args}
-\$nd & Rank of ND-list (e.g. 2D, 2d, or 2 for a matrix).  \\
 \$ndlist1 \$ndlist2 & ND-lists to combine. \\
 \$index & Index to insert at. \\
-\$axis & Axis to insert/concatenate at (default 0).
+\$axis & Axis to insert/concatenate at (default 0). \\
+\$nd & Rank of ND-list (e.g. 2 for matrix) or ``auto'' for auto-rank. Default ``auto''.
 \end{args}
 
 \begin{example}{Inserting a column into a matrix}
 \begin{lstlisting}
 set matrix {{1 2} {3 4} {5 6}}
 set column {A B C}
-puts [ninsert 2D $matrix 1 $column 1]
+puts [ninsert $matrix 1 $column 1 2]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
@@ -383,7 +383,7 @@ puts [ninsert 2D $matrix 1 $column 1]
 \begin{lstlisting}
 set x [nreshape {1 2 3 4 5 6 7 8 9} 3 3 1]
 set y [nreshape {A B C D E F G H I} 3 3 1]
-puts [ncat 3D $x $y 2]
+puts [ncat $x $y 2 3]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
@@ -444,21 +444,21 @@ The command \cmdlink{napply} applies a command over each element of an ND-list, 
 The commands \cmdlink{napply2} maps element-wise over two ND-lists. 
 If the input lists have different shapes, they will be expanded to their maximum dimensions with \cmdlink{nexpand} (if compatible).
 \begin{syntax}
-\command{napply} \$nd \$command \$ndlist \$arg ...
+\command{napply} \$command \$ndlist <\$suffix> <\$nd>
 \end{syntax}
 \begin{syntax}
-\command{napply2} \$nd \$command \$ndlist1 \$ndlist2 \$arg ...
+\command{napply2} \$command \$ndlist1 \$ndlist2 <\$suffix> <\$nd> 
 \end{syntax}
 \begin{args}
-\$nd & Rank of ND-list (e.g. 2D, 2d, or 2 for a matrix).  \\
 \$ndlist & ND-list to map over. \\
 \$ndlist1 \$ndlist2 & ND-lists to map over, element-wise. \\
 \$command & Command prefix to map with. \\
-\$arg ... & Additional arguments to append to command after ND-list element. 
+\$suffix & Additional arguments to append to command after ND-list elements. Default blank. \\
+\$nd & Rank of ND-list (e.g. 2 for matrix) or ``auto'' for auto-rank. Default ``auto''.
 \end{args}
 \begin{example}{Chained functional mapping over a matrix}
 \begin{lstlisting}
-napply 2D puts [napply 2D {format %.2f} [napply 2D expr {{1 2} {3 4}} + 1]]
+napply puts [napply {format %.2f} [napply expr {{1 2} {3 4}} {+ 1}]]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
@@ -472,7 +472,7 @@ napply 2D puts [napply 2D {format %.2f} [napply 2D expr {{1 2} {3 4}} + 1]]
 \begin{lstlisting}
 set data {{1 2 3} {4 5 6} {7 8 9}}
 set formats {{%.1f %.2f %.3f}}
-puts [napply2 2D format $formats $data]
+puts [napply2 format $formats $data]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
@@ -483,22 +483,22 @@ puts [napply2 2D format $formats $data]
 \subsection{Reducing an ND-list}
 The command \cmdlink{nreduce} combines \cmdlink{nmoveaxis} and \cmdlink{napply} to reduce an axis of an ND-list with a function that reduces a vector to a scalar, like \cmdlink{max} or \cmdlink{sum}.
 \begin{syntax}
-\command{nreduce} \$nd \$command \$ndlist <\$axis> <\$arg ...>
+\command{nreduce} \$command \$ndlist <\$axis> <\$suffix> <\$nd>
 \end{syntax}
 \begin{args}
-\$nd & Rank of ND-list (e.g. 2D, 2d, or 2 for a matrix).  \\
 \$command & Command prefix to map with. \\
 \$ndlist & ND-list to map over. \\
 \$axis & Axis to reduce. Default 0. \\
-\$arg ... & Additional arguments to append to command after ND-list elements.
+\$suffix & Additional arguments to append to command after ND-list elements. Default blank. \\
+\$nd & Rank of ND-list (e.g. 2 for matrix) or ``auto'' for auto-rank. Default ``auto''.
 \end{args}
 \begin{example}{Matrix row and column statistics}
 \begin{lstlisting}
 set x {{1 2} {3 4} {5 6} {7 8}}
-puts [nreduce 2D max $x]; # max of each column
-puts [nreduce 2D max $x 1]; # max of each row
-puts [nreduce 2D sum $x]; # sum of each column
-puts [nreduce 2D sum $x 1]; # sum of each row
+puts [nreduce max $x]; # max of each column
+puts [nreduce max $x 1]; # max of each row
+puts [nreduce sum $x]; # sum of each column
+puts [nreduce sum $x 1]; # sum of each row
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
@@ -517,10 +517,10 @@ The actual implementation flattens all the ND-lists and calls the Tcl \textit{lm
 So, if ``continue'' or ``break'' are used in the map body, it will return an error.
 
 \begin{syntax}
-\command{nmap} \$nd \$varName \$ndlist <\$varName \$ndlist ...> \$body
+\command{nmap} <\$nd> \$varName \$ndlist <\$varName \$ndlist ...> \$body
 \end{syntax}
 \begin{args}
-\$nd & Rank of ND-list (e.g. 2D, 2d, or 2 for a matrix).  \\
+\$nd & Rank of ND-list (e.g. 2 for matrix) or ``auto'' for auto-rank. Default ``auto''.  \\
 \$varName & Variable name to iterate with. \\
 \$ndlist & ND-list to iterate over. \\
 \$body & Tcl script to evaluate at every loop iteration. 
@@ -528,10 +528,10 @@ So, if ``continue'' or ``break'' are used in the map body, it will return an err
 
 \begin{example}{Expand and map over matrices}
 \begin{lstlisting}
-set phrases [nmap 2D greeting {{hello goodbye}} subject {world moon} {
+set phrases [nmap 2 greeting {{hello goodbye}} subject {world moon} {
     list $greeting $subject
 }]
-napply 2D puts $phrases
+napply puts $phrases {} 2 
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
@@ -563,7 +563,7 @@ The commands \cmdlink{j} and \cmdlink{k} are simply shorthand for \cmdlink{i} wi
 \begin{lstlisting}
 set x {{1 2 3} {4 5 6} {7 8 9}}
 set indices {}
-nmap 2D xi $x {
+nmap xi $x {
     if {$xi > 4} {
         lappend indices [list [i] [j]]
     }
