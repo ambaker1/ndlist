@@ -28,8 +28,6 @@ proc ::ndlist::ValidateRefName {refName} {
 
 # Create narray class.
 
-
-
 ::oo::class create ::ndlist::narray {
     superclass ::ndlist::ValueContainer
     variable myValue myDims autoDims
@@ -46,12 +44,8 @@ proc ::ndlist::ValidateRefName {refName} {
         # Validate reference name
         ::ndlist::ValidateRefName $refName
         # Determine ndims (or autoDims)
-        if {$ndims eq "auto"} {
-            set autoDims 1
-        } else {
-            set autoDims 0
-            set myDims [::ndlist::GetNDims $ndims]
-        }
+        set myDims $ndims
+        set autoDims [expr {$myDims eq "auto"}]
         next $refName $value
     }
     
@@ -63,9 +57,11 @@ proc ::ndlist::ValidateRefName {refName} {
     # SetValue is modified to determine ND-list dimensions.
     method SetValue {value} {
         if {$autoDims} {
-            set myDims [::ndlist::GetNDims auto $value]
+            set myDims [::ndlist::ndims $value auto]
+        } else {
+            ::ndlist::ndims $value $myDims
         }
-        next [::ndlist::ndlist $value $myDims]
+        next $value
     }
 
     # $object ndims --
@@ -89,10 +85,8 @@ proc ::ndlist::ValidateRefName {refName} {
             }
         }
         # Modify dimensions
-        set ndims [::ndlist::GetNDims $nd $myValue]
-        ::ndlist::ndlist $myValue $ndims
+        set myDims [::ndlist::ndims $myValue $nd]
         set autoDims [expr {$nd eq "auto"}]
-        set myDims $ndims
     }
     
     # $object shape --
@@ -241,8 +235,8 @@ proc ::ndlist::ValidateRefName {refName} {
             return -code error "wrong # of indices: want $myDims"
         }
         # Validate input, and call nset.
-        set ndims [my GetIndexDims $indices]
-        ::ndlist::nset myValue {*}$indices [::ndlist::ndlist $value $ndims]
+        ::ndlist::ndims $value [my GetIndexDims $indices]
+        ::ndlist::nset myValue {*}$indices $value
         return [self]
     }
     

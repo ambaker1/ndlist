@@ -3,19 +3,20 @@
 # Matrix for testing (DO NOT CHANGE)
 set testmat {{1 2 3} {4 5 6} {7 8 9}}
 
-# ndlist/nshape/nsize 
+# ndims/nshape/nsize 
 ################################################################################
 # ndlist
-test ndlist {
-    # Create an ndlist (validates)
-} -body {
-    ndlist $testmat
-} -result $testmat
 
-test ndlist_error {
+test ndims {
+    # Automatically determine dimensions of a matrix
+} -body {
+    ndims $testmat
+} -result 2
+
+test ndims_error {
     # Throws error if ragged.
 } -body {
-    ndlist {1 {2 3}} 2
+    ndims {1 {2 3}} 2
 } -returnCodes {1} -result {not a valid 2D-list}
 
 # nshape

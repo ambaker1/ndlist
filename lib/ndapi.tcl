@@ -9,34 +9,20 @@
 # redistribution, and for a DISCLAIMER OF ALL WARRANTIES.
 ################################################################################
 
-# GetNDims --
+# IsNDList --
 #
-# Get rank from input or determine automatically
+# Determine if an ND-list is valid for the specified number of dimensions
 # Returns error if invalid syntax
 #
 # Syntax:
-# GetNDims $ndims <$value>
+# IsNDList $ndims $ndlist
 #
 # Arguments:
-# ndims     Number of dimensions or "auto" to dynamically get rank.
-# value     ND-list for dynamically determining rank. Default blank.
+# ndims     Number of dimensions
+# ndlist    Candidate ndlist
 
-proc ::ndlist::GetNDims {ndims {value ""}} {
-    if {$ndims eq "auto"} {
-        set ndims 0
-        while {[string is list $value] && $value ne [lindex $value 0]} {
-            set value [lindex $value 0]
-            incr ndims
-        }
-        return $ndims
-    }
-    if {![string is integer -strict $ndims]} {
-        return -code error "expected integer, but got \"$ndims\""
-    }
-    if {$ndims < 0} {
-        return -code error "ndims must be non-negative"
-    }
-    return $ndims
+proc ::ndlist::IsNDList {ndims ndlist} {
+    IsShape $ndlist {*}[GetShape $ndims $ndlist]
 }
 
 # ValidateAxis --
@@ -72,6 +58,14 @@ proc ::ndlist::ValidateAxis {ndims axis} {
 # ndlist        ND-list to get dimensions from
 
 proc ::ndlist::GetShape {ndims ndlist} {
+    # Scalar case
+    if {$ndims == 0} {
+        return
+    }
+    # Vector case
+    if {$ndims == 1} {
+        return [llength $ndlist]
+    }
     # Null case
     if {[llength $ndlist] == 0} {
         return [lrepeat $ndims 0]
@@ -109,6 +103,8 @@ proc ::ndlist::IsShape {ndlist args} {
     # Vector base case
     if {[llength $ndlist] != $n} {
         return 0
+    } elseif {[llength $args] == 0} {
+        return 1
     }
     # Recursion
     foreach ndrow $ndlist {
