@@ -1,6 +1,6 @@
 # ndapi.tcl
 ################################################################################
-# Core API for manipulating ND-lists
+# Private functions for manipulating ND-lists
 
 # Copyright (C) 2025 Alex Baker, ambaker1@mtu.edu
 # All rights reserved. 
@@ -23,6 +23,77 @@
 
 proc ::ndlist::IsNDList {ndims ndlist} {
     IsShape $ndlist {*}[GetShape $ndims $ndlist]
+}
+
+# GetNDims --
+#
+# Automatically determine the dimension of an ND-list
+#
+# Syntax:
+# GetNDims $ndlist
+#
+# Arguments:
+# ndlist        ND-list
+
+proc ::ndlist::GetNDims {ndlist} {
+    # Determine dims from depth of scalar along index 0
+    set ndims 0
+    set value $ndlist; # temporary value for diving into index 0
+    while {[string is list $value] && $value ne [lindex $value 0]} {
+        set value [lindex $value 0]
+        incr ndims
+    }
+    # Back-pedal to the dimension that is well-formed (if needed)
+    while {![IsNDList $ndims $ndlist]} {
+        incr ndims -1
+    }
+    return $ndims
+}
+
+# GetMaxNDims --
+#
+# Returns the dimensions compatible with all input ndlists
+#
+# Syntax:
+# GetMaxNDims $ndlist ...
+#
+# Arguments:
+# ndlist ...    List of ndlists
+
+proc ::ndlist::GetMaxNDims {args} {
+    if {[llength $args] == 0} {
+        return -code error "wrong # args: want \"GetMaxNDims ndlist ...\""
+    }
+    set ndims_list [lmap ndlist $args {GetNDims $ndlist}]
+    foreach ndims [lsort -integer -decreasing $ndims_list] {
+        foreach ndlist $args {
+            if {![IsNDList $ndims $ndlist]} {
+                continue
+            }
+        }
+        break
+    }
+    return $ndims
+}
+
+# ValidateNDims --
+#
+# Validates ndims input
+#
+# Syntax:
+# ValidateNDims $ndims
+# 
+# Arguments:
+# ndims             Number of dimensions (Inf for arbitrary dimensions)
+# axis              Axis integer (must be 0-(N-1))
+
+proc ::ndlist::ValidateNDims {ndims} {
+    if {![string is integer -strict $ndims]} {
+        return -code error "expected integer, but got \"$ndims\""
+    }
+    if {$ndims < 0} {
+        return -code error "ndims must be non-negative"
+    }
 }
 
 # ValidateAxis --

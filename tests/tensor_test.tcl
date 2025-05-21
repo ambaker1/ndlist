@@ -19,6 +19,23 @@ test ndims_error {
     ndims {1 {2 3}} 2
 } -returnCodes {1} -result {not a valid 2D-list}
 
+test ndims_error2 {
+    # Should interpret as 1D
+} -body {
+    ndims {{1 2} 3}
+} -result 1
+
+test ndims_multiple {
+    # Get/assert number of dimensions compatible with a list of ND-lists
+} -body {
+    set ndlists [list {1 2 3} {{1 2} {3 4}} hello {{{1 2} {3 4}} {1 2}}]
+    assert [ndims_multiple $ndlists] == 2
+    assert [ndims_multiple $ndlists 0] == 0
+    assert [ndims_multiple $ndlists 1] == 1
+    assert [ndims_multiple $ndlists 2] == 2
+    catch {ndims_multiple $ndlists 3}; # throws error
+} -result 1
+
 # nshape
 test nshape {
     # Assert that nshape works

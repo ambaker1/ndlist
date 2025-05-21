@@ -14,6 +14,7 @@ namespace eval ::ndlist {
     variable map_index ""; # Linear index of mapping
     variable map_shape ""; # Shape of nmap list
     namespace export ndims nshape nsize; # ND-list basics
+    namespace export ndims_multiple; # Get/check ndims for compatibility
     namespace export nfull nrand; # ND-list initialization
     namespace export nflatten nreshape; # Reshaping an ND-list
     namespace export nrepeat nexpand npad nextend; # Expanding an ND-list
@@ -43,26 +44,43 @@ namespace eval ::ndlist {
 
 proc ::ndlist::ndims {ndlist {nd auto}} {
     if {$nd eq "auto"} {
-        set ndims 0
-        set value $ndlist
-        while {[string is list $value] && $value ne [lindex $value 0]} {
-            set value [lindex $value 0]
-            incr ndims
-            if {![IsNDList $ndims $ndlist]} {
-                break
-            }
-        }
-        return $ndims
+        return [GetNDims $ndlist]
     }
+    # User-specified
     set ndims $nd
-    if {![string is integer -strict $ndims]} {
-        return -code error "expected integer, but got \"$ndims\""
-    }
-    if {$ndims < 0} {
-        return -code error "ndims must be non-negative"
-    }
+    ValidateNDims $ndims
     if {![IsNDList $ndims $ndlist]} {
         return -code error "not a valid ${ndims}D-list"
+    }
+    return $ndims
+}
+
+# ndims_multiple --
+#
+# Returns the rank of the ndlist if "auto",
+# otherwise validates the input rank.
+#
+# Syntax:
+# ndims $ndlist <$nd>
+#
+# Arguments:
+# value         Value to check for ndlist validity.
+# nd            Number of dimensions. Default "auto"
+
+proc ::ndlist::ndims_multiple {ndlists {nd auto}} {
+    if {[llength $ndlists] == 0} {
+        return -code error "ndlists must have length > 0"
+    }
+    if {$nd eq "auto"} {
+        return [GetMaxNDims {*}$ndlists]
+    }
+    # User-specified
+    set ndims $nd
+    ValidateNDims $ndims
+    foreach ndlist $ndlists {
+        if {![IsNDList $ndims $ndlist]} {
+            return -code error "not a valid ${ndims}D-list"
+        }
     }
     return $ndims
 }
@@ -1125,12 +1143,10 @@ proc ::ndlist::RecApply {level ndims command ndlist args} {
 # nd                Number of dimensions (e.g. 2D). Default "auto"
 
 proc ::ndlist::napply2 {command ndlist1 ndlist2 {suffix ""} {nd auto}} {
-    set ndims1 [ndims $ndlist1 $nd]
-    set ndims2 [ndims $ndlist2 $nd]
-    set ndims [max [list $ndims1 $ndims2]]
-    set dims [GetMaxShape $ndims $ndlist1 $ndlist2]
-    set ndlist1 [nexpand $ndlist1 {*}$dims]
-    set ndlist2 [nexpand $ndlist2 {*}$dims]
+    set ndims [ndims_multiple [list $ndlist1 $ndlist2] $nd]
+    set shape [GetMaxShape $ndims $ndlist1 $ndlist2]
+    set ndlist1 [nexpand $ndlist1 {*}$shape]
+    set ndlist2 [nexpand $ndlist2 {*}$shape]
     RecApply2 1 $ndims $command $ndlist1 $ndlist2 {*}$suffix
 }
 
@@ -1204,7 +1220,7 @@ proc ::ndlist::nreduce {command ndlist {axis 0} {suffix ""} {nd auto}} {
 # nmap <$nd> $varName $ndlist ... $body; # lmap style, returns value.
 # 
 # Arguments:
-# nd            Number of dimensions (e.g. 2D). Default "auto"
+# nd            Number of dimensions. Default "auto"
 # varName       Variable name to iterate with (lmap style)
 # ndlist        ND-list to iterate over (lmap style)
 # body          Body to evaluate at every iteration
@@ -1228,7 +1244,7 @@ proc ::ndlist::nmap {args} {
     set varNames [dict keys $varMap]
     set ndlists [dict values $varMap]
     set body [lindex $args end]
-    set ndims [max [lmap ndlist $ndlists {ndims $ndlist $nd}]]
+    set ndims [ndims_multiple $ndlists $nd]
     # Handle scalar case
     if {$ndims == 0} {
         uplevel 1 [list lassign $ndlists {*}$varNames]
