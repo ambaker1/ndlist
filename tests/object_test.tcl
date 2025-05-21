@@ -178,9 +178,23 @@ test all_operators {
 
 # Other methods
 test other_methods {
-    # Test all other methods
+    # Test all other narray methods
 } -body {
     narray new x {{1 2 3} {4 5 6}}
     assert [[$x remove 1]] eq {{1 2 3}}
     assert [[$x insert 1 {{A B C}}]] eq {{1 2 3} {A B C}}
+} -result {}
+
+test rank_type {
+    # Test out the auto-rank feature of narray
+} -body {
+    narray new x {{1 2 3} {4 5 6}}
+    assert [$x ndims type] eq auto
+    assert [$x ndims] == 2
+    $x ndims 1
+    assert [$x ndims type] eq user
+    assert [$x ndims] == 1
+    $x ndims auto
+    assert [$x ndims type] eq auto
+    assert [$x ndims] == 2
 } -result {}

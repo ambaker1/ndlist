@@ -80,6 +80,14 @@ proc ::ndlist::ValidateRefName {refName} {
         if {$nd eq ""} {
             return $myDims
         }
+        # Type case
+        if {$nd eq "type"} {
+            if {$autoDims} {
+                return "auto"
+            } else {
+                return "user"
+            }
+        }
         # Modify dimensions
         set ndims [::ndlist::GetNDims $nd $myValue]
         ::ndlist::ndlist $myValue $ndims

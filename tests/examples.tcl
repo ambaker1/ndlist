@@ -476,26 +476,28 @@ puts -nonewline {}
 {1 1} {1 2} {2 0} {2 1} {2 2}
 }
 
-test {Example 42} {Creating ND-arrays} -body {
+test {Example 42} {Creating an ``narray'' object and accessing the value} -body {
 puts {}
-# Create new ND-arrays
-narray new a foo
-narray new b {1 2 3}
-narray new c {{1 2 3} {4 5 6}}
-narray new d {{{a b} {c d}} {{e f} {g h}}}
-# Print rank and value of ND-arrays
-foreach object [list $a $b $c $d] {
-    puts [list [$object ndims] [$object shape]]
-}
+narray new x {hello world}
+puts [$x]
 puts -nonewline {}
 } -output {
-0 {}
-1 3
-2 {2 3}
-3 {2 2 2}
+hello world
 }
 
-test {Example 43} {Accessing portions of an ND-array} -body {
+test {Example 43} {N-array dimension, shape and size} -body {
+puts {}
+narray new x {{1 2 3} {4 5 6}}
+puts [list [$x ndims] [$x ndims type] [$x shape] [$x size]]
+$x ndims 3; # change number of dimensions
+puts [list [$x ndims] [$x ndims type] [$x shape] [$x size]]
+puts -nonewline {}
+} -output {
+2 auto {2 3} 6
+3 user {2 3 1} 6
+}
+
+test {Example 44} {Accessing portions of an ND-array} -body {
 puts {}
 narray new x {{1 2 3} {4 5 6} {7 8 9}}
 puts [$x @ 0 2]
@@ -506,7 +508,7 @@ puts -nonewline {}
 {1 3} {4 6}
 }
 
-test {Example 44} {Copying a portion of an ND-array} -body {
+test {Example 45} {Copying a portion of an ND-array} -body {
 puts {}
 narray new x {{1 2 3} {4 5 6}}
 $x @ 0* : --> y; # Row vector (flattened to 1D)
@@ -516,7 +518,7 @@ puts -nonewline {}
 1, 1 2 3
 }
 
-test {Example 45} {Get distance between elements in a vector} -body {
+test {Example 46} {Get distance between elements in a vector} -body {
 puts {}
 narray new x {1 2 4 7 11 16}
 puts [nexpr {@x(1:end) - @x(0:end-1)}]
@@ -525,7 +527,7 @@ puts -nonewline {}
 1 2 3 4 5
 }
 
-test {Example 46} {Outer product of two vectors} -body {
+test {Example 47} {Outer product of two vectors} -body {
 puts {}
 narray new x {1 2 3}
 narray new y {{4 5 6}}
@@ -535,7 +537,7 @@ puts -nonewline {}
 {4 5 6} {8 10 12} {12 15 18}
 }
 
-test {Example 47} {Element-wise modification of a vector} -body {
+test {Example 48} {Element-wise modification of a vector} -body {
 puts {}
 # Create blank vectors and assign values
 [narray new x] = {1 2 3}
@@ -553,7 +555,7 @@ puts -nonewline {}
 12 23 38
 }
 
-test {Example 48} {Removing elements from a vector} -body {
+test {Example 49} {Removing elements from a vector} -body {
 puts {}
 narray new vector {1 2 3 4 5 6 7 8}
 # Remove all odd numbers
@@ -564,7 +566,7 @@ puts -nonewline {}
 2 4 6 8
 }
 
-test {Example 49} {Temporary object value} -body {
+test {Example 50} {Temporary object value} -body {
 puts {}
 # Create a matrix
 narray new x {{1 2 3} {4 5 6}}
@@ -578,7 +580,7 @@ puts -nonewline {}
 {1 2 3} {4 5 6}
 }
 
-test {Example 50} {Appending a vector} -body {
+test {Example 51} {Appending a vector} -body {
 puts {}
 # Create a 1D list
 narray new x {1 2 3}
@@ -594,7 +596,7 @@ puts -nonewline {}
 1 2 3 4 5 {6 7 8 9}
 }
 
-test {Example 51} {Creating and accessing a table} -body {
+test {Example 52} {Creating and accessing a table} -body {
 puts {}
 table new tableObj {{key A B} {1 foo bar} {2 hello world}}
 puts [$tableObj]
@@ -603,7 +605,7 @@ puts -nonewline {}
 {key A B} {1 foo bar} {2 hello world}
 }
 
-test {Example 52} {Cleaning the table} -body {
+test {Example 53} {Cleaning the table} -body {
 puts {}
 table new tableObj
 $tableObj = {
@@ -630,7 +632,7 @@ puts -nonewline {}
 key
 }
 
-test {Example 53} {Access table components} -body {
+test {Example 54} {Access table components} -body {
 puts {}
 table new tableObj
 $tableObj = {
@@ -652,7 +654,7 @@ A B
 {foo bar} {hello world}
 }
 
-test {Example 54} {Accessing table data and dimensions} -body {
+test {Example 55} {Accessing table data and dimensions} -body {
 puts {}
 table new tableObj {{key A B} {1 foo bar} {2 hello world} {3 {} {}}}
 puts [$tableObj dict]
@@ -665,7 +667,7 @@ puts -nonewline {}
 2
 }
 
-test {Example 55} {Find column index of a field} -body {
+test {Example 56} {Find column index of a field} -body {
 puts {}
 table new tableObj {
     {name x y z}
@@ -680,7 +682,7 @@ puts -nonewline {}
 2
 }
 
-test {Example 56} {Getting and setting values in a table} -body {
+test {Example 57} {Getting and setting values in a table} -body {
 puts {}
 table new tableObj
 # Set multiple values at once
@@ -694,7 +696,7 @@ puts -nonewline {}
 3.0
 }
 
-test {Example 57} {Setting entire rows/columns} -body {
+test {Example 58} {Setting entire rows/columns} -body {
 puts {}
 table new tableObj {{key A B}}
 $tableObj rset 1 {1 2}
@@ -707,7 +709,7 @@ puts -nonewline {}
 {key A B C} {1 1 2 3} {2 4 5 6} {3 7 8 9}
 }
 
-test {Example 58} {Matrix entry and access} -body {
+test {Example 59} {Matrix entry and access} -body {
 puts {}
 table new T
 $T mset {1 2 3 4} {A B} 0.0; # Initialize as zero
@@ -718,7 +720,7 @@ puts -nonewline {}
 {1.0 0.0} {2.0 0.0} {3.0 0.0} {0.0 0.0}
 }
 
-test {Example 59} {Iterating over a table, accessing and modifying field values} -body {
+test {Example 60} {Iterating over a table, accessing and modifying field values} -body {
 puts {}
 table new parameters {{key x y z}}
 $parameters set 1 x 1.0 y 2.0
@@ -732,7 +734,7 @@ puts -nonewline {}
 3.0 7.0
 }
 
-test {Example 60} {Math operation over table columns} -body {
+test {Example 61} {Math operation over table columns} -body {
 puts {}
 table new myTable
 $myTable set 1 x 1.0 
@@ -745,7 +747,7 @@ puts -nonewline {}
 22.0 24.0 26.0
 }
 
-test {Example 61} {Getting data that meets a criteria} -body {
+test {Example 62} {Getting data that meets a criteria} -body {
 puts {}
 # Create blank table with keyname "StudentID"
 table new classData StudentID
@@ -760,7 +762,7 @@ puts -nonewline {}
 {bob 175} {frank 180} {sue 165}
 }
 
-test {Example 62} {Accessing and modifying table columns} -body {
+test {Example 63} {Accessing and modifying table columns} -body {
 puts {}
 table new myTable
 $myTable define keys {1 2 3}
@@ -773,7 +775,7 @@ puts -nonewline {}
 22.0 24.0 26.0
 }
 
-test {Example 63} {Searching and sorting} -body {
+test {Example 64} {Searching and sorting} -body {
 puts {}
 # Use zip command to make a one-column table
 table new data [zip {key 1 2 3 4 5} {x 3.0 2.3 5.0 2.0 1.8}]
@@ -788,7 +790,7 @@ puts -nonewline {}
 {5 1.8} {4 2.0} {2 2.3} {1 3.0} {3 5.0}
 }
 
-test {Example 64} {Merging data from other tables} -body {
+test {Example 65} {Merging data from other tables} -body {
 puts {}
 table new table1 {{key A B} {1 foo bar} {2 hello world}}
 table new table2 {{key B} {1 foo} {2 there}}
@@ -799,7 +801,7 @@ puts -nonewline {}
 {key A B} {1 foo foo} {2 hello there}
 }
 
-test {Example 65} {Re-keying a table} -body {
+test {Example 66} {Re-keying a table} -body {
 puts {}
 table new tableObj {{ID A B C} {1 1 2 3} {2 4 5 6} {3 7 8 9}}
 $tableObj mkkey A
@@ -809,7 +811,7 @@ puts -nonewline {}
 {A B C ID} {1 2 3 1} {4 5 6 2} {7 8 9 3}
 }
 
-test {Example 66} {Renaming fields} -body {
+test {Example 67} {Renaming fields} -body {
 puts {}
 table new tableObj {{key A B C} {1 1 2 3}}
 $tableObj rename fields {x y z}
@@ -819,7 +821,7 @@ puts -nonewline {}
 {key x y z} {1 1 2 3}
 }
 
-test {Example 67} {Swapping table rows} -body {
+test {Example 68} {Swapping table rows} -body {
 puts {}
 table new tableObj
 $tableObj define keys {1 2 3 4}
@@ -831,7 +833,7 @@ puts -nonewline {}
 {key A} {4 16.0} {2 4.0} {3 8.0} {1 2.0}
 }
 
-test {Example 68} {File import/export} -body {
+test {Example 69} {File import/export} -body {
 puts {}
 # Export matrix to file (converts to csv)
 writeMatrix example.csv {{foo bar} {hello world}}
@@ -846,7 +848,7 @@ hello,world
 {foo bar} {hello world}
 }
 
-test {Example 69} {Data conversions} -body {
+test {Example 70} {Data conversions} -body {
 puts {}
 set matrix {{A B C} {{hello world} foo,bar {"hi"}}}
 puts {TXT format:}
@@ -863,7 +865,7 @@ A,B,C
 hello world,"foo,bar","""hi"""
 }
 
-test {Example 70} {Writing a table to SQLite} -body {
+test {Example 71} {Writing a table to SQLite} -body {
 puts {}
 # Matrix of data used for table (https://www.tutorialspoint.com/sqlite/company.sql)
 set matrix [txt2mat {\
@@ -892,7 +894,7 @@ Mark David Kim
 Mark David Kim
 }
 
-test {Example 71} {Reading and writing an entire SQL database} -body {
+test {Example 72} {Reading and writing an entire SQL database} -body {
 puts {}
 package require sqlite3; # required for sqlite3 command
 sqlite3 db myDatabase.db; # open SQL database

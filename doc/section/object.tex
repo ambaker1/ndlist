@@ -3,50 +3,67 @@ The command \cmdlink{narray} is a TclOO class based on the superclass \cmdlink{:
 It is an object-oriented approach to array manipulation and processing.
 
 \begin{syntax}
-\command{narray} new \$varName <\$value>
+\command{narray} new \$varName <\$value> <\$ndims>
 \end{syntax}
 \begin{syntax}
-narray create \$name \$varName <\$value>
+narray create \$name \$varName <\$value> <\$ndims>
 \end{syntax}
 \begin{args}
 \$varName & Variable to store object name for access and garbage collection. 
 Variable names are restricted to word characters and namespace delimiters only.\\
-\$value & ND-list value to store in ND-array. Default blank. \\
+\$value & ND-list value to store in array. Default blank. \\
+\$ndims & Number of dimensions of array. Default ``auto''. \\
 \$name & Name of object if using ``create'' method.
 \end{args}
-\clearpage
-\subsection{Value, Rank, Shape, and Size}
-The value is accessed by calling the object by itself, the rank is accessed with the method \methodlink[0]{narray}{ndims}, and the shape and size are accessed with the methods \methodlink[0]{narray}{shape} and \methodlink[0]{narray}{size}.
+\subsection{Value Access}
+The value stored in an narray object can be accessed by calling the object by itself with no argument, or by calling the method ``value''.
 \begin{syntax}
-\method{narray}{ndims}
+\method{narray}{<value>}
 \end{syntax}
+\begin{args}
+value & Optional method for returning value.
+\end{args}
+\begin{example}{Creating an ``narray'' object and accessing the value}
+\begin{lstlisting}
+narray new x {hello world}
+puts [$x]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+hello world
+\end{lstlisting}
+\end{example}
+
+\clearpage
+\subsection{Number of Dimensions}
+The number of dimensions can be manually set when creating the narray object, but by default it is set to ``auto''. For numerical data that is properly formatted as an ND-list, it will always choose the minimum number of dimensions that can store the data. For data containing strings with spaces, it is advised to manually set the dimension. To query or change the number of dimensions, use the method \methodlink[0]{narray}{ndims}.
 \begin{syntax}
-\method{narray}{shape} <\$axis>
+\method{narray}{ndims} <\$ndims | auto | type>
+\end{syntax}
+\begin{args}
+\$ndims & Value to set as number of dimensions of array. Default blank to query. \\
+auto & Toggle auto-dimensions. Returns auto-determined number of dimensions. \\
+type & Query internal dimension type. Returns ``auto'' or ``user''.
+\end{args}
+\subsection{Shape and Size}
+The shape and size corresponding with the number of dimensions of the narray are accessed with the methods \methodlink[0]{narray}{shape} and \methodlink[0]{narray}{size}.
+\begin{syntax}
+\method{narray}{shape}
 \end{syntax}
 \begin{syntax}
 \method{narray}{size}
 \end{syntax}
-\begin{args}
-\$axis & Axis to get dimension along. Default blank for all axes. \\
-\end{args}
-\begin{example}{Creating ND-arrays}
+\begin{example}{N-array dimension, shape and size}
 \begin{lstlisting}
-# Create new ND-arrays
-narray new a foo
-narray new b {1 2 3}
-narray new c {{1 2 3} {4 5 6}}
-narray new d {{{a b} {c d}} {{e f} {g h}}}
-# Print rank and value of ND-arrays
-foreach object [list $a $b $c $d] {
-    puts [list [$object ndims] [$object shape]]
-}
+narray new x {{1 2 3} {4 5 6}}
+puts [list [$x ndims] [$x ndims type] [$x shape] [$x size]]
+$x ndims 3; # change number of dimensions
+puts [list [$x ndims] [$x ndims type] [$x shape] [$x size]]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
-0 {}
-1 3
-2 {2 3}
-3 {2 2 2}
+2 auto {2 3} 6
+3 user {2 3 1} 6
 \end{lstlisting}
 \end{example}
 
