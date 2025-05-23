@@ -223,7 +223,24 @@ puts -nonewline {}
 {A 1} {A 2} {A 3} {B 1} {B 2} {B 3} {C 1} {C 2} {C 3}
 }
 
-test {Example 19} {Getting shape and size of an ND-list} -body {
+test {Example 19} {Rank of an ND-list} -body {
+puts {}
+set x {1}
+set y {1 2 {hello world}}; # note that this is not a valid 2D list
+set z {{1 2 3} {4 5 6}}
+puts [ndims $x]; # 0
+puts [ndims $y]; # 1
+puts [ndims $z]; # 2
+puts [ndims_multiple [list $x $y $z]]; # 1
+puts -nonewline {}
+} -output {
+0
+1
+2
+1
+}
+
+test {Example 20} {Getting shape and size of an ND-list} -body {
 puts {}
 set x {{1 2 3} {4 5 6}}
 puts [nshape $x]
@@ -234,7 +251,7 @@ puts -nonewline {}
 6
 }
 
-test {Example 20} {Generate ND-list filled with one value} -body {
+test {Example 21} {Generate ND-list filled with one value} -body {
 puts {}
 puts [nfull foo 3 2]; # 3x2 matrix filled with "foo"
 puts [nfull 0 2 2 2]; # 2x2x2 tensor filled with zeros
@@ -244,7 +261,7 @@ puts -nonewline {}
 {{0 0} {0 0}} {{0 0} {0 0}}
 }
 
-test {Example 21} {Generate random matrix} -body {
+test {Example 22} {Generate random matrix} -body {
 puts {}
 expr {srand(0)}; # resets the random number seed (for the example)
 puts [nrand 1 2]; # 1x2 matrix filled with random numbers
@@ -253,7 +270,7 @@ puts -nonewline {}
 {0.013469574513598146 0.3831388500440581}
 }
 
-test {Example 22} {Repeat elements of a matrix} -body {
+test {Example 23} {Repeat elements of a matrix} -body {
 puts {}
 puts [nrepeat {{1 2} {3 4}} 1 2]
 puts -nonewline {}
@@ -261,7 +278,7 @@ puts -nonewline {}
 {1 2 1 2} {3 4 3 4}
 }
 
-test {Example 23} {Expand an ND-list to new dimensions} -body {
+test {Example 24} {Expand an ND-list to new dimensions} -body {
 puts {}
 puts [nexpand {1 2 3} -1 2]
 puts [nexpand {{1 2}} 2 4]
@@ -271,7 +288,7 @@ puts -nonewline {}
 {1 2 1 2} {1 2 1 2}
 }
 
-test {Example 24} {Padding an ND-list with zeros} -body {
+test {Example 25} {Padding an ND-list with zeros} -body {
 puts {}
 set a {{1 2 3} {4 5 6} {7 8 9}}
 puts [npad $a 0 2 1]
@@ -280,7 +297,7 @@ puts -nonewline {}
 {1 2 3 0} {4 5 6 0} {7 8 9 0} {0 0 0 0} {0 0 0 0}
 }
 
-test {Example 25} {Extending an ND-list to a new shape with a filler value} -body {
+test {Example 26} {Extending an ND-list to a new shape with a filler value} -body {
 puts {}
 set a {hello hi hey howdy}
 puts [nextend $a world -1 2]
@@ -289,7 +306,7 @@ puts -nonewline {}
 {hello world} {hi world} {hey world} {howdy world}
 }
 
-test {Example 26} {Reshape a matrix to a 3D tensor} -body {
+test {Example 27} {Reshape a matrix to a 3D tensor} -body {
 puts {}
 set x [nflatten {{1 2 3 4} {5 6 7 8}}]
 puts [nreshape $x 2 2 2]
@@ -298,7 +315,7 @@ puts -nonewline {}
 {{1 2} {3 4}} {{5 6} {7 8}}
 }
 
-test {Example 27} {Reshape a vector to a matrix with three columns} -body {
+test {Example 28} {Reshape a vector to a matrix with three columns} -body {
 puts {}
 puts [nreshape {1 2 3 4 5 6} * 3]
 puts -nonewline {}
@@ -306,7 +323,7 @@ puts -nonewline {}
 {1 2 3} {4 5 6}
 }
 
-test {Example 28} {Index Notation} -body {
+test {Example 29} {Index Notation} -body {
 puts {}
 set n 10
 puts [::ndlist::ParseIndex $n :]
@@ -323,7 +340,7 @@ L {0 5 8}
 S 9
 }
 
-test {Example 29} {ND-list access} -body {
+test {Example 30} {ND-list access} -body {
 puts {}
 set A {{1 2 3} {4 5 6} {7 8 9}}
 puts [nget $A 0 :]; # get row matrix
@@ -340,7 +357,7 @@ puts -nonewline {}
 2 2 2
 }
 
-test {Example 30} {Replace range with a single value} -body {
+test {Example 31} {Replace range with a single value} -body {
 puts {}
 puts [nreplace [range 10] 0:2:end 0]
 puts -nonewline {}
@@ -348,7 +365,7 @@ puts -nonewline {}
 0 1 0 3 0 5 0 7 0 9
 }
 
-test {Example 31} {Swapping matrix rows} -body {
+test {Example 32} {Swapping matrix rows} -body {
 puts {}
 set a {{1 2 3} {4 5 6} {7 8 9}}
 nset a {1 0} : [nget $a {0 1} :]; # Swap rows and columns (modify by reference)
@@ -358,7 +375,7 @@ puts -nonewline {}
 {4 5 6} {1 2 3} {7 8 9}
 }
 
-test {Example 32} {Filtering a list by removing elements} -body {
+test {Example 33} {Filtering a list by removing elements} -body {
 puts {}
 set x [range 10]
 puts [nremove $x [find $x > 4]]
@@ -367,7 +384,7 @@ puts -nonewline {}
 0 1 2 3 4
 }
 
-test {Example 33} {Deleting a column from a matrix} -body {
+test {Example 34} {Deleting a column from a matrix} -body {
 puts {}
 set a {{1 2 3} {4 5 6} {7 8 9}}
 puts [nremove $a 2 1]
@@ -376,7 +393,7 @@ puts -nonewline {}
 {1 2} {4 5} {7 8}
 }
 
-test {Example 34} {Inserting a column into a matrix} -body {
+test {Example 35} {Inserting a column into a matrix} -body {
 puts {}
 narray new matrix {{1 2} {3 4} {5 6}}
 $matrix insert 1 {A B C} 1
@@ -386,7 +403,7 @@ puts -nonewline {}
 {1 A 2} {3 B 4} {5 C 6}
 }
 
-test {Example 35} {Concatenate tensors} -body {
+test {Example 36} {Concatenate tensors} -body {
 puts {}
 set x [nreshape {1 2 3 4 5 6 7 8 9} 3 3 1]
 set y [nreshape {A B C D E F G H I} 3 3 1]
@@ -396,7 +413,7 @@ puts -nonewline {}
 {{1 A} {2 B} {3 C}} {{4 D} {5 E} {6 F}} {{7 G} {8 H} {9 I}}
 }
 
-test {Example 36} {Changing tensor axes} -body {
+test {Example 37} {Changing tensor axes} -body {
 puts {}
 set x {{{1 2} {3 4}} {{5 6} {7 8}}}
 set y [nswapaxes $x 0 2]
@@ -411,7 +428,7 @@ puts -nonewline {}
 2
 }
 
-test {Example 37} {Chained functional mapping over a matrix} -body {
+test {Example 38} {Chained functional mapping over a matrix} -body {
 puts {}
 napply puts [napply {format %.2f} [napply expr {{1 2} {3 4}} {+ 1}]]
 puts -nonewline {}
@@ -422,7 +439,7 @@ puts -nonewline {}
 5.00
 }
 
-test {Example 38} {Format columns of a matrix} -body {
+test {Example 39} {Format columns of a matrix} -body {
 puts {}
 set data {{1 2 3} {4 5 6} {7 8 9}}
 set formats {{%.1f %.2f %.3f}}
@@ -432,7 +449,7 @@ puts -nonewline {}
 {1.0 2.00 3.000} {4.0 5.00 6.000} {7.0 8.00 9.000}
 }
 
-test {Example 39} {Matrix row and column statistics} -body {
+test {Example 40} {Matrix row and column statistics} -body {
 puts {}
 set x {{1 2} {3 4} {5 6} {7 8}}
 puts [nreduce max $x]; # max of each column
@@ -447,7 +464,7 @@ puts -nonewline {}
 3 7 11 15
 }
 
-test {Example 40} {Expand and map over matrices} -body {
+test {Example 41} {Expand and map over matrices} -body {
 puts {}
 set phrases [nmap 2 greeting {{hello goodbye}} subject {world moon} {
     list $greeting $subject
@@ -461,7 +478,7 @@ hello moon
 goodbye moon
 }
 
-test {Example 41} {Finding index tuples that match criteria} -body {
+test {Example 42} {Finding index tuples that match criteria} -body {
 puts {}
 set x {{1 2 3} {4 5 6} {7 8 9}}
 set indices {}
@@ -476,7 +493,7 @@ puts -nonewline {}
 {1 1} {1 2} {2 0} {2 1} {2 2}
 }
 
-test {Example 42} {Creating an ``narray'' object and accessing the value} -body {
+test {Example 43} {Creating an ``narray'' object and accessing the value} -body {
 puts {}
 narray new x {hello world}
 puts [$x]
@@ -485,7 +502,7 @@ puts -nonewline {}
 hello world
 }
 
-test {Example 43} {N-array dimension, shape and size} -body {
+test {Example 44} {N-array dimension, shape and size} -body {
 puts {}
 narray new x {{1 2 3} {4 5 6}}
 puts [list [$x ndims] [$x ndims type] [$x shape] [$x size]]
@@ -497,7 +514,7 @@ puts -nonewline {}
 3 user {2 3 1} 6
 }
 
-test {Example 44} {Accessing portions of an ND-array} -body {
+test {Example 45} {Accessing portions of an ND-array} -body {
 puts {}
 narray new x {{1 2 3} {4 5 6} {7 8 9}}
 puts [$x @ 0 2]
@@ -508,7 +525,7 @@ puts -nonewline {}
 {1 3} {4 6}
 }
 
-test {Example 45} {Copying a portion of an ND-array} -body {
+test {Example 46} {Copying a portion of an ND-array} -body {
 puts {}
 narray new x {{1 2 3} {4 5 6}}
 $x @ 0* : --> y; # Row vector (flattened to 1D)
@@ -518,7 +535,7 @@ puts -nonewline {}
 1, 1 2 3
 }
 
-test {Example 46} {Get distance between elements in a vector} -body {
+test {Example 47} {Get distance between elements in a vector} -body {
 puts {}
 narray new x {1 2 4 7 11 16}
 puts [nexpr {@x(1:end) - @x(0:end-1)}]
@@ -527,7 +544,7 @@ puts -nonewline {}
 1 2 3 4 5
 }
 
-test {Example 47} {Outer product of two vectors} -body {
+test {Example 48} {Outer product of two vectors} -body {
 puts {}
 narray new x {1 2 3}
 narray new y {{4 5 6}}
@@ -537,7 +554,7 @@ puts -nonewline {}
 {4 5 6} {8 10 12} {12 15 18}
 }
 
-test {Example 48} {Element-wise modification of a vector} -body {
+test {Example 49} {Element-wise modification of a vector} -body {
 puts {}
 # Create blank vectors and assign values
 [narray new x] = {1 2 3}
@@ -555,7 +572,7 @@ puts -nonewline {}
 12 23 38
 }
 
-test {Example 49} {Removing elements from a vector} -body {
+test {Example 50} {Removing elements from a vector} -body {
 puts {}
 narray new vector {1 2 3 4 5 6 7 8}
 # Remove all odd numbers
@@ -566,7 +583,7 @@ puts -nonewline {}
 2 4 6 8
 }
 
-test {Example 50} {Temporary object value} -body {
+test {Example 51} {Temporary object value} -body {
 puts {}
 # Create a matrix
 narray new x {{1 2 3} {4 5 6}}
@@ -580,7 +597,7 @@ puts -nonewline {}
 {1 2 3} {4 5 6}
 }
 
-test {Example 51} {Appending a vector} -body {
+test {Example 52} {Appending a vector} -body {
 puts {}
 # Create a 1D list
 narray new x {1 2 3}
@@ -596,7 +613,7 @@ puts -nonewline {}
 1 2 3 4 5 {6 7 8 9}
 }
 
-test {Example 52} {Creating and accessing a table} -body {
+test {Example 53} {Creating and accessing a table} -body {
 puts {}
 table new tableObj {{key A B} {1 foo bar} {2 hello world}}
 puts [$tableObj]
@@ -605,7 +622,7 @@ puts -nonewline {}
 {key A B} {1 foo bar} {2 hello world}
 }
 
-test {Example 53} {Cleaning the table} -body {
+test {Example 54} {Cleaning the table} -body {
 puts {}
 table new tableObj
 $tableObj = {
@@ -632,7 +649,7 @@ puts -nonewline {}
 key
 }
 
-test {Example 54} {Access table components} -body {
+test {Example 55} {Access table components} -body {
 puts {}
 table new tableObj
 $tableObj = {
@@ -654,7 +671,7 @@ A B
 {foo bar} {hello world}
 }
 
-test {Example 55} {Accessing table data and dimensions} -body {
+test {Example 56} {Accessing table data and dimensions} -body {
 puts {}
 table new tableObj {{key A B} {1 foo bar} {2 hello world} {3 {} {}}}
 puts [$tableObj dict]
@@ -667,7 +684,7 @@ puts -nonewline {}
 2
 }
 
-test {Example 56} {Find column index of a field} -body {
+test {Example 57} {Find column index of a field} -body {
 puts {}
 table new tableObj {
     {name x y z}
@@ -682,7 +699,7 @@ puts -nonewline {}
 2
 }
 
-test {Example 57} {Getting and setting values in a table} -body {
+test {Example 58} {Getting and setting values in a table} -body {
 puts {}
 table new tableObj
 # Set multiple values at once
@@ -696,7 +713,7 @@ puts -nonewline {}
 3.0
 }
 
-test {Example 58} {Setting entire rows/columns} -body {
+test {Example 59} {Setting entire rows/columns} -body {
 puts {}
 table new tableObj {{key A B}}
 $tableObj rset 1 {1 2}
@@ -709,7 +726,7 @@ puts -nonewline {}
 {key A B C} {1 1 2 3} {2 4 5 6} {3 7 8 9}
 }
 
-test {Example 59} {Matrix entry and access} -body {
+test {Example 60} {Matrix entry and access} -body {
 puts {}
 table new T
 $T mset {1 2 3 4} {A B} 0.0; # Initialize as zero
@@ -720,7 +737,7 @@ puts -nonewline {}
 {1.0 0.0} {2.0 0.0} {3.0 0.0} {0.0 0.0}
 }
 
-test {Example 60} {Iterating over a table, accessing and modifying field values} -body {
+test {Example 61} {Iterating over a table, accessing and modifying field values} -body {
 puts {}
 table new parameters {{key x y z}}
 $parameters set 1 x 1.0 y 2.0
@@ -734,7 +751,7 @@ puts -nonewline {}
 3.0 7.0
 }
 
-test {Example 61} {Math operation over table columns} -body {
+test {Example 62} {Math operation over table columns} -body {
 puts {}
 table new myTable
 $myTable set 1 x 1.0 
@@ -747,7 +764,7 @@ puts -nonewline {}
 22.0 24.0 26.0
 }
 
-test {Example 62} {Getting data that meets a criteria} -body {
+test {Example 63} {Getting data that meets a criteria} -body {
 puts {}
 # Create blank table with keyname "StudentID"
 table new classData StudentID
@@ -762,7 +779,7 @@ puts -nonewline {}
 {bob 175} {frank 180} {sue 165}
 }
 
-test {Example 63} {Accessing and modifying table columns} -body {
+test {Example 64} {Accessing and modifying table columns} -body {
 puts {}
 table new myTable
 $myTable define keys {1 2 3}
@@ -775,7 +792,7 @@ puts -nonewline {}
 22.0 24.0 26.0
 }
 
-test {Example 64} {Searching and sorting} -body {
+test {Example 65} {Searching and sorting} -body {
 puts {}
 # Use zip command to make a one-column table
 table new data [zip {key 1 2 3 4 5} {x 3.0 2.3 5.0 2.0 1.8}]
@@ -790,7 +807,7 @@ puts -nonewline {}
 {5 1.8} {4 2.0} {2 2.3} {1 3.0} {3 5.0}
 }
 
-test {Example 65} {Merging data from other tables} -body {
+test {Example 66} {Merging data from other tables} -body {
 puts {}
 table new table1 {{key A B} {1 foo bar} {2 hello world}}
 table new table2 {{key B} {1 foo} {2 there}}
@@ -801,7 +818,7 @@ puts -nonewline {}
 {key A B} {1 foo foo} {2 hello there}
 }
 
-test {Example 66} {Re-keying a table} -body {
+test {Example 67} {Re-keying a table} -body {
 puts {}
 table new tableObj {{ID A B C} {1 1 2 3} {2 4 5 6} {3 7 8 9}}
 $tableObj mkkey A
@@ -811,7 +828,7 @@ puts -nonewline {}
 {A B C ID} {1 2 3 1} {4 5 6 2} {7 8 9 3}
 }
 
-test {Example 67} {Renaming fields} -body {
+test {Example 68} {Renaming fields} -body {
 puts {}
 table new tableObj {{key A B C} {1 1 2 3}}
 $tableObj rename fields {x y z}
@@ -821,7 +838,7 @@ puts -nonewline {}
 {key x y z} {1 1 2 3}
 }
 
-test {Example 68} {Swapping table rows} -body {
+test {Example 69} {Swapping table rows} -body {
 puts {}
 table new tableObj
 $tableObj define keys {1 2 3 4}
@@ -833,7 +850,7 @@ puts -nonewline {}
 {key A} {4 16.0} {2 4.0} {3 8.0} {1 2.0}
 }
 
-test {Example 69} {File import/export} -body {
+test {Example 70} {File import/export} -body {
 puts {}
 # Export matrix to file (converts to csv)
 writeMatrix example.csv {{foo bar} {hello world}}
@@ -848,7 +865,7 @@ hello,world
 {foo bar} {hello world}
 }
 
-test {Example 70} {Data conversions} -body {
+test {Example 71} {Data conversions} -body {
 puts {}
 set matrix {{A B C} {{hello world} foo,bar {"hi"}}}
 puts {TXT format:}
@@ -865,7 +882,7 @@ A,B,C
 hello world,"foo,bar","""hi"""
 }
 
-test {Example 71} {Writing a table to SQLite} -body {
+test {Example 72} {Writing a table to SQLite} -body {
 puts {}
 # Matrix of data used for table (https://www.tutorialspoint.com/sqlite/company.sql)
 set matrix [txt2mat {\
@@ -894,7 +911,7 @@ Mark David Kim
 Mark David Kim
 }
 
-test {Example 72} {Reading and writing an entire SQL database} -body {
+test {Example 73} {Reading and writing an entire SQL database} -body {
 puts {}
 package require sqlite3; # required for sqlite3 command
 sqlite3 db myDatabase.db; # open SQL database

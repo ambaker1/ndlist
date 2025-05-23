@@ -66,12 +66,16 @@ proc ::ndlist::GetMaxNDims {args} {
     }
     set ndims_list [lmap ndlist $args {GetNDims $ndlist}]
     foreach ndims [lsort -integer -decreasing $ndims_list] {
+        set validRank 1
         foreach ndlist $args {
             if {![IsNDList $ndims $ndlist]} {
-                continue
+                set validRank 0
+                break
             }
         }
-        break
+        if {$validRank} {
+            break
+        }
     }
     return $ndims
 }

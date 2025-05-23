@@ -1,32 +1,54 @@
 \section{N-Dimensional Lists (Tensors)}
 A ND-list is defined as a list of equal length (N-1)D-lists, which are defined as equal length (N-2)D-lists, and so on until (N-N)D-lists, which are scalars of arbitrary size.
 This definition is flexible, and allows for different interpretations of the same data. 
-For example, the list ``1 2 3'' can be interpreted as a scalar with value ``1 2 3'', a vector with values ``1'', ``2'', and ``3'', or a matrix with row vectors ``1'', ``2'', and ``3''. 
+For example, the list ``1 2 3'' can be interpreted as a scalar with value ``1 2 3'', a vector with values ``1'', ``2'', and ``3'', or a matrix with row vectors ``1'', ``2'', and ``3''. In general, if a value is a valid for N dimensions, it will also be valid for dimensions 0 to N-1.
 
-The command \cmdlink{ndlist} validates that the input is a valid ND-list. 
-If the input value is ``ragged'', as in it has inconsistent dimensions, it will throw an error. 
-In general, if a value is a valid for N dimensions, it will also be valid for dimensions 0 to N-1.
-All other ND-list commands assume a valid ND-list.
+The command \cmdlink{ndims} returns the rank of an ND-list, and the command \cmdlink{ndims\_multiple} returns the rank that is compatible with multiple ND-lists. 
+By default, it automatically determines the rank for the data, but if a rank is provided, it will validate that the ND-list or ND-lists are compatible with the provided rank. 
 \begin{syntax}
-\command{ndlist} \$value <\$nd>
+\command{ndims} \$ndlist <\$rank>
+\end{syntax}
+\begin{syntax}
+\command{ndims\_multiple} \$ndlists <\$rank>
 \end{syntax}
 \begin{args}
-\$value & List to interpret as an ndlist. \\
-\$nd & Rank of ND-list (e.g. 2 for matrix) or ``auto'' for auto-rank. Default ``auto''.
+\$ndlist & ND-list. \\
+\$ndlists & List of ND-lists. \\
+\$rank & Rank of ND-list (e.g. 2 for matrix) or ``auto'' for auto-rank. Default ``auto''.
 \end{args}
+
+\begin{example}{Rank of an ND-list}
+\begin{lstlisting}
+set x {1}
+set y {1 2 {hello world}}; # note that this is not a valid 2D list
+set z {{1 2 3} {4 5 6}}
+puts [ndims $x]; # 0
+puts [ndims $y]; # 1
+puts [ndims $z]; # 2
+puts [ndims_multiple [list $x $y $z]]; # 1
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+0
+1
+2
+1
+\end{lstlisting}
+\end{example}
+Note: All Tcl values are ND-lists, because a 0D-list is just a string that can't be parsed as a Tcl list, and in Tcl, everything is a string.
+\clearpage
 \subsection{Shape and Size}
 The commands \cmdlink{nshape} and \cmdlink{nsize} return the shape and size of an ND-list, respectively.
 The shape is a list of the dimensions, and the size is the product of the shape.
 \begin{syntax}
-\command{nshape} \$ndlist <\$nd>
+\command{nshape} \$ndlist <\$rank>
 \end{syntax}
 \begin{syntax}
-\command{nsize} \$ndlist <\$nd>
+\command{nsize} \$ndlist <\$rank>
 \end{syntax}
 \begin{args}
 \$ndlist & ND-list to get shape/size of. \\
-\$axis & Axis to get dimension along. Default blank for all. \\
-\$nd & Rank of ND-list (e.g. 2 for matrix) or ``auto'' for auto-rank. Default ``auto''.
+\$rank & Rank of ND-list (e.g. 2 for matrix) or ``auto'' for auto-rank. Default ``auto''.
 \end{args}
 \begin{example}{Getting shape and size of an ND-list}
 \begin{lstlisting}
@@ -163,11 +185,11 @@ puts [nextend $a world -1 2]
 \subsection{Flattening and Reshaping}
 The command \cmdlink{nflatten} flattens an ND-list to a vector.
 \begin{syntax}
-\command{nflatten} \$ndlist <\$nd>
+\command{nflatten} \$ndlist <\$rank>
 \end{syntax}
 \begin{args}
 \$ndlist & ND-list to flatten. \\
-\$nd & Rank of ND-list (e.g. 2 for matrix) or ``auto'' for auto-rank. Default ``auto''.
+\$rank & Rank of ND-list (e.g. 2 for matrix) or ``auto'' for auto-rank. Default ``auto''.
 \end{args}
 \begin{example}{Reshape a matrix to a 3D tensor}
 \begin{lstlisting}
@@ -356,16 +378,16 @@ If ``end'' or ``end-integer'' is used for the index, it will insert after the in
 Otherwise, it will insert before the index.
 The command \cmdlink{ncat} is shorthand for inserting at ``end'', and concatenates two ND-lists.
 \begin{syntax}
-\command{ninsert} \$ndlist1 \$index \$ndlist2 <\$axis> <\$nd>
+\command{ninsert} \$ndlist1 \$index \$ndlist2 <\$axis> <\$rank>
 \end{syntax}
 \begin{syntax}
-\command{ncat} \$ndlist1 \$ndlist2 <\$axis> <\$nd> 
+\command{ncat} \$ndlist1 \$ndlist2 <\$axis> <\$rank> 
 \end{syntax}
 \begin{args}
 \$ndlist1 \$ndlist2 & ND-lists to combine. \\
 \$index & Index to insert at. \\
 \$axis & Axis to insert/concatenate at (default 0). \\
-\$nd & Rank of ND-list (e.g. 2 for matrix) or ``auto'' for auto-rank. Default ``auto''.
+\$rank & Rank of ND-list (e.g. 2 for matrix) or ``auto'' for auto-rank. Default ``auto''.
 \end{args}
 
 \begin{example}{Inserting a column into a matrix}
@@ -444,17 +466,17 @@ The command \cmdlink{napply} applies a command over each element of an ND-list, 
 The commands \cmdlink{napply2} maps element-wise over two ND-lists. 
 If the input lists have different shapes, they will be expanded to their maximum dimensions with \cmdlink{nexpand} (if compatible).
 \begin{syntax}
-\command{napply} \$command \$ndlist <\$suffix> <\$nd>
+\command{napply} \$command \$ndlist <\$suffix> <\$rank>
 \end{syntax}
 \begin{syntax}
-\command{napply2} \$command \$ndlist1 \$ndlist2 <\$suffix> <\$nd> 
+\command{napply2} \$command \$ndlist1 \$ndlist2 <\$suffix> <\$rank> 
 \end{syntax}
 \begin{args}
 \$ndlist & ND-list to map over. \\
 \$ndlist1 \$ndlist2 & ND-lists to map over, element-wise. \\
 \$command & Command prefix to map with. \\
 \$suffix & Additional arguments to append to command after ND-list elements. Default blank. \\
-\$nd & Rank of ND-list (e.g. 2 for matrix) or ``auto'' for auto-rank. Default ``auto''.
+\$rank & Rank of ND-list (e.g. 2 for matrix) or ``auto'' for auto-rank. Default ``auto''.
 \end{args}
 \begin{example}{Chained functional mapping over a matrix}
 \begin{lstlisting}
@@ -483,14 +505,14 @@ puts [napply2 format $formats $data]
 \subsection{Reducing an ND-list}
 The command \cmdlink{nreduce} combines \cmdlink{nmoveaxis} and \cmdlink{napply} to reduce an axis of an ND-list with a function that reduces a vector to a scalar, like \cmdlink{max} or \cmdlink{sum}.
 \begin{syntax}
-\command{nreduce} \$command \$ndlist <\$axis> <\$suffix> <\$nd>
+\command{nreduce} \$command \$ndlist <\$axis> <\$suffix> <\$rank>
 \end{syntax}
 \begin{args}
 \$command & Command prefix to map with. \\
 \$ndlist & ND-list to map over. \\
 \$axis & Axis to reduce. Default 0. \\
 \$suffix & Additional arguments to append to command after ND-list elements. Default blank. \\
-\$nd & Rank of ND-list (e.g. 2 for matrix) or ``auto'' for auto-rank. Default ``auto''.
+\$rank & Rank of ND-list (e.g. 2 for matrix) or ``auto'' for auto-rank. Default ``auto''.
 \end{args}
 \begin{example}{Matrix row and column statistics}
 \begin{lstlisting}
@@ -517,10 +539,10 @@ The actual implementation flattens all the ND-lists and calls the Tcl \textit{lm
 So, if ``continue'' or ``break'' are used in the map body, it will return an error.
 
 \begin{syntax}
-\command{nmap} <\$nd> \$varName \$ndlist <\$varName \$ndlist ...> \$body
+\command{nmap} <\$rank> \$varName \$ndlist <\$varName \$ndlist ...> \$body
 \end{syntax}
 \begin{args}
-\$nd & Rank of ND-list (e.g. 2 for matrix) or ``auto'' for auto-rank. Default ``auto''.  \\
+\$rank & Rank of ND-list (e.g. 2 for matrix) or ``auto'' for auto-rank. Default ``auto''.  \\
 \$varName & Variable name to iterate with. \\
 \$ndlist & ND-list to iterate over. \\
 \$body & Tcl script to evaluate at every loop iteration. 

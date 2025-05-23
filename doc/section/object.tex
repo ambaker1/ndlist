@@ -3,16 +3,16 @@ The command \cmdlink{narray} is a TclOO class based on the superclass \cmdlink{:
 It is an object-oriented approach to array manipulation and processing.
 
 \begin{syntax}
-\command{narray} new \$varName <\$value> <\$ndims>
+\command{narray} new \$varName <\$value> <\$rank>
 \end{syntax}
 \begin{syntax}
-narray create \$name \$varName <\$value> <\$ndims>
+narray create \$name \$varName <\$value> <\$rank>
 \end{syntax}
 \begin{args}
 \$varName & Variable to store object name for access and garbage collection. 
 Variable names are restricted to word characters and namespace delimiters only.\\
 \$value & ND-list value to store in array. Default blank. \\
-\$ndims & Number of dimensions of array. Default ``auto''. \\
+\$rank & Number of dimensions of array. Default ``auto''. \\
 \$name & Name of object if using ``create'' method.
 \end{args}
 \subsection{Value Access}
@@ -38,10 +38,10 @@ hello world
 \subsection{Number of Dimensions}
 The number of dimensions can be manually set when creating the narray object, but by default it is set to ``auto''. For numerical data that is properly formatted as an ND-list, it will always choose the minimum number of dimensions that can store the data. For data containing strings with spaces, it is advised to manually set the dimension. To query or change the number of dimensions, use the method \methodlink[0]{narray}{ndims}.
 \begin{syntax}
-\method{narray}{ndims} <\$ndims | auto | type>
+\method{narray}{ndims} <\$rank | auto | type>
 \end{syntax}
 \begin{args}
-\$ndims & Value to set as number of dimensions of array. Default blank to query. \\
+\$rank & Value to set as number of dimensions of array. Default blank to query. \\
 auto & Toggle auto-dimensions. Returns auto-determined number of dimensions. \\
 type & Query internal dimension type. Returns ``auto'' or ``user''.
 \end{args}
