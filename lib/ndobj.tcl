@@ -12,7 +12,7 @@
 # Define namespace and exported commands
 namespace eval ::ndlist {
     variable ref; # Reference map for ndlists.
-    namespace export narray neval nexpr
+    namespace export narray neval nexpr neval2 nexpr2
 }
 
 # ValidateRefName --
@@ -415,6 +415,57 @@ proc ::ndlist::neval {body {self ""} {rankVar ""}} {
     }
 }
 
+proc ::ndlist::neval2 {body {rank auto}} {
+    variable ref; # Reference array
+    # Get references
+    lassign [RefSub $body] body refNames 
+    # Get values and shapes from object references
+    set ndlists "" 
+    foreach {refName index} $refNames {
+        # Variable reference
+        upvar 1 $refName refVal
+        if {![info exists refVal]} {
+            return -code error "\"$refName\" does not exist"
+        }
+        if {[array exists refVal]} {
+            return -code error "\"$refName\" is an array"
+        }
+        set ndlist $refVal
+        # Index if needed
+        if {$index ne ""} {
+            set ndlist [nget $ndlist {*}[split $index ,]]
+        }
+        # Get object rank and value for mapping.
+        lappend ndlists $ndlist
+    }
+    # Save old reference mapping, and initialize.
+    set oldRefs [array get ref]
+    array unset ref
+    # Assign scalars and build map list
+    set varMap ""; # varName value ...
+    foreach ndlist $ndlists {refName index} $refNames {
+        if {[ndims $ndlist] == 0} {
+            # Scalar. Set value directly.
+            set ::ndlist::ref($refName.$index) $ndlist
+        } else {
+            # Not a scalar (rank > 0)
+            lappend varMap ::ndlist::ref($refName.$index) $ndlist
+        }
+    }
+    # Try to evaluate user-input
+    try {
+        if {[llength $varMap] == 0} {
+            uplevel 1 $body
+        } else {
+            uplevel 1 [list ::ndlist::nmap $rank {*}$varMap $body]
+        }
+    } finally {
+        # Reset refs (even if mapping failed)
+        array unset ref
+        array set ref $oldRefs
+    }
+}
+
 # nexpr --
 #
 # Version of neval, but for math.
@@ -434,4 +485,8 @@ proc ::ndlist::neval {body {self ""} {rankVar ""}} {
 
 proc ::ndlist::nexpr {expr {self ""} {rankVar ""}} {
     tailcall neval [list expr $expr] $self $rankVar
+}
+
+proc ::ndlist::nexpr2 {expr {rank auto}} {
+    tailcall neval2 [list expr $expr] $rank
 }
