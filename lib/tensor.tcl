@@ -13,6 +13,7 @@
 namespace eval ::ndlist {    
     variable map_index ""; # Linear index of mapping
     variable map_shape ""; # Shape of nmap list
+    variable ref; # Reference map for neval.
     namespace export ndims nshape nsize; # ND-list basics
     namespace export ndims_multiple; # Get/check ndims for compatibility
     namespace export nfull nrand; # ND-list initialization
@@ -23,6 +24,7 @@ namespace eval ::ndlist {
     namespace export nswapaxes nmoveaxis npermute; # Axis reordering
     namespace export napply napply2 nreduce; # Functional mapping
     namespace export nmap i j k; # Generalized mapping/looping
+    namespace export neval nexpr; # Element-wise evaluation/math
 }
 
 # ND-LIST BASICS
@@ -1309,3 +1311,110 @@ proc ::ndlist::i {{axis 0}} {
 }
 proc ::ndlist::j {} {i 1}
 proc ::ndlist::k {} {i 2}
+
+
+# RefSub --
+#
+# Search for pattern @ref(index)
+# Returns body substituted with array references, and list of refs.
+# Reference list has two parts: name and index.
+# name:     Variable name that contains object. Blank for "self".
+# index:    Index for narray. Blank for all.
+
+proc ::ndlist::RefSub {body} {
+    set exp {@((::+|\w+)+|\.)?(\(([^\(]*)\))?}
+    set refMap ""
+    foreach {match name ~ ~ index} [regexp -all -inline $exp $body] {
+        dict set refMap [list $name $index] ""
+    }
+    set body [regsub -all $exp $body {$::ndlist::ref(\1.\4)}]
+    set refNames [concat {*}[dict keys $refMap]]
+    return [list $body $refNames]
+}
+
+# neval --
+#
+# Map over ND lists
+# References must have matching dimensions or be scalar.
+#
+# Syntax:
+# neval $body <$rank>
+#
+# Arguments:
+# body          Tcl script, with @ref notation for object references.
+# rank          Rank of mapping. Default "auto"
+
+# Example:
+# set x {{hello world} {foo bar}}
+# neval {string toupper @x}; # {{HELLO WORLD} {FOO BAR}}
+
+proc ::ndlist::neval {body {rank auto}} {
+    variable ref; # Reference array
+    # Get references
+    lassign [RefSub $body] body refNames 
+    # Get values and shapes from object references
+    set ndlists "" 
+    foreach {refName index} $refNames {
+        # Variable reference
+        upvar 1 $refName refVal
+        if {![info exists refVal]} {
+            return -code error "\"$refName\" does not exist"
+        }
+        if {[array exists refVal]} {
+            return -code error "\"$refName\" is an array"
+        }
+        set ndlist $refVal
+        # Index if needed
+        if {$index ne ""} {
+            set ndlist [nget $ndlist {*}[split $index ,]]
+        }
+        # Get object rank and value for mapping.
+        lappend ndlists $ndlist
+    }
+    # Save old reference mapping, and initialize.
+    set oldRefs [array get ref]
+    array unset ref
+    # Assign scalars and build map list
+    set varMap ""; # varName value ...
+    foreach ndlist $ndlists {refName index} $refNames {
+        if {[ndims $ndlist] == 0} {
+            # Scalar. Set value directly.
+            set ::ndlist::ref($refName.$index) $ndlist
+        } else {
+            # Not a scalar (rank > 0)
+            lappend varMap ::ndlist::ref($refName.$index) $ndlist
+        }
+    }
+    # Try to evaluate user-input
+    try {
+        if {[llength $varMap] == 0} {
+            uplevel 1 $body
+        } else {
+            uplevel 1 [list ::ndlist::nmap $rank {*}$varMap $body]
+        }
+    } finally {
+        # Reset refs (even if mapping failed)
+        array unset ref
+        array set ref $oldRefs
+    }
+}
+
+# nexpr --
+#
+# Version of neval, but for math.
+#
+# Syntax:
+# nexpr $expr <$rank>
+#
+# Arguments:
+# expr          Math expression, with @ref notation for object references.
+# rank          Rank of mapping. Default "auto"
+
+# Example:
+# set x {1.0 2.0 3.0}
+# set y 5.0
+# nexpr {@x + @y}; # {6.0 7.0 8.0}
+
+proc ::ndlist::nexpr {expr {rank auto}} {
+    tailcall neval [list expr $expr] $rank
+}

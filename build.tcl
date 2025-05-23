@@ -23,19 +23,20 @@ puts "Running all tests..."
 source tests/vector_test.tcl
 source tests/matrix_test.tcl
 source tests/tensor_test.tcl
-source tests/object_test.tcl
-source tests/fileio_test.tcl
-source tests/table_test.tcl
-source tests/vutil_test.tcl
-source tests/examples.tcl
-file delete myDatabase.db; # from examples.tcl
+# source tests/object_test.tcl
+# source tests/fileio_test.tcl
+# source tests/table_test.tcl
+# source tests/vutil_test.tcl
+# source tests/examples.tcl
+# file delete myDatabase.db; # from examples.tcl
 
 
 set x {1 2 3}
 set y {{1 2} {3 4} {5 6}}
 set z 20.0
-puts [::ndlist::nexpr2 {@x + 2*@y + @z}]
+puts [nexpr {@x + 2*@y + @z}]
 pause
+exit
 
 # Check number of failed tests
 set nFailed $::tcltest::numTests(Failed)

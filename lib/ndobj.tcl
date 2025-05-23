@@ -12,7 +12,7 @@
 # Define namespace and exported commands
 namespace eval ::ndlist {
     variable ref; # Reference map for ndlists.
-    namespace export narray neval nexpr neval2 nexpr2
+    namespace export narray neval nexpr
 }
 
 # ValidateRefName --
