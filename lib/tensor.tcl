@@ -193,16 +193,16 @@ proc ::ndlist::nreshape {vector args} {
         # Note: 1 element list can be converted to scalar.
         return [lindex $vector 0]
     }
-    # Vector case (allow for dynamic "*")
+    # Vector case (allow for dynamic "-1")
     if {[llength $args] == 1} {
         set arg [lindex $args 0]
-        if {$size != $arg && $arg ne "*"} {
+        if {$size != $arg && $arg != -1} {
             return -code error "incompatible dimensions"
         }
         return $vector
     }
     # Matrix and higher-dimensional case (allow for one dynamic axis)
-    set dynamic [lsearch -all -exact $args "*"]
+    set dynamic [lsearch -all -exact $args "-1"]
     if {[llength $dynamic] > 1} {
         return -code error "can only make one axis dynamic"
     }
@@ -588,7 +588,7 @@ proc ::ndlist::nset {varName args} {
 # ndlist        Valid ND-list
 # index ...     Indices to replace at
 # sublist       Sublist to replace with (must be expandable)
-#               If blank and all other indices are "*", calls nremove.
+#               If blank and all other indices are ":", calls nremove.
 # expr          Expression to evaluate. Indexed range is accessible by @.
 
 proc ::ndlist::nreplace {ndlist args} {

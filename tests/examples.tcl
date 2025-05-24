@@ -297,7 +297,7 @@ puts -nonewline {}
 test {Example 25} {Extending an ND-list to a new shape with a filler value} -body {
 puts {}
 set a {hello hi hey howdy}
-puts [nextend $a world -1 2]
+puts [nextend $a world -1 2]; # -1 preserves size at axis 0
 puts -nonewline {}
 } -output {
 {hello world} {hi world} {hey world} {howdy world}
@@ -314,7 +314,7 @@ puts -nonewline {}
 
 test {Example 27} {Reshape a vector to a matrix with three columns} -body {
 puts {}
-puts [nreshape {1 2 3 4 5 6} * 3]
+puts [nreshape {1 2 3 4 5 6} -1 3]
 puts -nonewline {}
 } -output {
 {1 2 3} {4 5 6}
