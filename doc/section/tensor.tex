@@ -312,6 +312,8 @@ A ND-list can be modified by reference with \cmdlink{nset}, and by value with \c
 Note that unlike the Tcl \textit{lset} and \textit{lreplace} commands, the commands \cmdlink{nset} and \cmdlink{nreplace} will return an error if the indices are out of range.
 If all the index inputs are ``\texttt{:}'' except for one, and the replacement list is blank, it will delete values along that axis by calling \cmdlink{nremove}.
 Otherwise, the replacement ND-list must be expandable to the target index dimensions. 
+
+If using the ``\texttt{= \$expr}'' notation, it will call \cmdlink{nexpr}, where ``self'' is the ND-list or indexed range being modified and ``rank'' is ``auto'' if no index arguments are provided, otherwise it is equal to the number of index arguments minus the number of single index (S) arguments (see \cmdlink{::ndlist::ParseIndex}).
 \begin{syntax}
 \command{nset} \$varName \$i ... (\$sublist | = \$expr)
 \end{syntax}
@@ -327,25 +329,19 @@ Otherwise, the replacement ND-list must be expandable to the target index dimens
 \end{args}
 
 
-\begin{example}{Swapping matrix rows}
+\begin{example}{ND-list modification}
 \begin{lstlisting}
+# Swap rows in a matrix (by reference)
 set a {{1 2 3} {4 5 6} {7 8 9}}
-nset a {1 0} : [nget $a {0 1} :]; # Swap rows and columns (modify by reference)
-# nset a {1 0} : = {@a(0 1,:)}; # alternative notation
+nset a {1 0} : [nget $a {0 1} :]
 puts $a
+# Element-wise operation on portion of vector (by value)
+set b [range 10]
+puts [nreplace $b 0:2:end = {@. + 10}]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
 {4 5 6} {1 2 3} {7 8 9}
-\end{lstlisting}
-\end{example}
-
-\begin{example}{Element-wise math operations}
-\begin{lstlisting}
-puts [nreplace [range 10] 0:2:end = {@. + 10}]
-\end{lstlisting}
-\tcblower
-\begin{lstlisting}
 10 1 12 3 14 5 16 7 18 9
 \end{lstlisting}
 \end{example}
@@ -489,7 +485,7 @@ If the input lists have different shapes, they will be expanded to their maximum
 \$ndlist & ND-list to map over. \\
 \$ndlist1 \$ndlist2 & ND-lists to map over, element-wise. \\
 \$command & Command prefix to map with. \\
-\$suffix & Additional arguments to append to command after ND-list elements. Default blank. \\
+\$suffix & Additional arguments to append after ND-list elements. Default blank. \\
 \$rank & Rank of ND-list (e.g. 2 for matrix) or ``auto'' for auto-rank. Default ``auto''.
 \end{args}
 \begin{example}{Chained functional mapping over a matrix}
@@ -525,7 +521,7 @@ The command \cmdlink{nreduce} combines \cmdlink{nmoveaxis} and \cmdlink{napply} 
 \$command & Command prefix to map with. \\
 \$ndlist & ND-list to map over. \\
 \$axis & Axis to reduce. Default 0. \\
-\$suffix & Additional arguments to append to command after ND-list elements. Default blank. \\
+\$suffix & Additional arguments to append after ND-list elements. Default blank. \\
 \$rank & Rank of ND-list (e.g. 2 for matrix) or ``auto'' for auto-rank. Default ``auto''.
 \end{args}
 \begin{example}{Matrix row and column statistics}
@@ -556,7 +552,7 @@ If rank is not specified, it will automatically determine the rank using \cmdlin
 \command{nmap} <\$rank> \$varName \$ndlist <\$varName \$ndlist ...> \$body
 \end{syntax}
 \begin{args}
-\$rank & Rank for looping (e.g. 2 for matrix) or ``auto'' for auto-rank. Default ``auto''.  \\
+\$rank & Rank (e.g. 2 for matrix) or ``auto'' for auto-rank. Default ``auto''.  \\
 \$varName & Variable name to iterate with. \\
 \$ndlist & ND-list to iterate over. \\
 \$body & Tcl script to evaluate at every loop iteration. 
@@ -629,7 +625,7 @@ If rank is not specified, it will automatically determine the rank using \cmdlin
 \$body & Script to evaluate, with ``\texttt{@ref}'' notation for ND-list references. \\
 \$expr & Expression to evaluate, with ``\texttt{@ref}'' notation for ND-list references. \\
 \$self & ND-list to refer to with ``\texttt{@.}''. Default blank. \\
-\$rank & Rank for looping (e.g. 2 for matrix) or ``auto'' for auto-rank. Default ``auto''. 
+\$rank & Rank (e.g. 2 for matrix) or ``auto'' for auto-rank. Default ``auto''. 
 \end{args}
 
 \begin{example}{Get distance between elements in a vector}

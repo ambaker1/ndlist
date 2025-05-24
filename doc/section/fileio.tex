@@ -1,5 +1,5 @@
 \section{File Import/Export}
-The commands \cmdlink{readFile} and \cmdlink{writeFile} perform simple data import/export, while the commands \cmdlink{readMatrix} and \cmdlink{writeMatrix} dynamically convert files to matrix format and matrices to file format.
+The commands \cmdlink{readFile} and \cmdlink{writeFile} perform simple data import/export, while the commands \cmdlink{readMatrix} and \cmdlink{writeMatrix} dynamically convert files to matrix format and matrices to the specified file format (e.g. file extension .csv will call conversion functions \cmdlink{mat2csv} and \cmdlink{csv2mat}).
 \begin{syntax}
 \command{readFile} <\$option \$value ...> <-newline> \$file
 \end{syntax}
