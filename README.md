@@ -1,6 +1,5 @@
 # N-Dimensional Lists (ndlist)
-Vectors, Matrices, Tables and Tensors
-
+Vectors, matrices, and arbitrary dimensional tensors (ND-lists) in pure Tcl
 
 ## Installation
 This package is a Tin package. 
@@ -14,44 +13,30 @@ tin import ndlist
 ```
 
 ## Examples
-The ndlist package has support for vectors, matrices, tables, and higher-dimensional tensors.
-It is designed to be a one-stop shop for data processing in Tcl.
 
-Below are just a few examples of what is possible with ndlist. 
+Here are just a few of the things you can do with "ndlist":
 
 ```tcl
-# Get distance between elements in a vector
-vector new x {1 2 4 7 11 16}
+# Difference between elements in a vector
+set x {1 2 4 7 11 16}
 puts [nexpr {@x(1:end) - @x(0:end-1)}]; # 1 2 3 4 5
 ```
 
 ```tcl
-# Element-wise multiplication of column and row matrices
-matrix new x {1 2 3}
-matrix new y {{4 5 6}}
-puts [nexpr {@x * @y}]; # {4 5 6} {8 10 12} {12 15 18}
+# Swapping matrix rows
+set a {{1 2 3} {4 5 6} {7 8 9}}
+nset a {1 0} : [nget $a {0 1} :]
+puts $a; # {4 5 6} {1 2 3} {7 8 9}
 ```
 
 ```tcl
-# Multi-dimensional mapping of Tcl nested lists
-set x {{1 2 3} {4 5 6} {7 8 9}}
-set indices {}
-nmap 2D xi $x {
-    if {$xi > 4} {
-        lappend indices [list [i] [j]]
-    }
-}
-puts $indices; # {1 1} {1 2} {2 0} {2 1} {2 2}
-```
-
-```tcl
-# Tabular data structure
-table new myTable
-$myTable define keys {1 2 3}
-$myTable @ x = {1.0 2.0 3.0}
-set a 20.0
-$myTable @ y := {@x*2 + $a}
-puts [$myTable @ y]; # 22.0 24.0 26.0
+# Changing tensor axes
+set x {{{1 2} {3 4}} {{5 6} {7 8}}}
+set y [nswapaxes $x 0 2]
+set z [nmoveaxis $x 0 2]
+puts [lindex $x 0 0 1]; # 2
+puts [lindex $y 1 0 0]; # 2
+puts [lindex $z 0 1 0]; # 2
 ```
 
 ## Documentation

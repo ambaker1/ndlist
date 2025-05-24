@@ -2,8 +2,8 @@ set tin_version 2.1
 package require tin $tin_version
 tin import assert from tin
 tin import tcltest
-tin add flytrap 1.2 https://github.com/ambaker1/flytrap v1.2 install.tcl
-tin import flytrap -exact 1.2
+# tin add flytrap 1.2 https://github.com/ambaker1/flytrap v1.2 install.tcl
+# tin import flytrap -exact 1.2
 set version 0.11
 set config ""
 dict set config VERSION $version
@@ -23,12 +23,8 @@ puts "Running all tests..."
 source tests/vector_test.tcl
 source tests/matrix_test.tcl
 source tests/tensor_test.tcl
-source tests/object_test.tcl
 source tests/fileio_test.tcl
-source tests/table_test.tcl
-source tests/vutil_test.tcl
 source tests/examples.tcl
-file delete myDatabase.db; # from examples.tcl
 
 # Check number of failed tests
 set nFailed $::tcltest::numTests(Failed)

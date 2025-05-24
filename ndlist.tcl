@@ -16,10 +16,6 @@ namespace eval ::ndlist {
     source [file join $dir lib vector.tcl]
     source [file join $dir lib matrix.tcl]
     source [file join $dir lib tensor.tcl]
-    source [file join $dir lib ndapi.tcl]
-    source [file join $dir lib vutil.tcl]
-    source [file join $dir lib ndobj.tcl]
-    source [file join $dir lib table.tcl]
     source [file join $dir lib fileio.tcl]
 }
 

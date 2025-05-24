@@ -3,20 +3,38 @@
 # Matrix for testing (DO NOT CHANGE)
 set testmat {{1 2 3} {4 5 6} {7 8 9}}
 
-# ndlist/nshape/nsize 
+# ndims/nshape/nsize 
 ################################################################################
 # ndlist
-test ndlist {
-    # Create an ndlist (validates)
-} -body {
-    ndlist $testmat
-} -result $testmat
 
-test ndlist_error {
+test ndims {
+    # Automatically determine dimensions of a matrix
+} -body {
+    ndims $testmat
+} -result 2
+
+test ndims_error {
     # Throws error if ragged.
 } -body {
-    ndlist {1 {2 3}} 2
+    ndims {1 {2 3}} 2
 } -returnCodes {1} -result {not a valid 2D-list}
+
+test ndims_error2 {
+    # Should interpret as 1D
+} -body {
+    ndims {{1 2} 3}
+} -result 1
+
+test ndims_multiple {
+    # Get/assert number of dimensions compatible with a list of ND-lists
+} -body {
+    set ndlists [list {1 2 3} {{1 2} {3 4}} hello {{{1 2} {3 4}} {1 2}}]
+    assert [ndims_multiple $ndlists] == 2
+    assert [ndims_multiple $ndlists 0] == 0
+    assert [ndims_multiple $ndlists 1] == 1
+    assert [ndims_multiple $ndlists 2] == 2
+    catch {ndims_multiple $ndlists 3}; # throws error
+} -result 1
 
 # nshape
 test nshape {
@@ -102,7 +120,7 @@ test nreshape_error {
 test nreshape_error2 {
     # incompatible length error (dynamic)
 } -body {
-    nreshape {1 2 3 4 5 6} 4 *
+    nreshape {1 2 3 4 5 6} 4 -1
 } -returnCodes {1} -result {incompatible dimensions}
 
 test nreshape2 {
@@ -114,7 +132,7 @@ test nreshape2 {
 test nreshape_error3 {
     # too many dynamic axes (higher dimensions too)
 } -body {
-    nreshape {1 2 3 4 5 6 7 8 9} 3 * *
+    nreshape {1 2 3 4 5 6 7 8 9} 3 -1 -1
 } -returnCodes {1} -result {can only make one axis dynamic}
 
 test nrepeat {
@@ -387,12 +405,19 @@ test nreplace3 {} {nreplace $x : : 0 ""}            {{{2 3} {5 6}} {{8 9} {11 12
 test nreplace3 {} {nremove $x 0 2}                  {{{2 3} {5 6}} {{8 9} {11 12}}}
 
 # nset (just calls nreplace)
-test nset2 {
-    # Swap rows and columns (example)
+test swaprows {
+    # Swap rows in a matrix
 } -body {
     set a {{1 2} {3 4} {5 6}}
     nset a {1 0} : [nget $a {0 1} :]
 } -result {{3 4} {1 2} {5 6}}
+
+test swapcolumns {
+    # Swap columns in a matrix
+} -body {
+    set x {{1 2 3} {4 5 6}}
+    nset x : {1 2} [nget $x : {2 1}]
+} -result {{1 3 2} {4 6 5}}
 
 test nset_I_3D {
     # Create "Identity tensor"
@@ -403,6 +428,13 @@ test nset_I_3D {
     }
     set I
 } -result {{{1 0 0} {0 0 0} {0 0 0}} {{0 0 0} {0 1 0} {0 0 0}} {{0 0 0} {0 0 0} {0 0 1}}}
+
+test nset_blank {
+    # Calling nset with only one argument should return the value stored
+} -body {
+    set x foobar
+    nset x
+} -result foobar
 
 # ninsert/ncat
 ################################################################################
@@ -761,3 +793,83 @@ test nmap_index_blank {
     assert $::ndlist::map_index eq ""
     assert $::ndlist::map_shape eq ""
 } -result {}
+
+# neval/nexpr
+################################################################################
+
+test neval {
+    # nd-list mapping using references
+} -body {
+    set x {{1 2 3} {4 5 6}}
+    set y {2 3}
+    assert [neval {string cat @y @x}] eq {{21 22 23} {34 35 36}}
+    assert [neval {string cat @y @x} {} 1] eq {{21 2 3} {34 5 6}}
+    assert [neval {string cat @y @x @.} {!}] eq {{21! 22! 23!} {34! 35! 36!}}
+    assert [neval {string cat @y @x @.} {!} 1] eq {{21 2 3!} {34 5 6!}}
+} -result {}
+
+test nexpr {
+    # Version of neval, but for math
+} -body {
+    set x {{1 2 3} {4 5 6}}
+    set y {2 3}
+    assert [nexpr {@x + @y}] eq {{3 4 5} {7 8 9}}
+    assert [nexpr {(@x + @y)*@.} {{1 0 0} {0 1 1}}] eq {{3 0 0} {0 8 9}}
+    assert [nexpr {[string cat @y @x @.]} {!} 1] eq {{21 2 3!} {34 5 6!}}
+} -result {}
+
+test nexpr_indexing {
+    # Use advanced features of nexpr
+} -body {
+    set x {{1 2 3} {4 5 6}}
+    set y {0.1 0.2 0.3}
+    nexpr {@x(1*,:) + @y}
+} -result {4.1 5.2 6.3}
+
+test nexpr_error {
+    # Incompatible dimensions
+} -body {
+    set x {1 2 3}
+    set y {1 2 3 4}
+    catch {nexpr {@x + @y}}
+} -result {1}
+
+test nexpr_self {
+    # Test out self-evaluation feature
+} -body {
+    nexpr {@.+5} {1 2 3}
+} -result {6 7 8}
+
+test nset_expr {
+    # nset for math
+} -body {
+    assert [nset x {1 2 3}] eq {1 2 3}
+    assert [nset x 1:2 = {@. + 5}] eq {1 7 8}
+    nset x 5
+    nset y {10.0 12.0 14.0}
+    set z ""; unset z; # make sure it works without 
+    nset z = {@x + @y}
+    assert [nset z end = {@. * 2}] eq {15.0 17.0 38.0}
+    nset x [nfull 1 3 3 3]
+    nset y {1 2 3}
+    nset z {{hello world} {goodbye moon} {foo bar}}
+    assert [nset x end* : 0* = {@. + @y + [llength @z]}] eq {{{1 1 1} {1 1 1} {1 1 1}} {{1 1 1} {1 1 1} {1 1 1}} {{4 1 1} {5 1 1} {6 1 1}}}
+} -result {}
+
+test nset_expr_error {
+    # Cannot set indexed value of object that has no size.
+} -body {
+    set x {1 2 3}
+    set y {10 20 30}
+    set z ""; unset z
+    catch {nset z : = {@x + @y}}
+} -result {1}
+
+test nexpr_index_variable {
+    # Use Tcl variables to refer to index in nexpr
+} -body {
+    set i 0
+    set j {0 end}
+    set x {{1 2 3} {4 5 6}}
+    nexpr "@x($i,$j)*2"; # does not support substitution for index args.
+} -result {{2 6}}

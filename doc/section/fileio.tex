@@ -1,5 +1,5 @@
 \section{File Import/Export}
-The commands \cmdlink{readFile} and \cmdlink{writeFile} perform simple data import/export, while the commands \cmdlink{readMatrix} and \cmdlink{writeMatrix} dynamically convert files to matrix format and matrices to file format.
+The commands \cmdlink{readFile} and \cmdlink{writeFile} perform simple data import/export, while the commands \cmdlink{readMatrix} and \cmdlink{writeMatrix} dynamically convert files to matrix format and matrices to the specified file format (e.g. file extension .csv will call conversion functions \cmdlink{mat2csv} and \cmdlink{csv2mat}).
 \begin{syntax}
 \command{readFile} <\$option \$value ...> <-newline> \$file
 \end{syntax}
@@ -82,87 +82,6 @@ A B C
 CSV format:
 A,B,C
 hello world,"foo,bar","""hi"""
-\end{lstlisting}
-\end{example}
-\clearpage
-\subsection{Interface with SQLite Database Tables}
-The sqlite3 Tcl package provides access to SQL commands within a Tcl interpreter. 
-SQL databases are a powerful way to manipulate and query data, so to aid in using this powerful tool, the following commands were added to the ndlist package: \cmdlink{readTable} and \cmdlink{writeTable}. 
-The command \cmdlink{readTable} reads a specified table from a SQL database, returning a matrix. 
-The command \cmdlink{writeTable} writes a matrix to a table in a SQL database. If the table exists, it will be overwritten.
-If sqlite3 is not loaded before calling these commands, they will throw an error.
-\begin{syntax}
-\command{readTable} \$db \$table
-\end{syntax}
-\begin{syntax}
-\command{writeTable} \$db \$table \$matrix
-\end{syntax}
-\begin{args}
-\$db & sqlite3 database command \\
-\$table & Name of table in database to read/write. \\
-\$matrix & Matrix, with first row as headers, to read/write.
-\end{args}
-\begin{example}{Writing a table to SQLite}
-\begin{lstlisting}
-# Matrix of data used for table (https://www.tutorialspoint.com/sqlite/company.sql)
-set matrix [txt2mat {\
-ID          NAME        AGE         ADDRESS     SALARY
-1           Paul        32          California  20000.0
-2           Allen       25          Texas       15000.0
-3           Teddy       23          Norway      20000.0
-4           Mark        25          Rich-Mond   65000.0
-5           David       27          Texas       85000.0
-6           Kim         22          South-Hall  45000.0
-7           James       24          Houston     10000.0}]
-
-# Write the data to an SQL table and a Tcl table
-package require sqlite3; # required for sqlite3 command
-sqlite3 db myDatabase.db; # open SQL database
-writeTable db People $matrix; # write to SQL table
-table new People $matrix; # write to Tcl table
-
-# Example of a query, both with SQL and Tcl table commands
-puts [db eval {SELECT NAME FROM People WHERE SALARY > 40000.0;}]
-puts [$People mget [$People query {@SALARY > 40000.0}] NAME]
-db close; # close SQL database
-\end{lstlisting}
-\tcblower
-\begin{lstlisting}
-Mark David Kim
-Mark David Kim
-\end{lstlisting}
-\end{example}
-\clearpage
-\subsubsection{Reading and Writing SQL Databases}
-The command \cmdlink{readDatabase} reads all the tables in an SQLite database to a Tcl array of table objects.
-Likewise, the command \cmdlink{writeDatabase} writes all the tables in a Tcl array to tables in a SQLite database, overwriting those tables if they exist. 
-\begin{syntax}
-\command{readDatabase} \$db \$arrayName
-\end{syntax}
-\begin{syntax}
-\command{writeDatabase} \$db \$arrayName
-\end{syntax}
-\begin{args}
-\$db & sqlite3 database command \\
-\$arrayName & Variable name of array with keys corresponding to table names, and values corresponding to table objects.
-\end{args}
-
-\begin{example}{Reading and writing an entire SQL database}
-\begin{lstlisting}
-package require sqlite3; # required for sqlite3 command
-sqlite3 db myDatabase.db; # open SQL database
-readDatabase db t
-$t(People) @ AGE := {@AGE + 1}; # add one to people's ages
-writeDatabase db t
-db close; # close SQL database
-# Verifying that data was modified
-sqlite3 db myDatabase.db; # open SQL database
-puts [db eval {SELECT NAME,AGE FROM People}]
-db close; # close SQL database
-\end{lstlisting}
-\tcblower
-\begin{lstlisting}
-Paul 33 Allen 26 Teddy 24 Mark 26 David 28 Kim 23 James 25
 \end{lstlisting}
 \end{example}
 \clearpage

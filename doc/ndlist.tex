@@ -14,7 +14,7 @@
 \begin{document}
 \maketitle
 \begin{abstract}
-One of the drawbacks of the Tcl programming language is its lack of data structures. This package is an attempt to fill that gap, to provide the basic data structures that every programmer is familiar with: vectors, matrices, tables, and higher-dimensional arrays.
+In Tcl, everything is a string, and most things are lists. This package expands on this, by proposing a new paradigm for Tcl: everything is an ND-list. 
 \end{abstract}
 \vspace{20 pt}
 
@@ -31,11 +31,8 @@ tin import ndlist
 \include{section/vector.tex}
 \include{section/matrix.tex}
 \include{section/tensor.tex}
-\include{section/object.tex}
-\include{section/table.tex}
 \include{section/fileio.tex}
-\include{section/vutil.tex}
 
-\printindex
+{\footnotesize \printindex}
 \end{document}
 

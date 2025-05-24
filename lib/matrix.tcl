@@ -11,60 +11,9 @@
 
 # Define namespace and exported commands
 namespace eval ::ndlist {
-    namespace export zeros ones eye; # Generate matrices
     namespace export stack augment block; # Combine matrices
-    namespace export transpose matmul outerprod kronprod; # Linear algebra
+    namespace export transpose eye matmul outerprod kronprod; # Linear algebra
     namespace export zip zip3 cartprod; # Iteration tools
-}
-
-# zeros --
-# 
-# Generate a matrix filled with zeros.
-#
-# Syntax:
-# zeros $n $m
-# 
-# Arguments:
-# n             Number of rows
-# m             Number of columns
-
-proc ::ndlist::zeros {n m} {
-    if {$m == 0} {return}
-    lrepeat $n [lrepeat $m 0]
-}
-
-# ones --
-#
-# Generate a matrix filled with ones.
-#
-# Syntax:
-# ones $n $m
-# 
-# Arguments:
-# n             Number of rows
-# m             Number of columns
-
-proc ::ndlist::ones {n m} {
-    if {$m == 0} {return}
-    lrepeat $n [lrepeat $m 1]
-}
-
-# eye --
-# 
-# Generate an identity matrix of specified size
-#
-# Syntax:
-# eye $n
-# 
-# Arguments:
-# n             Size of matrix (nxn)
-
-proc ::ndlist::eye {n} {
-    set x [zeros $n $n]
-    foreach i [range $n] {
-        lset x $i $i 1
-    }
-    return $x
 }
 
 # stack --
@@ -187,6 +136,24 @@ proc ::ndlist::matmul {A B} {
             dot $rowA $colB
         }
     }
+}
+
+# eye --
+# 
+# Generate an identity matrix of specified size
+#
+# Syntax:
+# eye $n
+# 
+# Arguments:
+# n             Size of matrix (nxn)
+
+proc ::ndlist::eye {n} {
+    set x [nfull 0 $n $n]
+    foreach i [range $n] {
+        lset x $i $i 1
+    }
+    return $x
 }
 
 # outerprod --

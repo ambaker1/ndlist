@@ -47,42 +47,6 @@ C =
 \end{lstlisting}
 \end{example}
 \clearpage
-\subsection{Generating Matrices}
-The commands \cmdlink{zeros}, \cmdlink{ones}, and \cmdlink{eye} generate common matrices.
-\begin{syntax}
-\command{zeros} \$n \$m
-\end{syntax}
-\begin{syntax}
-\command{ones} \$n \$m
-\end{syntax}
-\begin{args}
-\$n & Number of rows \\
-\$m & Number of columns
-\end{args}
-The command \cmdlink{eye} generates an identity matrix of a specified size.
-\begin{syntax}
-\command{eye} \$n
-\end{syntax}
-\begin{args}
-\$n  & Size of identity matrix 
-\end{args}
-
-\begin{example}{Generating standard matrices}
-\begin{lstlisting}
-puts [zeros 2 3]
-puts [ones 3 2]
-puts [eye 3]
-\end{lstlisting}
-\tcblower
-\begin{lstlisting}
-{0 0 0} {0 0 0}
-{1 1} {1 1} {1 1}
-{1 0 0} {0 1 0} {0 0 1}
-\end{lstlisting}
-\end{example}
-\clearpage
-
-
 \subsection{Combining Matrices}
 The commands \cmdlink{stack} and \cmdlink{augment} can be used to combine matrices, row or column-wise.
 \begin{syntax}
@@ -161,6 +125,14 @@ puts [matmul {{2 5 1 3} {4 1 7 9} {6 8 3 2} {7 8 1 4}} {9 3 0 -3}]
 \end{example}
 \clearpage
 \subsection{Miscellaneous Linear Algebra Routines}
+The command \cmdlink{eye} generates an identity matrix.
+\begin{syntax}
+\command{eye} \$n
+\end{syntax}
+\begin{args}
+\$n  & Size of identity matrix 
+\end{args}
+
 The command \cmdlink{outerprod} takes the outer product of two vectors, $\bm{a} \otimes \bm{b} = \bm{a}\bm{b}^T$.
 \begin{syntax}
 \command{outerprod} \$a \$b
@@ -176,6 +148,7 @@ The command \cmdlink{kronprod} takes the Kronecker product of two matrices, as s
 \begin{args}
 \$A \$B & Matrices, shapes nxm and pxq. Returns a matrix, shape (np)x(mq).
 \end{args}
+
 \begin{equation}\label{eq:kronprod}
 \bm{A} \otimes \bm{B} = \left[\begin{matrix}
 a_{11}\bm{B} & ... & a_{1n}\bm{B} \\
