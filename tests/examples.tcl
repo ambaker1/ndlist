@@ -493,7 +493,26 @@ puts -nonewline {}
 {1 1} {1 2} {2 0} {2 1} {2 2}
 }
 
-test {Example 43} {File import/export} -body {
+test {Example 43} {Get distance between elements in a vector} -body {
+puts {}
+set x {1 2 4 7 11 16}
+puts [nexpr {@x(1:end) - @x(0:end-1)}]
+puts -nonewline {}
+} -output {
+1 2 3 4 5
+}
+
+test {Example 44} {Outer product of two vectors} -body {
+puts {}
+set x {1 2 3}
+set y {{4 5 6}}
+puts [nexpr {@x * @y}]
+puts -nonewline {}
+} -output {
+{4 5 6} {8 10 12} {12 15 18}
+}
+
+test {Example 45} {File import/export} -body {
 puts {}
 # Export matrix to file (converts to csv)
 writeMatrix example.csv {{foo bar} {hello world}}
@@ -508,7 +527,7 @@ hello,world
 {foo bar} {hello world}
 }
 
-test {Example 44} {Data conversions} -body {
+test {Example 46} {Data conversions} -body {
 puts {}
 set matrix {{A B C} {{hello world} foo,bar {"hi"}}}
 puts {TXT format:}

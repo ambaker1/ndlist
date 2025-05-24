@@ -779,6 +779,7 @@ test nmap_index_blank {
     assert $::ndlist::map_index eq ""
     assert $::ndlist::map_shape eq ""
 } -result {}
+
 test neval {
     # nd-list mapping using references
 } -body {
