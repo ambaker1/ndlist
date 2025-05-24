@@ -405,12 +405,19 @@ test nreplace3 {} {nreplace $x : : 0 ""}            {{{2 3} {5 6}} {{8 9} {11 12
 test nreplace3 {} {nremove $x 0 2}                  {{{2 3} {5 6}} {{8 9} {11 12}}}
 
 # nset (just calls nreplace)
-test nset2 {
-    # Swap rows and columns (example)
+test swaprows {
+    # Swap rows in a matrix
 } -body {
     set a {{1 2} {3 4} {5 6}}
     nset a {1 0} : [nget $a {0 1} :]
 } -result {{3 4} {1 2} {5 6}}
+
+test swapcolumns {
+    # Swap columns in a matrix
+} -body {
+    set x {{1 2 3} {4 5 6}}
+    nset x : {1 2} [nget $x : {2 1}]
+} -result {{1 3 2} {4 6 5}}
 
 test nset_I_3D {
     # Create "Identity tensor"
@@ -421,6 +428,13 @@ test nset_I_3D {
     }
     set I
 } -result {{{1 0 0} {0 0 0} {0 0 0}} {{0 0 0} {0 1 0} {0 0 0}} {{0 0 0} {0 0 0} {0 0 1}}}
+
+test nset_blank {
+    # Calling nset with only one argument should return the value stored
+} -body {
+    set x foobar
+    nset x
+} -result foobar
 
 # ninsert/ncat
 ################################################################################
@@ -780,35 +794,37 @@ test nmap_index_blank {
     assert $::ndlist::map_shape eq ""
 } -result {}
 
+# neval/nexpr
+################################################################################
+
 test neval {
     # nd-list mapping using references
 } -body {
     set x {{1 2 3} {4 5 6}}
     set y {2 3}
-    neval {string cat @y @x}
-} -result {{21 22 23} {34 35 36}}
+    assert [neval {string cat @y @x}] eq {{21 22 23} {34 35 36}}
+    assert [neval {string cat @y @x} {} 1] eq {{21 2 3} {34 5 6}}
+    assert [neval {string cat @y @x @.} {!}] eq {{21! 22! 23!} {34! 35! 36!}}
+    assert [neval {string cat @y @x @.} {!} 1] eq {{21 2 3!} {34 5 6!}}
+} -result {}
 
 test nexpr {
     # Version of neval, but for math
 } -body {
     set x {{1 2 3} {4 5 6}}
-    nexpr {@x * 2.0}
-} -result {{2.0 4.0 6.0} {8.0 10.0 12.0}}
+    set y {2 3}
+    assert [nexpr {@x + @y}] eq {{3 4 5} {7 8 9}}
+    assert [nexpr {(@x + @y)*@.} {{1 0 0} {0 1 1}}] eq {{3 0 0} {0 8 9}}
+    assert [nexpr {[string cat @y @x @.]} {!} 1] eq {{21 2 3!} {34 5 6!}}
+} -result {}
 
-test nexpr_advanced {
+test nexpr_indexing {
     # Use advanced features of nexpr
 } -body {
     set x {{1 2 3} {4 5 6}}
     set y {0.1 0.2 0.3}
     nexpr {@x(1*,:) + @y}
 } -result {4.1 5.2 6.3}
-
-test columnswap {
-    # Swap columns in a matrix
-} -body {
-    set x {{1 2 3} {4 5 6}}
-    nset x : {1 2} [nget $x : {2 1}]
-} -result {{1 3 2} {4 6 5}}
 
 test nexpr_error {
     # Incompatible dimensions
@@ -825,17 +841,35 @@ test nexpr_self {
 } -result {6 7 8}
 
 test nset_expr {
-    # Combined nset and 
+    # nset for math
 } -body {
-    nset x {1 2 3}
-    nset x 1:2 = {@. + 5}
-} -result {1 7 8}
-
-test nset_expr2 {
-    # Test out whether nset works as a replacement to set
-} -body {
+    assert [nset x {1 2 3}] eq {1 2 3}
+    assert [nset x 1:2 = {@. + 5}] eq {1 7 8}
     nset x 5
     nset y {10.0 12.0 14.0}
+    set z ""; unset z; # make sure it works without 
     nset z = {@x + @y}
-    nset z end = {@. * 2}
-} -result {15.0 17.0 38.0}
+    assert [nset z end = {@. * 2}] eq {15.0 17.0 38.0}
+    nset x [nfull 1 3 3 3]
+    nset y {1 2 3}
+    nset z {{hello world} {goodbye moon} {foo bar}}
+    assert [nset x end* : 0* = {@. + @y + [llength @z]}] eq {{{1 1 1} {1 1 1} {1 1 1}} {{1 1 1} {1 1 1} {1 1 1}} {{4 1 1} {5 1 1} {6 1 1}}}
+} -result {}
+
+test nset_expr_error {
+    # Cannot set indexed value of object that has no size.
+} -body {
+    set x {1 2 3}
+    set y {10 20 30}
+    set z ""; unset z
+    catch {nset z : = {@x + @y}}
+} -result {1}
+
+test nexpr_index_variable {
+    # Use Tcl variables to refer to index in nexpr
+} -body {
+    set i 0
+    set j {0 end}
+    set x {{1 2 3} {4 5 6}}
+    nexpr "@x($i,$j)*2"; # does not support substitution for index args.
+} -result {{2 6}}

@@ -231,6 +231,7 @@ set z {{1 2 3} {4 5 6}}
 puts [ndims $x]; # 0
 puts [ndims $y]; # 1
 puts [ndims $z]; # 2
+# the only rank that works for x, y, and z is 1
 puts [ndims_multiple [list $x $y $z]]; # 1
 puts -nonewline {}
 } -output {
@@ -242,13 +243,21 @@ puts -nonewline {}
 
 test {Example 20} {Getting shape and size of an ND-list} -body {
 puts {}
-set x {{1 2 3} {4 5 6}}
-puts [nshape $x]
-puts [nsize $x]
+# Create a 3D list
+set x {{{1 2} {3 4} {5 6}} {{7 8} {9 10} {11 12}}}
+# Get the shape and size for different rank interpretations
+puts [list [nshape $x] [nsize $x]]; # auto-rank (3)
+puts [list [nshape $x 1] [nsize $x 1]]; # rank 1
+puts [list [nshape $x 2] [nsize $x 2]]; # rank 2
+puts [list [nshape $x 3] [nsize $x 3]]; # rank 3
+puts [list [nshape $x 4] [nsize $x 4]]; # rank 4
 puts -nonewline {}
 } -output {
-2 3
-6
+{2 3 2} 12
+2 2
+{2 3} 6
+{2 3 2} 12
+{2 3 2 1} 12
 }
 
 test {Example 21} {Generate ND-list filled with one value} -body {
@@ -357,22 +366,23 @@ puts -nonewline {}
 2 2 2
 }
 
-test {Example 31} {Replace range with a single value} -body {
-puts {}
-puts [nreplace [range 10] 0:2:end 0]
-puts -nonewline {}
-} -output {
-0 1 0 3 0 5 0 7 0 9
-}
-
-test {Example 32} {Swapping matrix rows} -body {
+test {Example 31} {Swapping matrix rows} -body {
 puts {}
 set a {{1 2 3} {4 5 6} {7 8 9}}
 nset a {1 0} : [nget $a {0 1} :]; # Swap rows and columns (modify by reference)
+# nset a {1 0} : = {@a(0 1,:)}; # alternative notation
 puts $a
 puts -nonewline {}
 } -output {
 {4 5 6} {1 2 3} {7 8 9}
+}
+
+test {Example 32} {Element-wise math operations} -body {
+puts {}
+puts [nreplace [range 10] 0:2:end = {@. + 10}]
+puts -nonewline {}
+} -output {
+10 1 12 3 14 5 16 7 18 9
 }
 
 test {Example 33} {Filtering a list by removing elements} -body {
