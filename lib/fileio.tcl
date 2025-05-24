@@ -13,7 +13,6 @@
 namespace eval ::ndlist {
     # File import/export commands
     namespace export readFile writeFile readMatrix writeMatrix
-    namespace export readTable writeTable readDatabase writeDatabase; # sqlite3
     namespace export mat2txt txt2mat mat2csv csv2mat
 }
 
@@ -160,111 +159,6 @@ proc ::ndlist::writeMatrix {args} {
         set data [mat2txt $matrix]
     }
     writeFile {*}$options $file $data
-}
-
-# readTable --
-#
-# Using the sqlite3 package, extract a table to a matrix, 
-# with the first row being headers and the remaining rows being entries.
-# To extract part of a table, try "CREATE TEMPORARY TABLE ... AS SELECT ..."
-# NOTE: CLEAN YOUR SQL INPUTS ($table CAN BE USED FOR SQL INJECTION)
-#
-# Syntax:
-# readTable $db $table
-#
-# Arguments:
-# db:           sqlite3 database command
-# table:        name of existing table within database
-
-proc ::ndlist::readTable {db table} {
-    # Ensure that the package sqlite3 is already loaded
-    package present sqlite3 3.45.2
-    set header [$db eval {SELECT name FROM PRAGMA_TABLE_INFO($table);}]
-    set values [$db eval "SELECT * FROM \"$table\";"]
-    concat [list $header] [nreshape $values * [llength $header]]
-}
-
-# writeTable --
-#
-# Writes a matrix to an SQL table, returns blank
-# NOTE: CLEAN YOUR SQL INPUTS ($table CAN BE USED FOR SQL INJECTION)
-#
-# Syntax:
-# writeTable $db $table $matrix
-#
-# Arguments:
-# matrix:       Matrix to convert
-# db:           sqlite3 database command
-# table:        name of new table within database
-
-proc ::ndlist::writeTable {db table matrix} {
-    # Ensure that the package sqlite3 is already loaded
-    package present sqlite3 3.45.2
-    # Get header from matrix, and wrap in quotes in case of spaces in names.
-    # Currently does not support double quotes in field names
-    set header [lmap field [lindex $matrix 0] {string cat "\"" $field "\""}]
-    # Create the table with the specified name and column names
-    $db eval "DROP TABLE IF EXISTS \"$table\";"
-    $db eval "CREATE TABLE \"$table\" ([join $header ,]);"
-    # Get value rows from matrix
-    foreach row [lrange $matrix 1 end] {
-        set row [lmap value $row {
-            if {[string is double -strict $value]} {
-                # store numbers as is
-                set value
-            } else {
-                # for strings, escape single quotes and wrap with single quotes
-                string cat "'" [string map {' ''} $value] "'"
-            }
-        }]
-        $db eval "INSERT INTO \"$table\" VALUES ([join $row ,]);"
-    }
-    return
-}
-
-# readDatabase --
-#
-# Read an sqlite3 database to a Tcl array of table objects
-#
-# Syntax:
-# readDatabase $db $arrayName
-#
-# Arguments:
-# db:           sqlite3 database command
-# arrayName:    name of array to save table objects to
-
-proc ::ndlist::readDatabase {db arrayName} {
-    # Ensure that the package sqlite3 is already loaded
-    package present sqlite3 3.45.2
-    upvar 1 $arrayName t
-    foreach name [$db eval {SELECT name FROM sqlite_schema WHERE type = 'table' AND name NOT LIKE 'sqlite_%'}] {
-        table new t($name) [readTable $db $name]
-    }
-    return
-}
-
-# writeDatabase --
-#
-# Read an sqlite3 database to a Tcl array of table objects
-# Array must contain ndlist::table objects.
-#
-# Syntax:
-# writeDatabase $db $arrayName
-#
-# Arguments:
-# db:           sqlite3 database command
-# arrayName:    name of array to read table objects from
-
-proc ::ndlist::writeDatabase {db arrayName} {
-    # Ensure that the package sqlite3 is already loaded
-    package present sqlite3 3.45.2
-    upvar 1 $arrayName t
-    foreach name [array names t] {
-        if {[info object isa object $t($name)] && [info object isa typeof $t($name) ::ndlist::table]} {
-            writeTable $db $name [$t($name)]
-        }
-    }
-    return
 }
 
 # Datatype conversions

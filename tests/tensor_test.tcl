@@ -779,3 +779,62 @@ test nmap_index_blank {
     assert $::ndlist::map_index eq ""
     assert $::ndlist::map_shape eq ""
 } -result {}
+test neval {
+    # nd-list mapping using references
+} -body {
+    set x {{1 2 3} {4 5 6}}
+    set y {2 3}
+    neval {string cat @y @x}
+} -result {{21 22 23} {34 35 36}}
+
+test nexpr {
+    # Version of neval, but for math
+} -body {
+    set x {{1 2 3} {4 5 6}}
+    nexpr {@x * 2.0}
+} -result {{2.0 4.0 6.0} {8.0 10.0 12.0}}
+
+test nexpr_advanced {
+    # Use advanced features of nexpr
+} -body {
+    set x {{1 2 3} {4 5 6}}
+    set y {0.1 0.2 0.3}
+    nexpr {@x(1*,:) + @y}
+} -result {4.1 5.2 6.3}
+
+test columnswap {
+    # Swap columns in a matrix
+} -body {
+    set x {{1 2 3} {4 5 6}}
+    nset x : {1 2} [nget $x : {2 1}]
+} -result {{1 3 2} {4 6 5}}
+
+test nexpr_error {
+    # Incompatible dimensions
+} -body {
+    set x {1 2 3}
+    set y {1 2 3 4}
+    catch {nexpr {@x + @y}}
+} -result {1}
+
+test nexpr_self {
+    # Test out self-evaluation feature
+} -body {
+    nexpr {@.+5} {1 2 3}
+} -result {6 7 8}
+
+test nset_expr {
+    # Combined nset and 
+} -body {
+    nset x {1 2 3}
+    nset x 1:2 = {@. + 5}
+} -result {1 7 8}
+
+test nset_expr2 {
+    # Test out whether nset works as a replacement to set
+} -body {
+    nset x 5
+    nset y {10.0 12.0 14.0}
+    nset z = {@x + @y}
+    nset z end = {@. * 2}
+} -result {15.0 17.0 38.0}
