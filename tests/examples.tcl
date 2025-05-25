@@ -487,26 +487,24 @@ puts -nonewline {}
 {1 1} {1 2} {2 0} {2 1} {2 2}
 }
 
-test {Example 41} {Get distance between elements in a vector} -body {
+test {Example 41} {Element-wise operations} -body {
 puts {}
-set x {1 2 4 7 11 16}
-puts [nexpr {@x(1:end) - @x(0:end-1)}]
-puts -nonewline {}
-} -output {
-1 2 3 4 5
-}
-
-test {Example 42} {Outer product of two vectors} -body {
-puts {}
-set x {1 2 3}
-set y {{4 5 6}}
-puts [nexpr {@x * @y}]
+set x {1 2 3}; # vector, length 3
+set y {{4 5 6}}; # matrix, shape {1 3}
+set z {1 2 4 7 11 16}; # vector, length 6
+puts [nexpr {@x * @y}]; # outer product of two vectors (creates matrix)
+puts [nexpr {@x + @z}]; # expands vector x to match length of z
+puts [nexpr {@z(1:end) - @z(0:end-1)}]; # distance between vector elements
+puts [nexpr {@. * 2.0} {4 3 8}]; # self-operation using @. notation
 puts -nonewline {}
 } -output {
 {4 5 6} {8 10 12} {12 15 18}
+2 4 7 8 13 19
+1 2 3 4 5
+8.0 6.0 16.0
 }
 
-test {Example 43} {File import/export} -body {
+test {Example 42} {File import/export} -body {
 puts {}
 # Export matrix to file (converts to csv)
 writeMatrix example.csv {{foo bar} {hello world}}
@@ -521,7 +519,7 @@ hello,world
 {foo bar} {hello world}
 }
 
-test {Example 44} {Data conversions} -body {
+test {Example 43} {Data conversions} -body {
 puts {}
 set matrix {{A B C} {{hello world} foo,bar {"hi"}}}
 puts {TXT format:}
