@@ -1,5 +1,7 @@
 # N-Dimensional Lists (ndlist)
-Vectors, matrices, and arbitrary dimensional tensors (ND-lists) in pure Tcl
+Vectors, matrices, and arbitrary dimensional tensors (ND-lists) in pure Tcl.
+
+Uses the same format for matrices/arbitrary rank tensors as [VecTcl](https://auriocus.github.io/VecTcl/), but ND-lists are not limited to numeric values.
 
 ## Installation
 This package is a Tin package. 
