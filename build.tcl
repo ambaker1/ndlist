@@ -4,7 +4,7 @@ tin import assert from tin
 tin import tcltest
 # tin add flytrap 1.2 https://github.com/ambaker1/flytrap v1.2 install.tcl
 # tin import flytrap -exact 1.2
-set version 0.12
+set version 0.12.1
 set config ""
 dict set config VERSION $version
 dict set config TIN_VERSION $tin_version

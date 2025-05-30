@@ -375,13 +375,13 @@ proc ::ndlist::nexpand {ndlist shape} {
 #
 # Arguments:
 # ndlist        ND-list to expand
-# pads          Amount to pad along each axis. 0 for none. 
+# pads          Amount to pad along each axis. 0 for none, negative to prepend
 
 proc ::ndlist::npad {ndlist value pads} {
     # Check input
     foreach pad $pads {
-        if {![string is integer -strict $pad] || $pad < 0} {
-            return -code error "bad count \"$pad\": must be >= 0"
+        if {![string is integer -strict $pad]} {
+            return -code error "expected integer, but got \"$pad\""
         }
     }
     # Null case
@@ -406,15 +406,17 @@ proc ::ndlist::npad {ndlist value pads} {
 # ndlist        ND-list to pad
 # value         Value to pad with
 # dims          Shape of ND-list
-# n ...         Amount to pad.
+# n ...         Amount to pad. If negative, prepends.
 
 proc ::ndlist::RecPad {ndlist value dims n args} {
     # Base case
     if {[llength $args] == 0} {
         if {$n == 0} {
             return $ndlist
-        } else {
+        } elseif {$n > 0} {
             return [concat $ndlist [lrepeat $n $value]]
+        } else {
+            return [concat [lrepeat [expr {-$n}] $value] $ndlist]
         }
     }
     # Recursion case
@@ -422,6 +424,8 @@ proc ::ndlist::RecPad {ndlist value dims n args} {
     # Skip case
     if {$n > 0} {
         set ndlist [concat $ndlist [nfull $value [concat $n $dims]]]
+    } elseif {$n < 0} {
+        set ndlist [concat [nfull $value [concat [expr {-$n}] $dims]] $ndlist]
     }
     lmap ndrow $ndlist {
         RecPad $ndrow $value $dims {*}$args
