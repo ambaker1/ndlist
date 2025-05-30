@@ -285,13 +285,15 @@ puts -nonewline {}
 {1 2 1 2} {1 2 1 2}
 }
 
-test {Example 24} {Padding an ND-list with zeros} -body {
+test {Example 24} {Padding an ND-list with a value} -body {
 puts {}
 set a {{1 2 3} {4 5 6} {7 8 9}}
 puts [npad $a 0 {2 1}]
+puts [npad $a foo {-2 -1}]
 puts -nonewline {}
 } -output {
 {1 2 3 0} {4 5 6 0} {7 8 9 0} {0 0 0 0} {0 0 0 0}
+{foo foo foo foo} {foo foo foo foo} {foo 1 2 3} {foo 4 5 6} {foo 7 8 9}
 }
 
 test {Example 25} {Extending an ND-list to a new shape with a filler value} -body {

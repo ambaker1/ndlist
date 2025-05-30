@@ -198,6 +198,12 @@ test npad2 {
     set a [npad $a 2 {1 0}]
 } -result {{0 0 0 1} {0 0 0 1} {0 0 0 1} {1 1 1 1} {2 2 2 2}}
 
+test npad_prepend {
+    # Prepend with values on different axes
+} -body {
+    set a [npad $a foo {-1 -1}]
+} -result {{foo foo foo foo foo} {foo 0 0 0 1} {foo 0 0 0 1} {foo 0 0 0 1} {foo 1 1 1 1} {foo 2 2 2 2}}
+
 # nextend 
 test nextend0 {
     # Extending an empty list just calls nfull
