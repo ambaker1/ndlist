@@ -80,122 +80,122 @@ test nsize3D {
 test nfull {
     # Create a tensor filled with a value.
 } -body {
-    nfull 0.0 1 2 3
+    nfull 0.0 {1 2 3}
 } -result {{{0.0 0.0 0.0} {0.0 0.0 0.0}}}
 
 test nrand0 {
     # Random number generator function (no args)
 } -body {
     expr {srand(0)}
-    nrand
+    nrand {}
 } -result {0.013469574513598146}
 
 test nrand1 {
     # list of random numbers
 } -body {
     expr {srand(0)}
-    nrand 2
+    nrand {2}
 } -result {0.013469574513598146 0.3831388500440581}
 
 test nrand_2 {
     # matrix of random numbers
 } -body {
     expr {srand(0)}
-    nrand 1 2
+    nrand {1 2}
 } -result {{0.013469574513598146 0.3831388500440581}}
 
 # nreshape
 test nreshape1 {
     # Check that nreshape works for matrices
 } -body {
-    nreshape {1 2 3 4 5 6} 2 3
+    nreshape {1 2 3 4 5 6} {2 3}
 } -result {{1 2 3} {4 5 6}}
 
 test nreshape_error {
     # incompatible length error
 } -body {
-    nreshape {1 2 3 4 5 6} 3 3
+    nreshape {1 2 3 4 5 6} {3 3}
 } -returnCodes {1} -result {incompatible dimensions}
 
 test nreshape_error2 {
     # incompatible length error (dynamic)
 } -body {
-    nreshape {1 2 3 4 5 6} 4 -1
+    nreshape {1 2 3 4 5 6} {4 -1}
 } -returnCodes {1} -result {incompatible dimensions}
 
 test nreshape2 {
     # Check that nreshape works for higher dimensions
 } -body {
-    nreshape {1 2 3 4 5 6 7 8} 2 2 2
+    nreshape {1 2 3 4 5 6 7 8} {2 2 2}
 } -result {{{1 2} {3 4}} {{5 6} {7 8}}}
 
 test nreshape_error3 {
     # too many dynamic axes (higher dimensions too)
 } -body {
-    nreshape {1 2 3 4 5 6 7 8 9} 3 -1 -1
+    nreshape {1 2 3 4 5 6 7 8 9} {3 -1 -1}
 } -returnCodes {1} -result {can only make one axis dynamic}
 
 test nrepeat {
     # Repeat along a dimension
 } -body {
-    nrepeat {{1 2} {3 4}} 1 2
+    nrepeat {{1 2} {3 4}} {1 2}
 } -result {{1 2 1 2} {3 4 3 4}}
 
-test nrepeat0 {} {nrepeat {{1 2} {3 4}}} {{1 2} {3 4}}
+test nrepeat0 {} {nrepeat {{1 2} {3 4}} {}} {{1 2} {3 4}} 
 test nrepeat1 {} {nrepeat {{1 2} {3 4}} 2} {{1 2} {3 4} {1 2} {3 4}}
-test nrepeat3 {} {nrepeat {{1 2} {3 4}} 3 1 2} {{{1 1} {2 2}} {{3 3} {4 4}} {{1 1} {2 2}} {{3 3} {4 4}} {{1 1} {2 2}} {{3 3} {4 4}}}
-test nrepeat_blank1 {} {nrepeat {} 2 2} {}
-test nrepeat_blank2 {} {nrepeat {{}} 2 2} {{} {}}
-test nrepeat_blank2 {} {nrepeat {{{}}} 2 2} {{{} {}} {{} {}}}
+test nrepeat3 {} {nrepeat {{1 2} {3 4}} {3 1 2}} {{{1 1} {2 2}} {{3 3} {4 4}} {{1 1} {2 2}} {{3 3} {4 4}} {{1 1} {2 2}} {{3 3} {4 4}}}
+test nrepeat_blank1 {} {nrepeat {} {2 2}} {}
+test nrepeat_blank2 {} {nrepeat {{}} {2 2}} {{} {}}
+test nrepeat_blank2 {} {nrepeat {{{}}} {2 2}} {{{} {}} {{} {}}}
 
 # nexpand
 test nexpand {
     # Expand an ndlist
 } -body {
-    nexpand {1 2 3} 3 2
+    nexpand {1 2 3} {3 2}
 } -result {{1 1} {2 2} {3 3}}
 
 test nexpand_3D {
     # Expand an ndlist to a tensor
 } -body {
-    nexpand {{1 2 3}} 3 3 2
+    nexpand {{1 2 3}} {3 3 2}
 } -result {{{1 1} {2 2} {3 3}} {{1 1} {2 2} {3 3}} {{1 1} {2 2} {3 3}}}
 
 test nexpand_stride {
     # Expand a strided ndlist
 } -body {
-    nexpand {{1 2}} 2 4
+    nexpand {{1 2}} {2 4}
 } -result {{1 2 1 2} {1 2 1 2}}
 
 test nexpand_-1 {
     # Use "-1" to say "same shape"
 } -body {
-    nexpand {{1 2}} -1 4
+    nexpand {{1 2}} {-1 4}
 } -result {{1 2 1 2}}
 
 test nexpand_error {
     # Cannot expand if dimensions don't match.
 } -body {
-    nexpand {1 2 3} 4 2
+    nexpand {1 2 3} {4 2}
 } -returnCodes {1} -result {incompatible dimensions}
 
 test npad0 {
     # Padding an empty list just calls nfull
 } -body {
     set a ""
-    set a [npad $a 0 3 3]
+    set a [npad $a 0 {3 3}]
 } -result {{0 0 0} {0 0 0} {0 0 0}}
 
 test npad1 {
     # Extend an ND list with values
 } -body {
-    set a [npad $a 1 1 1]
+    set a [npad $a 1 {1 1}]
 } -result {{0 0 0 1} {0 0 0 1} {0 0 0 1} {1 1 1 1}}
 
 test npad2 {
     # Only extend along one axis (keep the other dimension the same)
 } -body {
-    set a [npad $a 2 1 0]
+    set a [npad $a 2 {1 0}]
 } -result {{0 0 0 1} {0 0 0 1} {0 0 0 1} {1 1 1 1} {2 2 2 2}}
 
 # nextend 
@@ -203,19 +203,19 @@ test nextend0 {
     # Extending an empty list just calls nfull
 } -body {
     set a ""
-    set a [nextend $a 0 3 3]
+    set a [nextend $a 0 {3 3}]
 } -result {{0 0 0} {0 0 0} {0 0 0}}
 
 test nextend1 {
     # Extend an ND list with values
 } -body {
-    set a [nextend $a 1 4 4]
+    set a [nextend $a 1 {4 4}]
 } -result {{0 0 0 1} {0 0 0 1} {0 0 0 1} {1 1 1 1}}
 
 test nextend2 {
     # Only extend along one axis (keep the other dimension the same)
 } -body {
-    set a [nextend $a 2 5 -1]
+    set a [nextend $a 2 {5 -1}]
 } -result {{0 0 0 1} {0 0 0 1} {0 0 0 1} {1 1 1 1} {2 2 2 2}}
 
 # nget/nset/nreplace (ndlist access/modification)
@@ -422,7 +422,7 @@ test swapcolumns {
 test nset_I_3D {
     # Create "Identity tensor"
 } -body {
-    set I [nfull 0 3 3 3]
+    set I [nfull 0 {3 3 3}]
     for {set i 0} {$i < 3} {incr i} {
         nset I $i $i $i 1
     }
@@ -473,8 +473,8 @@ test ninsert2D_1 {
 test ninsert3D_2 {
     # Test on tensors
 } -body {
-    set x [nreshape {1 2 3 4 5 6 7 8 9} 3 3 1]; # Create tensor
-    set y [nreshape {A B C D E F G H I} 3 3 1]; # 
+    set x [nreshape {1 2 3 4 5 6 7 8 9} {3 3 1}]; # Create tensor
+    set y [nreshape {A B C D E F G H I} {3 3 1}]; # 
     ninsert $x end $y 2 3 
 } -result {{{1 A} {2 B} {3 C}} {{4 D} {5 E} {6 F}} {{7 G} {8 H} {9 I}}}
 
@@ -607,22 +607,22 @@ test npermute {
     # Reorder axes, and show agreement with nswapaxes and nmoveaxis
 } -body {
     # Verify with 4D tensor
-    set x [nrand 10 10 10 10]
-    set y1 [npermute $x 3 2 0 1]; # Reversed order
+    set x [nrand {10 10 10 10}]
+    set y1 [npermute $x {3 2 0 1}]; # Reversed order
     # i j k l; # swap 3 and 0
     # l j k i; # move 1 to 3
     # l k i j
     set y2 [nmoveaxis [nswapaxes $x 0 3] 1 3]
     assert $y1 eq $y2
     # Perform same axis swap as example nmoveaxis_btf
-    npermute {{{1 2} {3 4}} {{5 6} {7 8}}} 2 0 1; # Same as move 2 0
+    npermute {{{1 2} {3 4}} {{5 6} {7 8}}} {2 0 1}; # Same as move 2 0
 } -result {{{1 3} {5 7}} {{2 4} {6 8}}}
 
 test npermute5 {
     # Permute a 5D tensor
 } -body {
-    set x [nrand 10 10 10 10 10]
-    set y1 [npermute $x 4 3 0 2 1]
+    set x [nrand {10 10 10 10 10}]
+    set y1 [npermute $x {4 3 0 2 1}]
     # 0 1 2 3 4; # swap 0 and 4
     # 4 1 2 3 0; # swap 1 and 3
     # 4 3 2 1 0; # swap 2 and 3
@@ -756,7 +756,7 @@ test nmap_index3 {
 } -body {
     set y ""
     lappend y ""
-    nmap x [nfull {} 2 3 2] {
+    nmap x [nfull {} {2 3 2}] {
         lappend y [list [i -1] [i] [j] [k]]
     }
     lappend y ""
@@ -840,6 +840,14 @@ test nexpr_self {
     nexpr {@.+5} {1 2 3}
 } -result {6 7 8}
 
+test nexpr_stride {
+    # Do a strided nexpr
+} -body {
+    set x {4 5}
+    set y {{10 20 30} {100 200 300} {1000 2000 3000} {10000 20000 30000}}
+    nexpr {@x + @y}
+} -result {{14 24 34} {105 205 305} {1004 2004 3004} {10005 20005 30005}}
+
 test nset_expr {
     # nset for math
 } -body {
@@ -850,7 +858,7 @@ test nset_expr {
     set z ""; unset z; # make sure it works without 
     nset z = {@x + @y}
     assert [nset z end = {@. * 2}] eq {15.0 17.0 38.0}
-    nset x [nfull 1 3 3 3]
+    nset x [nfull 1 {3 3 3}]
     nset y {1 2 3}
     nset z {{hello world} {goodbye moon} {foo bar}}
     assert [nset x end* : 0* = {@. + @y + [llength @z]}] eq {{{1 1 1} {1 1 1} {1 1 1}} {{1 1 1} {1 1 1} {1 1 1}} {{4 1 1} {5 1 1} {6 1 1}}}

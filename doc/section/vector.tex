@@ -64,7 +64,7 @@ puts [nget $x [find $x > 2]]
 \end{example}
 \subsection{Linear Interpolation}
 The command \cmdlink{linterp} performs linear 1D interpolation.
-Converts input to double.
+Converts inputs to double.
 \begin{syntax}
 \command{linterp} \$x \$xList \$yList
 \end{syntax}
@@ -87,7 +87,7 @@ puts [linterp 8.2 {0 10 20} {2 -4 5}]
 \clearpage
 \subsection{Vector Generation}
 The command \cmdlink{linspace} can be used to generate a vector of specified length and equal spacing between two specified values. 
-Converts input to double.
+Converts inputs to double.
 \begin{syntax}
 \command{linspace} \$n \$start \$stop 
 \end{syntax}
@@ -106,17 +106,17 @@ puts [linspace 5 0 1]
 \end{lstlisting}
 \end{example}
 The command \cmdlink{linsteps} generates intermediate values given an increment size and a sequence of targets.
-Converts input to double.
+Converts inputs to double.
 \begin{syntax}
-\command{linsteps} \$step \$x1 \$x2 ...
+\command{linsteps} \$step \$targets
 \end{syntax}
 \begin{args}
 \$step & Maximum step size \\
-\$x1 \$x2 ... & Targets to hit.
+\$targets & List of targets to hit.
 \end{args}
 \begin{example}{Intermediate value vector generation}
 \begin{lstlisting}
-puts [linsteps 0.25 0 1 0]
+puts [linsteps 0.25 {0 1 0}]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}

@@ -149,7 +149,7 @@ proc ::ndlist::matmul {A B} {
 # n             Size of matrix (nxn)
 
 proc ::ndlist::eye {n} {
-    set x [nfull 0 $n $n]
+    set x [lrepeat $n [lrepeat $n 0]]
     foreach i [range $n] {
         lset x $i $i 1
     }

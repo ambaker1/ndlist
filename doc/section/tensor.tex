@@ -77,16 +77,16 @@ puts [list [nshape $x 4] [nsize $x 4]]; # rank 4
 \subsection{Initialization}
 The command \cmdlink{nfull} initializes a valid ND-list of any size filled with a single value.
 \begin{syntax}
-\command{nfull} \$value \$n ...
+\command{nfull} \$value \$shape
 \end{syntax}
 \begin{args}
 \$value & Value to repeat \\
-\$n ... & Shape (list of dimensions) of ND-list. 
+\$shape & Shape (list of dimensions) of ND-list. 
 \end{args}
 \begin{example}{Generate ND-list filled with one value}
 \begin{lstlisting}
-puts [nfull foo 3 2]; # 3x2 matrix filled with "foo"
-puts [nfull 0 2 2 2]; # 2x2x2 tensor filled with zeros
+puts [nfull foo {3 2}]; # 3x2 matrix filled with "foo"
+puts [nfull 0 {2 2 2}]; # 2x2x2 tensor filled with zeros
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
@@ -96,15 +96,15 @@ puts [nfull 0 2 2 2]; # 2x2x2 tensor filled with zeros
 \end{example}
 The command \cmdlink{nrand} initializes a valid ND-list of any size filled with random values between 0 and 1.
 \begin{syntax}
-\command{nrand} \$n ...
+\command{nrand} \$shape
 \end{syntax}
 \begin{args}
-\$n ... & Shape (list of dimensions) of ND-list. 
+\$shape & Shape (list of dimensions) of ND-list. 
 \end{args}
 \begin{example}{Generate random matrix}
 \begin{lstlisting}
 expr {srand(0)}; # resets the random number seed (for the example)
-puts [nrand 1 2]; # 1x2 matrix filled with random numbers
+puts [nrand {1 2}]; # 1x2 matrix filled with random numbers
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
@@ -115,15 +115,15 @@ puts [nrand 1 2]; # 1x2 matrix filled with random numbers
 \subsection{Repeating and Expanding}
 The command \cmdlink{nrepeat} repeats portions of an ND-list a specified number of times.
 \begin{syntax}
-\command{nrepeat} \$ndlist \$n ...
+\command{nrepeat} \$ndlist \$repeats
 \end{syntax}
 \begin{args}
 \$value & Value to repeat \\
-\$n ... & Repetitions at each level.
+\$repeats & Repetitions at each level.
 \end{args}
 \begin{example}{Repeat elements of a matrix}
 \begin{lstlisting}
-puts [nrepeat {{1 2} {3 4}} 1 2]
+puts [nrepeat {{1 2} {3 4}} {1 2}]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
@@ -134,16 +134,16 @@ The command \cmdlink{nexpand} repeats portions of an ND-list to expand to new di
 New dimensions must be divisible by old dimensions.
 For example, 1x1, 2x1, 4x1, 1x3, 2x3 and 4x3 are compatible with 4x3.
 \begin{syntax}
-\command{nexpand} \$ndlist \$n ...
+\command{nexpand} \$ndlist \$shape
 \end{syntax}
 \begin{args}
 \$ndlist & ND-list to expand. \\
-\$n ... & New shape of ND-list. If -1 is used, it keeps that axis the same.
+\$shape & New shape of ND-list. If -1 is used, it keeps that axis the same.
 \end{args}
 \begin{example}{Expand an ND-list to new dimensions}
 \begin{lstlisting}
-puts [nexpand {1 2 3} -1 2]
-puts [nexpand {{1 2}} 2 4]
+puts [nexpand {1 2 3} {-1 2}]
+puts [nexpand {{1 2}} {2 4}]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
@@ -155,17 +155,17 @@ puts [nexpand {{1 2}} 2 4]
 \subsection{Padding and Extending}
 The command \cmdlink{npad} pads an ND-list along its axes by a specified number of elements.
 \begin{syntax}
-\command{npad} \$ndlist \$value \$n ...
+\command{npad} \$ndlist \$value \$pads
 \end{syntax}
 \begin{args}
 \$ndlist & ND-list to pad. \\
 \$value & Value to pad with. \\
-\$n ... & Number of elements to pad.
+\$pads & Number of elements to pad along each axis.
 \end{args}
 \begin{example}{Padding an ND-list with zeros}
 \begin{lstlisting}
 set a {{1 2 3} {4 5 6} {7 8 9}}
-puts [npad $a 0 2 1]
+puts [npad $a 0 {2 1}]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
@@ -174,17 +174,17 @@ puts [npad $a 0 2 1]
 \end{example}
 The command \cmdlink{nextend} extends an ND-list to a new shape by padding.
 \begin{syntax}
-\command{nextend} \$ndlist \$value \$n ...
+\command{nextend} \$ndlist \$value \$shape
 \end{syntax}
 \begin{args}
 \$ndlist & ND-list to extend. \\
 \$value & Value to pad with. \\
-\$n ... & New shape of ND-list. To keep the shape at an axis, use -1.
+\$shape & New shape of ND-list. To keep the shape at an axis, use -1.
 \end{args}
 \begin{example}{Extending an ND-list to a new shape with a filler value}
 \begin{lstlisting}
 set a {hello hi hey howdy}
-puts [nextend $a world -1 2]; # -1 preserves size at axis 0
+puts [nextend $a world {-1 2}]; # -1 preserves size at axis 0
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
@@ -201,29 +201,28 @@ The command \cmdlink{nflatten} flattens an ND-list to a vector.
 \$ndlist & ND-list to flatten. \\
 \$rank & Rank of ND-list (e.g. 2 for matrix) or ``auto'' for auto-rank. Default ``auto''.
 \end{args}
-\begin{example}{Reshape a matrix to a 3D tensor}
+\begin{example}{Flattening a 3D tensor}
 \begin{lstlisting}
-set x [nflatten {{1 2 3 4} {5 6 7 8}}]
-puts [nreshape $x 2 2 2]
+puts [nflatten {{{1 2} {3 4}} {{5 6} {7 8}}}]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
-{{1 2} {3 4}} {{5 6} {7 8}}
+1 2 3 4 5 6 7 8
 \end{lstlisting}
 \end{example}
 
 The command \cmdlink{nreshape} reshapes a vector into specified dimensions.
 Sizes must be compatible.
 \begin{syntax}
-\command{nreshape} \$vector \$n ...
+\command{nreshape} \$vector \$shape
 \end{syntax}
 \begin{args}
 \$vector & Vector (1D-list) to reshape. \\
-\$n ... & Shape of ND-list. One axis may be dynamic, denoted with -1.
+\$shape & Shape of ND-list. One axis may be dynamic, denoted with -1.
 \end{args}
 \begin{example}{Reshape a vector to a matrix with three columns}
 \begin{lstlisting}
-puts [nreshape {1 2 3 4 5 6} -1 3]
+puts [nreshape {1 2 3 4 5 6} {-1 3}]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
@@ -413,8 +412,8 @@ puts [ninsert $matrix 1 $column 1 2]
 \end{example}
 \begin{example}{Concatenate tensors}
 \begin{lstlisting}
-set x [nreshape {1 2 3 4 5 6 7 8 9} 3 3 1]
-set y [nreshape {A B C D E F G H I} 3 3 1]
+set x [nreshape {1 2 3 4 5 6 7 8 9} {3 3 1}]
+set y [nreshape {A B C D E F G H I} {3 3 1}]
 puts [ncat $x $y 2 3]
 \end{lstlisting}
 \tcblower
@@ -447,17 +446,17 @@ For example, moving axis 0 to position 2 would change ``i,j,k'' to ``j,k,i''.
 The command \cmdlink{npermute} is more general purpose, and defines a new order for the axes of an ND-list.
 For example, the axis list ``1 0 2'' would change ``i,j,k'' to ``j,i,k''. 
 \begin{syntax}
-\command{npermute} \$ndlist \$axis ...
+\command{npermute} \$ndlist \$order
 \end{syntax}
 \begin{args}
 \$ndlist & ND-list to manipulate. \\
-\$axis ... & List of axes defining new order.
+\$order & List of axes defining new order.
 \end{args}
 \begin{example}{Changing tensor axes}
 \begin{lstlisting}
-set x {{{1 2} {3 4}} {{5 6} {7 8}}}
-set y [nswapaxes $x 0 2]
-set z [nmoveaxis $x 0 2]
+set x {{{1 2} {3 4}} {{5 6} {7 8}}}; # 3D tensor
+set y [nswapaxes $x 0 2]; # k,j,i
+set z [nmoveaxis $x 0 2]; # j,k,i
 puts [lindex $x 0 0 1]
 puts [lindex $y 1 0 0]
 puts [lindex $z 0 1 0]

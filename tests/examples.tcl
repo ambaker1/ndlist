@@ -53,7 +53,7 @@ puts -nonewline {}
 
 test {Example 6} {Intermediate value vector generation} -body {
 puts {}
-puts [linsteps 0.25 0 1 0]
+puts [linsteps 0.25 {0 1 0}]
 puts -nonewline {}
 } -output {
 0.0 0.25 0.5 0.75 1.0 0.75 0.5 0.25 0.0
@@ -250,8 +250,8 @@ puts -nonewline {}
 
 test {Example 20} {Generate ND-list filled with one value} -body {
 puts {}
-puts [nfull foo 3 2]; # 3x2 matrix filled with "foo"
-puts [nfull 0 2 2 2]; # 2x2x2 tensor filled with zeros
+puts [nfull foo {3 2}]; # 3x2 matrix filled with "foo"
+puts [nfull 0 {2 2 2}]; # 2x2x2 tensor filled with zeros
 puts -nonewline {}
 } -output {
 {foo foo} {foo foo} {foo foo}
@@ -261,7 +261,7 @@ puts -nonewline {}
 test {Example 21} {Generate random matrix} -body {
 puts {}
 expr {srand(0)}; # resets the random number seed (for the example)
-puts [nrand 1 2]; # 1x2 matrix filled with random numbers
+puts [nrand {1 2}]; # 1x2 matrix filled with random numbers
 puts -nonewline {}
 } -output {
 {0.013469574513598146 0.3831388500440581}
@@ -269,7 +269,7 @@ puts -nonewline {}
 
 test {Example 22} {Repeat elements of a matrix} -body {
 puts {}
-puts [nrepeat {{1 2} {3 4}} 1 2]
+puts [nrepeat {{1 2} {3 4}} {1 2}]
 puts -nonewline {}
 } -output {
 {1 2 1 2} {3 4 3 4}
@@ -277,8 +277,8 @@ puts -nonewline {}
 
 test {Example 23} {Expand an ND-list to new dimensions} -body {
 puts {}
-puts [nexpand {1 2 3} -1 2]
-puts [nexpand {{1 2}} 2 4]
+puts [nexpand {1 2 3} {-1 2}]
+puts [nexpand {{1 2}} {2 4}]
 puts -nonewline {}
 } -output {
 {1 1} {2 2} {3 3}
@@ -288,7 +288,7 @@ puts -nonewline {}
 test {Example 24} {Padding an ND-list with zeros} -body {
 puts {}
 set a {{1 2 3} {4 5 6} {7 8 9}}
-puts [npad $a 0 2 1]
+puts [npad $a 0 {2 1}]
 puts -nonewline {}
 } -output {
 {1 2 3 0} {4 5 6 0} {7 8 9 0} {0 0 0 0} {0 0 0 0}
@@ -297,24 +297,23 @@ puts -nonewline {}
 test {Example 25} {Extending an ND-list to a new shape with a filler value} -body {
 puts {}
 set a {hello hi hey howdy}
-puts [nextend $a world -1 2]; # -1 preserves size at axis 0
+puts [nextend $a world {-1 2}]; # -1 preserves size at axis 0
 puts -nonewline {}
 } -output {
 {hello world} {hi world} {hey world} {howdy world}
 }
 
-test {Example 26} {Reshape a matrix to a 3D tensor} -body {
+test {Example 26} {Flattening a 3D tensor} -body {
 puts {}
-set x [nflatten {{1 2 3 4} {5 6 7 8}}]
-puts [nreshape $x 2 2 2]
+puts [nflatten {{{1 2} {3 4}} {{5 6} {7 8}}}]
 puts -nonewline {}
 } -output {
-{{1 2} {3 4}} {{5 6} {7 8}}
+1 2 3 4 5 6 7 8
 }
 
 test {Example 27} {Reshape a vector to a matrix with three columns} -body {
 puts {}
-puts [nreshape {1 2 3 4 5 6} -1 3]
+puts [nreshape {1 2 3 4 5 6} {-1 3}]
 puts -nonewline {}
 } -output {
 {1 2 3} {4 5 6}
@@ -399,8 +398,8 @@ puts -nonewline {}
 
 test {Example 34} {Concatenate tensors} -body {
 puts {}
-set x [nreshape {1 2 3 4 5 6 7 8 9} 3 3 1]
-set y [nreshape {A B C D E F G H I} 3 3 1]
+set x [nreshape {1 2 3 4 5 6 7 8 9} {3 3 1}]
+set y [nreshape {A B C D E F G H I} {3 3 1}]
 puts [ncat $x $y 2 3]
 puts -nonewline {}
 } -output {
@@ -409,9 +408,9 @@ puts -nonewline {}
 
 test {Example 35} {Changing tensor axes} -body {
 puts {}
-set x {{{1 2} {3 4}} {{5 6} {7 8}}}
-set y [nswapaxes $x 0 2]
-set z [nmoveaxis $x 0 2]
+set x {{{1 2} {3 4}} {{5 6} {7 8}}}; # 3D tensor
+set y [nswapaxes $x 0 2]; # k,j,i
+set z [nmoveaxis $x 0 2]; # j,k,i
 puts [lindex $x 0 0 1]
 puts [lindex $y 1 0 0]
 puts [lindex $z 0 1 0]
