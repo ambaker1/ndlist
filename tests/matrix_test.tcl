@@ -20,10 +20,10 @@ test stack_augment {
 test block {
     # Combine a matrix of matrices
 } -body {
-    set A [nfull 1 4 3]
-    set B [nfull 0 4 2]
-    set C [nfull 0 1 3]
-    set D [nfull 1 1 2]
+    set A [nfull 1 {4 3}]
+    set B [nfull 0 {4 2}]
+    set C [nfull 0 {1 3}]
+    set D [nfull 1 {1 2}]
     join [block [list [list $A $B] [list $C $D]]] \n
 } -result {1 1 1 0 0
 1 1 1 0 0

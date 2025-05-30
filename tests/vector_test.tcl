@@ -65,13 +65,13 @@ test linspace {
 test linsteps {
     # Walk through target points
 } -body {
-    linsteps 0.25 0 1 0
+    linsteps 0.25 {0 1 0}
 } -result {0.0 0.25 0.5 0.75 1.0 0.75 0.5 0.25 0.0}
 
 test linsteps_uneven {
     # Uneven steps
 } -body {
-    linsteps 0.3 0 1 0
+    linsteps 0.3 {0 1 0}
 } -result {0.0 0.3 0.6 0.8999999999999999 1.0 0.7 0.4 0.10000000000000009 0.0}
 
 test linterp_mid {

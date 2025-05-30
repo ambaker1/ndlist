@@ -10,3 +10,4 @@ doc/**
 !doc/section/*.tex
 !doc/figures
 !doc/figures/*.pdf
+tests/*.csv

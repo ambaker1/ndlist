@@ -139,21 +139,23 @@ proc ::ndlist::linspace {n start stop} {
 # Generate list that walks between targets, with a maximum step size.
 #
 # Syntax:
-# linsteps $stepSize $start $target ...
+# linsteps $stepSize $targets
 # 
 # Arguments:
 # stepSize      Magnitude of step size (must be > 0.0)
-# start         Starting value
-# target ...    Targets to walk through
+# target        Targets to walk through (length > 0)
 
-proc ::ndlist::linsteps {stepSize start args} {
+proc ::ndlist::linsteps {stepSize targets} {
     # Interpret inputs and coerce into double (throws error if not double)
     set stepSize [expr {double($stepSize)}]
     if {$stepSize <= 0.0} {
         return -code error "Step size must be > 0.0"
     }
-    set start [expr {double($start)}]
-    set targets [lmap target $args {expr {double($target)}}]
+    if {[llength $targets] == 0} {
+        return -code error "target list must be at least length 1"
+    }
+    set targets [lmap target $targets {expr {double($target)}}]
+    set targets [lassign $targets start]
     # Initialize with start
     set values [list $start]
     # Loop through targets

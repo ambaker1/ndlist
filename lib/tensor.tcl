@@ -133,15 +133,15 @@ proc ::ndlist::nsize {ndlist {rank auto}} {
 # Create an ND-list filled with one value
 #
 # Syntax:
-# nfull $value $n ...
+# nfull $value $shape
 #
 # Arguments:
 # value         Value to repeat
-# n ...         Shape of ND-list
+# shape         Shape of ND-list
 
-proc ::ndlist::nfull {value args} {
+proc ::ndlist::nfull {value shape} {
     set ndlist $value
-    foreach n [lreverse $args] {
+    foreach n [lreverse $shape] {
         if {$n == 0} {
             return
         }
@@ -155,20 +155,20 @@ proc ::ndlist::nfull {value args} {
 # Generate an ND-list filled with random values between 0 and 1
 #
 # Syntax:
-# nrand $n ...
+# nrand $shape
 #
 # Arguments:
-# n ...         Shape of resulting ND-list
+# shape         Shape of resulting ND-list
 
-proc ::ndlist::nrand {args} {
+proc ::ndlist::nrand {shape} {
     # Base case
-    if {[llength $args] == 0} {
+    if {[llength $shape] == 0} {
         return [::tcl::mathfunc::rand]
     }
     # Recursion
-    set args [lassign $args n]
+    set shape [lassign $shape n]
     lmap x [lrepeat $n {}] {
-        nrand {*}$args
+        nrand $shape
     }
 }
 
@@ -177,16 +177,16 @@ proc ::ndlist::nrand {args} {
 # Reshape a vector to different dimensions.
 #
 # Syntax:
-# nreshape $vector $arg ...
+# nreshape $vector $shape
 #
 # Arguments:
 # vector        1D list to reshape into matrix or higher-dimensional tensor
-# arg ...       New shape (and dimensions). One axis may be dynamic (*)
+# shape         New shape (and dimensions). One axis may be dynamic (-1)
 
-proc ::ndlist::nreshape {vector args} {
+proc ::ndlist::nreshape {vector shape} {
     set size [llength $vector]
     # Scalar case
-    if {[llength $args] == 0} {
+    if {[llength $shape] == 0} {
         if {$size != 1} {
             return -code error "incompatible dimensions"
         }
@@ -194,28 +194,27 @@ proc ::ndlist::nreshape {vector args} {
         return [lindex $vector 0]
     }
     # Vector case (allow for dynamic "-1")
-    if {[llength $args] == 1} {
-        set arg [lindex $args 0]
-        if {$size != $arg && $arg != -1} {
+    if {[llength $shape] == 1} {
+        if {$size != [lindex $shape 0] && [lindex $shape 0] != -1} {
             return -code error "incompatible dimensions"
         }
         return $vector
     }
     # Matrix and higher-dimensional case (allow for one dynamic axis)
-    set dynamic [lsearch -all -exact $args "-1"]
+    set dynamic [lsearch -all -exact $shape -1]
     if {[llength $dynamic] > 1} {
         return -code error "can only make one axis dynamic"
     }
     if {[llength $dynamic] == 1} {
-        set subsize [product [lreplace $args $dynamic $dynamic]]
-        lset args $dynamic [expr {$size/$subsize}]
+        set subsize [product [lreplace $shape $dynamic $dynamic]]
+        lset shape $dynamic [expr {$size/$subsize}]
     }
     # Check compatibility
-    if {[product $args] != $size} {
+    if {[product $shape] != $size} {
         return -code error "incompatible dimensions"
     }
     # Call recursive handler
-    RecReshape $vector {*}$args
+    RecReshape $vector {*}$shape
 }
 
 # RecReshape --
@@ -285,28 +284,28 @@ proc ::ndlist::nflatten {ndlist {rank auto}} {
 #
 # Arguments:
 # ndlist        ND-list to repeat
-# n ...         Number of times to repeat ND-list along the axis.
+# repeats       Number of times to repeat ND-list along the axis.
 
-proc ::ndlist::nrepeat {ndlist args} {
+proc ::ndlist::nrepeat {ndlist repeats} {
     # Scalar case
-    if {[llength $args] == 0} {
+    if {[llength $repeats] == 0} {
         return $ndlist
     }
     # Validate integer inputs
-    foreach n $args {
-        if {![string is integer -strict $n]} {
-            return -code error "expected integer but got \"$n\""
+    foreach repeat $repeats {
+        if {![string is integer -strict $repeat]} {
+            return -code error "expected integer but got \"$repeat\""
         }
-        if {$n <= 0} {
-            return -code error "bad count \"$n\": must be integer > 0"
+        if {$repeat <= 0} {
+            return -code error "bad count \"$repeat\": must be integer > 0"
         }
     }
-    # Trivial case
-    if {[lsearch -exact -integer -not $args 1] == -1} {
+    # Trivial case (all are 1)
+    if {[lsearch -exact -integer -not $repeats 1] == -1} {
         return $ndlist
     }
     # Call recursive handler
-    RecRepeat $ndlist {*}$args
+    RecRepeat $ndlist {*}$repeats
 }
 
 # RecRepeat --
@@ -350,19 +349,19 @@ proc ::ndlist::RecRepeat {ndlist n args} {
 #
 # Arguments:
 # ndlist        ND-list to expand
-# arg ...       New shape. -1 to keep shape at that dimension.
+# shape         New shape. -1 to keep shape at that dimension.
 
-proc ::ndlist::nexpand {ndlist args} {    
+proc ::ndlist::nexpand {ndlist shape} {    
     # Get dimensions
-    set dims [GetShape [llength $args] $ndlist]
-    set args [lmap dim $dims arg $args {expr {$arg == -1 ? $dim : $arg}}]
+    set shape1 [GetShape [llength $shape] $ndlist]
+    set shape2 [lmap n1 $shape1 n2 $shape {expr {$n2 == -1 ? $n1 : $n2}}]
     # Get number of repetitions at every level
-    nrepeat $ndlist {*}[lmap dim $dims arg $args {
-        if {$arg % $dim} {
+    nrepeat $ndlist [lmap n1 $shape1 n2 $shape2 {
+        if {$n2 % $n1} {
             return -code error "incompatible dimensions"
         } else {
             # Compute number of repetitions by integer division.
-            expr {$arg / $dim}
+            expr {$n2 / $n1}
         }
     }]
 }
@@ -376,23 +375,23 @@ proc ::ndlist::nexpand {ndlist args} {
 #
 # Arguments:
 # ndlist        ND-list to expand
-# n ...         Amount to pad. 0 for none. 
+# pads          Amount to pad along each axis. 0 for none. 
 
-proc ::ndlist::npad {ndlist value args} {
+proc ::ndlist::npad {ndlist value pads} {
     # Check input
-    foreach arg $args {
-        if {![string is integer -strict $arg] || $arg < 0} {
-            return -code error "bad count \"$arg\": must be >= 0"
+    foreach pad $pads {
+        if {![string is integer -strict $pad] || $pad < 0} {
+            return -code error "bad count \"$pad\": must be >= 0"
         }
     }
     # Null case
     if {[llength $ndlist] == 0} {
-        return [nfull $value {*}$args]
+        return [nfull $value $pads]
     }
     # Get dimensions
-    set dims [GetShape [llength $args] $ndlist]
+    set dims [GetShape [llength $pads] $ndlist]
     # Call recursive handler
-    RecPad $ndlist $value $dims {*}$args
+    RecPad $ndlist $value $dims {*}$pads
 }
 
 # RecPad --
@@ -422,7 +421,7 @@ proc ::ndlist::RecPad {ndlist value dims n args} {
     set dims [lrange $dims 1 end]; # trim dims
     # Skip case
     if {$n > 0} {
-        set ndlist [concat $ndlist [nfull $value $n {*}$dims]]
+        set ndlist [concat $ndlist [nfull $value [concat $n $dims]]]
     }
     lmap ndrow $ndlist {
         RecPad $ndrow $value $dims {*}$args
@@ -434,19 +433,19 @@ proc ::ndlist::RecPad {ndlist value dims n args} {
 # Extend an ND-list to a new shape, filling with a single value.
 # 
 # Syntax:
-# nextend $ndlist $value $arg ...
+# nextend $ndlist $value $shape
 #
 # Arguments:
 # ndlist        ND-list to expand
 # arg ...       New shape, greater than or equal to old.
 #               -1 to maintain shape at axis.
 
-proc ::ndlist::nextend {ndlist value args} {
+proc ::ndlist::nextend {ndlist value shape} {
     # Get dimensions
-    set dims [GetShape [llength $args] $ndlist]
+    set dims [GetShape [llength $shape] $ndlist]
     # Pad the ndlist based on the difference between new and old.
-    npad $ndlist $value {*}[lmap dim $dims arg $args {
-        expr {$arg == -1 ? 0 : $arg - $dim}
+    npad $ndlist $value [lmap dim $dims n $shape {
+        expr {$n == -1 ? 0 : $n - $dim}
     }]
 }
 
@@ -645,7 +644,7 @@ proc ::ndlist::nreplace {ndlist args} {
         }
     }
     # Expand sublist if needed based on index dimensions.
-    set sublist [nexpand $sublist {*}[GetIndexShape $dims {*}$iArgs]]
+    set sublist [nexpand $sublist [GetIndexShape $dims {*}$iArgs]]
     # Call recursive handler
     RecReplace $ndlist $sublist {*}$iArgs
 }
@@ -1070,35 +1069,35 @@ proc ::ndlist::MoveBack2Front {ndlist axis} {
 # Reorders the ND-list according to list of axes.
 #
 # Syntax:
-# npermute $ndlist $axis ...
+# npermute $ndlist $order
 #
 # Arguments:
 # ndlist        ND-list to manipulate
-# axis ...      New order of axes. e.g. 2 0 1, or 2 3 0 1
+# order         New order of axes. e.g. 2 0 1, or 2 3 0 1
 
-proc ::ndlist::npermute {ndlist args} {
+proc ::ndlist::npermute {ndlist order} {
     # Get dimensionality and check validity of axes list
-    set ndims [llength $args]
+    set ndims [llength $order]
     # Validate axes
-    foreach axis $args {
+    foreach axis $order {
         ValidateAxis $ndims $axis
     }
     # Null case (same axis list)
-    if {$args eq [range $ndims]} {
+    if {$order eq [range $ndims]} {
         return $ndlist
     }
     # Make sure there are no duplicates
-    if {[llength [lsort -integer -unique $args]] != $ndims} {
+    if {[llength [lsort -integer -unique $order]] != $ndims} {
         return -code error "invalid axes list: duplicates"
     }
     # Get index lists for axis swap.
     set dims [GetShape $ndims $ndlist]
     set indicesList [cartprod {*}[lmap dim $dims {range $dim}]]
     # Initialize new ND-list
-    set newList [nfull {} {*}[lmap axis $args {lindex $dims $axis}]]
+    set newList [nfull {} [lmap axis $order {lindex $dims $axis}]]
     # Fill new ND-list
     foreach indices $indicesList {
-        set newIndices [lmap axis $args {lindex $indices $axis}]
+        set newIndices [lmap axis $order {lindex $indices $axis}]
         lset newList {*}$newIndices [lindex $ndlist {*}$indices]
     }
     return $newList
@@ -1168,8 +1167,8 @@ proc ::ndlist::RecApply {level ndims command ndlist args} {
 proc ::ndlist::napply2 {command ndlist1 ndlist2 {suffix ""} {rank auto}} {
     set ndims [ndims_multiple [list $ndlist1 $ndlist2] $rank]
     set shape [GetMaxShape $ndims $ndlist1 $ndlist2]
-    set ndlist1 [nexpand $ndlist1 {*}$shape]
-    set ndlist2 [nexpand $ndlist2 {*}$shape]
+    set ndlist1 [nexpand $ndlist1 $shape]
+    set ndlist2 [nexpand $ndlist2 $shape]
     RecApply2 1 $ndims $command $ndlist1 $ndlist2 {*}$suffix
 }
 
@@ -1275,7 +1274,7 @@ proc ::ndlist::nmap {args} {
     }
     # Expand all ndlists to have the same shape, and then flatten.
     set dims [GetMaxShape $ndims {*}$ndlists]
-    set ndlists [lmap ndlist $ndlists {nexpand $ndlist {*}$dims}]
+    set ndlists [lmap ndlist $ndlists {nexpand $ndlist $dims}]
     set ndlists [lmap ndlist $ndlists {nflatten $ndlist $ndims}]
     # Create varName-ndlist mapping with flattened ndlists.
     set varMap {}; # initialize
@@ -1295,7 +1294,7 @@ proc ::ndlist::nmap {args} {
         if {[llength $vector] == 0} {
             return
         }
-        nreshape $vector {*}$dims
+        nreshape $vector $dims
     } finally {
         set map_index $oldmap_index
         set map_shape $oldmap_shape
