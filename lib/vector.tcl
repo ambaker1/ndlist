@@ -11,7 +11,7 @@
 
 # Define namespace and exported commands
 namespace eval ::ndlist {
-    namespace export range find; # List indexing utilities
+    namespace export range where; # List indexing utilities
     namespace export linspace linsteps linterp; # List generation
     namespace export lapply lapply2; # Functional mapping
     namespace export max min sum product mean median stdev pstdev; # Stats
@@ -74,27 +74,27 @@ proc ::ndlist::range {args} {
     lmap x [lrepeat $n {}] {incr i $step}
 }
 
-# find --
+# where --
 #
 # Get list of all non-zero elements for indexing lists.
 # Converts list to boolean, then performs lsearch to get all indices.
 #
 # Syntax:
-# find $list <$op $value>
+# where $list <$op $value>
 #
 # Arguments:
 # list          List to search for non-zero elements.
 # op            Comparison operator. Default !=
 # value         Value to compare with. Default 0
 
-proc ::ndlist::find {list args} {
+proc ::ndlist::where {list args} {
     # Switch for arity and interpret input
     if {[llength $args] == 0} {
-        # find $list
+        # where $list
         set op !=
         set value 0
     } elseif {[llength $args] == 2} {
-        # find $list $op $value
+        # where $list $op $value
         lassign $args op value
         # Check comparison operator
         if {$op ni {!= == <= >= < > eq ne in ni}} {
@@ -102,7 +102,7 @@ proc ::ndlist::find {list args} {
         }
     } else {
         return -code error "wrong # args: should be\
-                \"find list ?op value?\""
+                \"where list ?op value?\""
     }
     # Perform search.
     lsearch -exact -integer -all [lapply ::tcl::mathop::$op $list $value] 1

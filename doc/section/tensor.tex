@@ -363,7 +363,7 @@ The command \cmdlink{nremove} removes portions of an ND-list at a specified axis
 \begin{example}{Filtering a list by removing elements}
 \begin{lstlisting}
 set x [range 10]
-puts [nremove $x [find $x > 4]]
+puts [nremove $x [where $x > 4]]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}

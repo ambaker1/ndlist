@@ -42,10 +42,10 @@ foreach i [range 3] {
 \end{example}
 \clearpage
 \subsection{Logical Indexing}
-The command \cmdlink{find} returns the indices of non-zero elements of a boolean list, or indices of elements that satisfy a given criterion.
+The command \cmdlink{where} returns the indices of non-zero elements of a boolean list, or indices of elements that satisfy a given criterion.
 Can be used in conjunction with \cmdlink{nget} to perform logical indexing.
 \begin{syntax}
-\command{find} \$list <\$op \$scalar>
+\command{where} \$list <\$op \$scalar>
 \end{syntax}
 \begin{args}
 \$list & List of values to compare. \\
@@ -55,7 +55,7 @@ Can be used in conjunction with \cmdlink{nget} to perform logical indexing.
 \begin{example}{Filtering a list}
 \begin{lstlisting}
 set x {0.5 2.3 4.0 2.5 1.6 2.0 1.4 5.6}
-puts [nget $x [find $x > 2]]
+puts [nget $x [where $x > 2]]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}

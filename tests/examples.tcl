@@ -27,7 +27,7 @@ puts -nonewline {}
 test {Example 3} {Filtering a list} -body {
 puts {}
 set x {0.5 2.3 4.0 2.5 1.6 2.0 1.4 5.6}
-puts [nget $x [find $x > 2]]
+puts [nget $x [where $x > 2]]
 puts -nonewline {}
 } -output {
 2.3 4.0 2.5 5.6
@@ -373,7 +373,7 @@ puts -nonewline {}
 test {Example 31} {Filtering a list by removing elements} -body {
 puts {}
 set x [range 10]
-puts [nremove $x [find $x > 4]]
+puts [nremove $x [where $x > 4]]
 puts -nonewline {}
 } -output {
 0 1 2 3 4
