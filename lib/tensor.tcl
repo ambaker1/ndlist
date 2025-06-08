@@ -25,6 +25,13 @@ namespace eval ::ndlist {
     namespace export napply napply2 nreduce; # Functional mapping
     namespace export nmap i j k; # Generalized mapping/looping
     namespace export neval nexpr; # Element-wise evaluation/math
+    
+    # Polish notation for element-wise math
+    variable mathops {~ ! - + * << ** / % >> & | ^ == != < <= > >=}
+    foreach op $mathops {
+        proc .$op {arg args} "::ndlist::MathOp $op \$arg {*}\$args"
+        namespace export .$op
+    }
 }
 
 # ND-LIST BASICS
@@ -1888,4 +1895,66 @@ proc ::ndlist::UnravelIndex {i n args} {
     # Recursion
     set N [product $args]
     concat [expr {$i / $N}] [UnravelIndex [expr {$i % $N}] {*}$args]
+}
+
+# POLISH NOTATION ELEMENT-WISE MATH OPERATORS
+################################################################################
+
+# In Tcl, the "expr" command is notorious for making math-heavy code difficult
+# to read. TIP #174 added math operators to the namespace ::tcl::mathop, which,
+# when imported, allows for polish-notation math in Tcl (e.g. set y [+ $x 1])
+# This expands upon that concept by adding n-dimensional math operators, using
+# the prefix "." (Note: a smaller subset of math ops is used)
+
+# .$op --
+#
+# Simple math operations on ndlists.
+#
+# Syntax:
+# .$op $ndlist ...
+#
+# Arguments:
+# op            Valid mathop (see $::ndlist::mathops)
+# ndlist ...    Values to perform mathop with 
+#
+# Matrix examples:
+# ./ $matrix; # Performs reciprocal
+# .- $matrix; # Negates values
+# .! $matrix; # Boolean negation
+# .+ 5 1 $matrix; # Adds 5 and 1 to each matrix element
+# .** $matrix 2; # Squares entire matrix
+
+namespace eval ::ndlist {
+    variable mathops {~ ! - + * << ** / % >> & | ^ == != < <= > >=}
+    foreach op $mathops {
+        proc .$op {arg args} "::ndlist::MathOp $op \$arg {*}\$args"
+        namespace export .$op
+    }
+}
+
+proc ::ndlist::MathOp {op arg args} {
+    # Handle common 1 and 2 arg operations for performance
+    if {[llength $args] == 0} {
+        return [napply ::tcl::mathop::$op $arg]
+    } elseif {[llength $args] == 1} {
+        set ndlist1 $arg
+        set ndlist2 [lindex $args 0]
+        if {[ndims $ndlist1] == 0} {
+            return [napply [list ::tcl::mathop::$op $ndlist1] $ndlist2]
+        } elseif {[ndims $ndlist2] == 0} {
+            return [napply ::tcl::mathop::$op $ndlist1 [list $ndlist2]]
+        } else {
+            return [napply2 ::tcl::mathop::$op $ndlist1 $ndlist2]
+        }
+    }
+    # General N-dimensional case
+    set ndlists [linsert $args 0 $arg]
+    set nargs [llength $ndlists]
+    set ndims [ndims_multiple $ndlists]
+    set shape [GetMaxShape $ndims {*}$ndlists]
+    set ndlists [lmap ndlist $ndlists {nexpand $ndlist $shape}]
+    set ndlists [lmap ndlist $ndlists {nflatten $ndlist $ndims}]
+    nreshape [lmap opargs [transpose $ndlists] {
+        ::tcl::mathop::$op {*}$opargs
+    }] $shape
 }

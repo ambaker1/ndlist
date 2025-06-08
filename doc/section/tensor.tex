@@ -296,6 +296,9 @@ puts [nget $A 0* :]; # flatten row matrix to a vector
 puts [nget $A 0:1 0:1]; # get matrix subset
 puts [nget $A end:0 end:0]; # can have reverse ranges
 puts [nget $A {0 0 0} 1*]; # can repeat indices
+# TIP: You can use the Tcl 'interp alias' command to create a convenient shortcut to nget
+interp alias {} @ {} nget
+puts [@ $A 0 :]; # get row matrix
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
@@ -304,6 +307,7 @@ puts [nget $A {0 0 0} 1*]; # can repeat indices
 {1 2} {4 5}
 {9 8 7} {6 5 4} {3 2 1}
 2 2 2
+{1 2 3}
 \end{lstlisting}
 \end{example}
 
@@ -610,7 +614,7 @@ puts $indices
 \end{example}
 \clearpage
 
-\subsection{Element-Wise Operations}
+\subsection{Element-Wise Expressions}
 The command \cmdlink{neval} maps over ND-arrays using \cmdlink{nmap}, but without the need to specify looping variables, and the command \cmdlink{nexpr} is a special case that passes input through the Tcl \textit{expr} command.
 ND-lists can be referred to with ``\texttt{@ref}'', where ``ref'' is the name of the variable storing the ND-list.
 If an ND-list is provided as ``self'', it can be referred to with ``\texttt{@.}'' for convenience.
@@ -648,7 +652,44 @@ puts [nexpr {@. * 2.0} {4 3 8}]; # self-operation using @. notation
 \end{lstlisting}
 \end{example}
 
+\clearpage
+\subsection{Prefix Notation Math}
+Tcl is unique in that everything is a command. So, that means that it does not natively support the typical algebraic ``infix'' notation that people are used to. 
+Instead, the Tcl \textit{expr} command provides a sub-language that parses scalar math in the familiar ``infix'' notation.
+The ndlist \cmdlink{nexpr} command was designe to extend the functionality of \textit{expr} to provide support for element-wise operations. 
+However, in code that is heavy in math, having a lot of ``expr'' or ``nexpr'' calls can make code difficult to read.
+There has been a lot of discussion in the Tcl community about this problem, and the general consensus is that it was addressed in Tcl \hyperlink{https://core.tcl-lang.org/tips/doc/trunk/tip/174.md}{TIP \#174}, which added the ::tcl::mathop namespace to the core. 
+This change to Tcl provided users with easy access to math operators as commands.
+The ndlist package expands upon this by providing equivalent element-wise operators as commands, with the exception that it only provides element-wise math operators. 
+This is because the ndlist math operator commands do not have an option to specify the rank of the input lists, which could lead to unexpected results for some string/list operations.
 
+The available element-wise operators are \texttt{$\sim$}, \texttt{!}, \texttt{-}, \texttt{+}, \texttt{*}, \texttt{<{}<}, \texttt{**}, \texttt{/}, \texttt{\%}, \texttt{>{}>}, \texttt{\&}, \texttt{|}, \texttt{$^\wedge$}, \texttt{==}, \texttt{!=}, \texttt{<}, \texttt{<=}, \texttt{>}, and \texttt{>=}. 
 
+Full documentation of these operators can be found in the Tcl \hyperlink{https://www.tcl-lang.org/man/tcl/TclCmd/mathop.htm}{::tcl::mathop namespace documentation}.
+
+\begin{syntax}
+\command{.\$op} \$ndlist ...
+\end{syntax}
+\begin{args}
+\$op & Tcl numeric math operator. \\
+\$ndlist ... & Numeric ND-lists to apply operator to.
+\end{args}
+
+\begin{example}{Prefix notation math}
+\begin{lstlisting}
+namespace path {::tcl::mathfunc ::tcl::mathop}; # exposes 'expr' functions and operators
+# Scalar math
+set x [+ 1 2]; # 3
+puts [** $x 2]
+# Element-wise math
+set x [.+ {10 20} [nreshape [range 6] {2 3}]]; # {10 11 12} {23 24 25}
+puts [napply double [.- [nget $x 0* 0:end-1]]]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+9
+-10.0 -11.0
+\end{lstlisting}
+\end{example}
 
 \clearpage

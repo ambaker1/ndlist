@@ -887,3 +887,19 @@ test nexpr_index_variable {
     set x {{1 2 3} {4 5 6}}
     nexpr "@x($i,$j)*2"; # does not support substitution for index args.
 } -result {{2 6}}
+
+test nop {
+    # Polish notation math
+} -body {
+    set x 1 
+    set y {2 3 4}
+    set z {{5 6} {7 8} {9 10}}
+    assert [.- $x] eq -1
+    assert [.- $y] eq {-2 -3 -4}
+    assert [.- $z] eq {{-5 -6} {-7 -8} {-9 -10}}
+    assert [.- $y $x] eq {1 2 3}
+    assert [.- $z $y] eq {{3 4} {4 5} {5 6}}
+    assert [.! [.== $z [.* $y 3]]] eq {{1 0} {1 1} {1 1}}; # chained
+    assert [.! [.== $z [.* $y 3]]] eq [nexpr {!(@z == (@y * 3))}]; # compared
+    assert [.+ $x $y $z 100] eq {{108 109} {111 112} {114 115}}
+} -result {}
