@@ -29,8 +29,8 @@ namespace eval ::ndlist {
     # Polish notation for element-wise math
     variable mathops {~ ! - + * << ** / % >> & | ^ == != < <= > >=}
     foreach op $mathops {
-        proc .$op {arg args} "::ndlist::MathOp $op \$arg {*}\$args"
-        namespace export .$op
+        proc $op. {arg args} "::ndlist::MathOp $op \$arg {*}\$args"
+        namespace export $op.
     }
 }
 
@@ -1904,33 +1904,25 @@ proc ::ndlist::UnravelIndex {i n args} {
 # to read. TIP #174 added math operators to the namespace ::tcl::mathop, which,
 # when imported, allows for polish-notation math in Tcl (e.g. set y [+ $x 1])
 # This expands upon that concept by adding n-dimensional math operators, using
-# the prefix "." (Note: a smaller subset of math ops is used)
+# the suffix "." on operators (Note: a smaller subset of math ops is used)
 
-# .$op --
+# $op. --
 #
 # Simple math operations on ndlists.
 #
 # Syntax:
-# .$op $ndlist ...
+# $op. $ndlist ...
 #
 # Arguments:
 # op            Valid mathop (see $::ndlist::mathops)
 # ndlist ...    Values to perform mathop with 
 #
 # Matrix examples:
-# ./ $matrix; # Performs reciprocal
-# .- $matrix; # Negates values
-# .! $matrix; # Boolean negation
-# .+ 5 1 $matrix; # Adds 5 and 1 to each matrix element
-# .** $matrix 2; # Squares entire matrix
-
-namespace eval ::ndlist {
-    variable mathops {~ ! - + * << ** / % >> & | ^ == != < <= > >=}
-    foreach op $mathops {
-        proc .$op {arg args} "::ndlist::MathOp $op \$arg {*}\$args"
-        namespace export .$op
-    }
-}
+# /. $matrix; # Performs reciprocal
+# -. $matrix; # Negates values
+# !. $matrix; # Boolean negation
+# +. 5 1 $matrix; # Adds 5 and 1 to each matrix element
+# **. $matrix 2; # Squares entire matrix
 
 proc ::ndlist::MathOp {op arg args} {
     # Handle common 1 and 2 arg operations for performance

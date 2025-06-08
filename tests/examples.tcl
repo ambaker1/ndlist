@@ -516,8 +516,8 @@ namespace path {::tcl::mathfunc ::tcl::mathop}; # exposes 'expr' functions and o
 set x [+ 1 2]; # 3
 puts [** $x 2]
 # Element-wise math
-set x [.+ {10 20} [nreshape [range 6] {2 3}]]; # {10 11 12} {23 24 25}
-puts [napply double [.- [nget $x 0* 0:end-1]]]
+set x [+. {10 20} [nreshape [range 6] {2 3}]]; # {10 11 12} {23 24 25}
+puts [napply double [-. [nget $x 0* 0:end-1]]]
 puts -nonewline {}
 } -output {
 9
