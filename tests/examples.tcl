@@ -346,6 +346,9 @@ puts [nget $A 0* :]; # flatten row matrix to a vector
 puts [nget $A 0:1 0:1]; # get matrix subset
 puts [nget $A end:0 end:0]; # can have reverse ranges
 puts [nget $A {0 0 0} 1*]; # can repeat indices
+# TIP: You can use the Tcl 'interp alias' command to create a convenient shortcut to nget
+interp alias {} @ {} nget
+puts [@ $A 0 :]; # get row matrix
 puts -nonewline {}
 } -output {
 {1 2 3}
@@ -353,6 +356,7 @@ puts -nonewline {}
 {1 2} {4 5}
 {9 8 7} {6 5 4} {3 2 1}
 2 2 2
+{1 2 3}
 }
 
 test {Example 30} {ND-list modification} -body {
@@ -505,7 +509,22 @@ puts -nonewline {}
 8.0 6.0 16.0
 }
 
-test {Example 42} {File import/export} -body {
+test {Example 42} {Prefix notation math} -body {
+puts {}
+namespace path {::tcl::mathfunc ::tcl::mathop}; # exposes 'expr' functions and operators
+# Scalar math
+set x [+ 1 2]; # 3
+puts [** $x 2]
+# Element-wise math
+set x [.+ {10 20} [nreshape [range 6] {2 3}]]; # {10 11 12} {23 24 25}
+puts [napply double [.- [nget $x 0* 0:end-1]]]
+puts -nonewline {}
+} -output {
+9
+-10.0 -11.0
+}
+
+test {Example 43} {File import/export} -body {
 puts {}
 # Export matrix to file (converts to csv)
 writeMatrix example.csv {{foo bar} {hello world}}
@@ -520,7 +539,7 @@ hello,world
 {foo bar} {hello world}
 }
 
-test {Example 43} {Data conversions} -body {
+test {Example 44} {Data conversions} -body {
 puts {}
 set matrix {{A B C} {{hello world} foo,bar {"hi"}}}
 puts {TXT format:}
