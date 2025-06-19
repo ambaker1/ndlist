@@ -8,6 +8,8 @@ set version 0.13
 set config ""
 dict set config VERSION $version
 dict set config TIN_VERSION $tin_version
+dict set config TCL8_VERSION 8.6
+dict set config TCL9_VERSION 9.0
 
 puts "Building from source files..."
 tin bake src . $config

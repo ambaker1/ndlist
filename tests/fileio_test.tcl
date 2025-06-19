@@ -16,8 +16,8 @@ test binary_io {
     # Example modified from example on tcl wiki written by Mac Cody and Jeff David
     # https://wiki.tcl-lang.org/page/Working+with+binary+data
     set outBinData [binary format s2Sa6B8 {100 -2} 100 foobar 01000001]
-    writeFile -translation binary tests/binfile.bin $outBinData
-    set inBinData [readFile -translation binary tests/binfile.bin]
+    writeFile tests/binfile.bin binary $outBinData
+    set inBinData [readFile tests/binfile.bin binary]
     assert [binary scan $inBinData s2Sa6B8 val1 val2 val3 val4] == 4
     list $val1 $val2 $val3 $val4
 } -result {{100 -2} 100 foobar 01000001}

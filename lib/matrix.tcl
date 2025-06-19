@@ -14,6 +14,7 @@ namespace eval ::ndlist {
     namespace export stack augment block; # Combine matrices
     namespace export transpose eye matmul outerprod kronprod; # Linear algebra
     namespace export zip zip3 cartprod; # Iteration tools
+    namespace export mat2txt txt2mat mat2csv csv2mat; # Data conversions
 }
 
 # stack --
@@ -257,4 +258,167 @@ proc ::ndlist::cartprod {args} {
         set matrix $newMatrix
     }
     return $matrix
+}
+
+# Datatype conversions
+################################################################################
+
+# Conform2Matrix --
+#
+# Expand rows to have the same length (and trims trailing newline)
+# Pads short rows with blanks.
+#
+# Syntax:
+# Conform2Matrix $matrix 
+#
+# Arguments:
+# matrix        Nested list to conform into a matrix.
+
+proc ::ndlist::Conform2Matrix {matrix} {
+    # Trim trailing newline.
+    if {[llength [lindex $matrix end]] == 0} {
+        set matrix [lrange $matrix 0 end-1]
+    }
+    # Get number of columns
+    set m 0
+    foreach row $matrix {
+        if {[llength $row] > $m} {
+            set m [llength $row]
+        }
+    }
+    # Expand matrix if needed.
+    lmap row $matrix {
+        if {[llength $row] < $m} {
+            lappend row {*}[lrepeat [expr {$m-[llength $row]}] {}]
+        }
+        set row
+    }
+}
+
+# mat2txt --
+#
+# Convert from matrix to space-delimited text. 
+# Note that rows are Tcl lists.
+#
+# Syntax:
+# mat2txt $matrix
+#
+# Arguments:
+# matrix:       Matrix value
+
+proc ::ndlist::mat2txt {matrix} {
+    join [Conform2Matrix $matrix] \n
+}
+
+# txt2mat --
+#
+# Convert from space-delimited text to matrix
+# Newlines can be escaped inside curly braces
+# Ignores blank lines
+#
+# Syntax:
+# txt2mat $text
+#
+# Arguments:
+# text:     Text to convert.
+
+proc ::ndlist::txt2mat {text} {
+    set matrix ""
+    set row ""
+    foreach line [split $text \n] {
+        # Add to row, and handle escaped newlines
+        append row $line
+        if {[string is list $row]} {
+            lappend matrix $row
+            set row ""
+        } else {
+            append row \n
+        }
+    }
+    # Validate and return matrix
+    return [Conform2Matrix $matrix]
+}
+
+# mat2csv --
+#
+# Convert from matrix to comma-separated values
+#
+# Arguments:
+# matrix:       Matrix to convert
+
+proc ::ndlist::mat2csv {matrix} {
+    set csvLines ""
+    # Validate matrix and loop through rows
+    foreach row [Conform2Matrix $matrix] {
+        set csvRow ""
+        foreach val $row {
+            # Perform escaping if required
+            if {[string match "*\[\",\r\n\]*" $val]} {
+                set val "\"[string map [list \" \"\"] $val]\""
+            }
+            lappend csvRow $val
+        }
+        lappend csvLines [join $csvRow ,]
+    }
+    return [join $csvLines \n]
+}
+
+# csv2mat --
+#
+# Convert from comma-separated values to matrix
+# Ignores blank lines
+#
+# Syntax:
+# csv2mat $csv
+#
+# Arguments:
+# csv:          CSV string to convert
+
+proc ::ndlist::csv2mat {csv} {
+    # Initialize variables
+    set matrix ""; # Output matrix
+    set csvRow ""; # CSV-formatted row of data
+    set val ""; # Value in matrix row
+    
+    # Split csv by newline and loop through lines
+    foreach line [split $csv \n] {
+        append csvRow $line
+        # Check for escaped newline condition
+        if {[regexp -all "\"" $csvRow] % 2} {
+            # Odd number of quotes
+            append csvRow \n
+            continue
+        }
+        # Split csv row by comma and loop through items, creating matrix row
+        set row ""; # Matrix row of data
+        foreach item [split $csvRow ,] {
+            append val $item
+            # Check for escaped comma condition
+            if {[regexp -all "\"" $val] % 2} {
+                # Odd number of quotes
+                append val ,
+                continue
+            }
+            # Check if escaped (commas, newlines, or quotes)
+            if {[regexp "\"" $val]} {
+                # Remove outer escaping quotes
+                set val [string range $val 1 end-1]
+                # Check for escaped quotes
+                if {[regexp "\"" $val]} {
+                    # Replace with normal quotes
+                    set val [regsub -all "\"\"" $val "\""]
+                }
+            }
+            # Add to row
+            lappend row $val
+            # Clear val
+            set val ""
+        }
+        # Add to matrix
+        lappend matrix $row
+        # Clear csv row
+        set csvRow ""
+    }
+    # Validate and return matrix
+    return [Conform2Matrix $matrix]
 }
