@@ -1,3 +1,3 @@
 package require tin 2.1
-set dir [tin mkdir -force ndlist 0.14]
+set dir [tin mkdir -force ndlist 0.13]
 file copy README.md LICENSE pkgIndex.tcl ndlist.tcl lib $dir
