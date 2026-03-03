@@ -36,23 +36,23 @@ test range3_reverse {
     range 10 2 -3
 } -result {10 7 4}
 
-test find {
+test where {
     # Find non-zero elements of a list
 } -body {
-    find {0 1 0 1 1 0}
+    where {0 1 0 1 1 0}
 } -result {1 3 4}
 
-test find_null {
+test where_null {
     # Return a blank list for no matches.
 } -body {
-    find {0 0 0}
+    where {0 0 0}
 } -result {}
 
-test find_filter {
-    # Filter with find and nget
+test where_filter {
+    # Filter with where and nget
 } -body {
     set x {0.5 2.3 4.0 2.5 1.6 2.0 1.4 5.6}
-    nget $x [find $x > 2]
+    nget $x [where $x > 2]
 } -result {2.3 4.0 2.5 5.6}
 
 # List generation

@@ -104,6 +104,18 @@ test nrand_2 {
     nrand {1 2}
 } -result {{0.013469574513598146 0.3831388500440581}}
 
+test ndouble {
+    # coerce to floating point
+} -body {
+    ndouble {1 2 3}
+} -result {1.0 2.0 3.0}
+
+test nentier {
+    # coerce to integer
+} -body {
+    nentier {1.1 -2.6 -0.7}
+} -result {1 -2 0}
+
 # nreshape
 test nreshape1 {
     # Check that nreshape works for matrices
@@ -232,29 +244,29 @@ test ParseIndex {
 } -body {
     set n 10
     # All indices
-    assert [::ndlist::ParseIndex $n :] eq {A {}}
-    assert [::ndlist::ParseIndex $n 0:end] eq {A {}}
-    assert [::ndlist::ParseIndex $n 0:1:end] eq {A {}}
+    assert [::ndlist::ParseIndex : $n] eq {A {}}
+    assert [::ndlist::ParseIndex 0:-1 $n] eq {A {}}
+    assert [::ndlist::ParseIndex 0:1:-1 $n] eq {A {}}
     # Range of indices
-    assert [::ndlist::ParseIndex $n 1:8] eq {R {1 8}}
-    assert [::ndlist::ParseIndex $n 1:1:8] eq {R {1 8}}
-    assert [::ndlist::ParseIndex $n end:4] eq {R {9 4}}
-    assert [::ndlist::ParseIndex $n end:-1:4] eq {R {9 4}}
-    assert [catch {::ndlist::ParseIndex $n 0:end+1}]
-    assert [catch {::ndlist::ParseIndex $n end+1:0}]
+    assert [::ndlist::ParseIndex 1:8 $n] eq {R {1 8}}
+    assert [::ndlist::ParseIndex 1:1:8 $n] eq {R {1 8}}
+    assert [::ndlist::ParseIndex -1:4 $n] eq {R {9 4}}
+    assert [::ndlist::ParseIndex -1:-1:4 $n] eq {R {9 4}}
+    assert [catch {::ndlist::ParseIndex 0:$n $n}]
+    assert [catch {::ndlist::ParseIndex $n:0 $n}]
     # Stepped range of indices (list)
-    assert [::ndlist::ParseIndex $n 0:2:6] eq {L {0 2 4 6}}
-    assert [::ndlist::ParseIndex $n 6:-2:0] eq {L {6 4 2 0}}
-    assert [catch {::ndlist::ParseIndex $n 0:2:10}]
-    assert [catch {::ndlist::ParseIndex $n 10:2:0}]
+    assert [::ndlist::ParseIndex 0:2:6 $n] eq {L {0 2 4 6}}
+    assert [::ndlist::ParseIndex 6:-2:0 $n] eq {L {6 4 2 0}}
+    assert [catch {::ndlist::ParseIndex 0:2:10 $n}]
+    assert [catch {::ndlist::ParseIndex 10:2:0 $n}]
     # List of indices 
-    assert [::ndlist::ParseIndex $n {0 end end-1}] eq {L {0 9 8}}
-    assert [::ndlist::ParseIndex $n {-1 -2 5+2}] eq {L {9 8 7}}
-    assert [::ndlist::ParseIndex $n {end-3}] eq {L 6}
-    assert [catch {::ndlist::ParseIndex $n {0 1 2 10}}]
+    assert [::ndlist::ParseIndex {0 -1 -2} $n] eq {L {0 9 8}}
+    assert [::ndlist::ParseIndex {-1 -2 7} $n] eq {L {9 8 7}}
+    assert [::ndlist::ParseIndex {-4} $n] eq {L 6}
+    assert [catch {::ndlist::ParseIndex {0 1 2 10} $n}]
     # Single index
-    assert [::ndlist::ParseIndex $n end*] eq {S 9}
-    assert [catch {::ndlist::ParseIndex $n {end+1*}}]
+    assert [::ndlist::ParseIndex -1. $n] eq {S 9}
+    assert [catch {::ndlist::ParseIndex {$n.} $n}]
 } 
 
 # nget
@@ -263,30 +275,30 @@ test nget {
 } -body {
     assert {[nget $testmat : :] eq $testmat}
     assert {[nget $testmat : 0] eq {1 4 7}}
-    assert {[nget $testmat : 0*] eq {1 4 7}}
+    assert {[nget $testmat : 0.] eq {1 4 7}}
     assert {[nget $testmat : 0:1] eq {{1 2} {4 5} {7 8}}}
     assert {[nget $testmat : 1:0] eq {{2 1} {5 4} {8 7}}}
     assert {[nget $testmat 0 :] eq {{1 2 3}}}
     assert {[nget $testmat 0 0] eq {1}}
-    assert {[nget $testmat 0 0*] eq {1}}
+    assert {[nget $testmat 0 0.] eq {1}}
     assert {[nget $testmat 0 0:1] eq {{1 2}}}
     assert {[nget $testmat 0 1:0] eq {{2 1}}}
-    assert {[nget $testmat 0* :] eq {1 2 3}}
-    assert {[nget $testmat 0* 0] eq {1}}
-    assert {[nget $testmat 0* 0*] eq {1}}
-    assert {[nget $testmat 0* 0:1] eq {1 2}}
-    assert {[nget $testmat 0* 1:0] eq {2 1}}
+    assert {[nget $testmat 0. :] eq {1 2 3}}
+    assert {[nget $testmat 0. 0] eq {1}}
+    assert {[nget $testmat 0. 0.] eq {1}}
+    assert {[nget $testmat 0. 0:1] eq {1 2}}
+    assert {[nget $testmat 0. 1:0] eq {2 1}}
     assert {[nget $testmat 0:1 :] eq {{1 2 3} {4 5 6}}}
     assert {[nget $testmat 0:1 0] eq {1 4}}
-    assert {[nget $testmat 0:1 0*] eq {1 4}}
+    assert {[nget $testmat 0:1 0.] eq {1 4}}
     assert {[nget $testmat 0:1 0:1] eq {{1 2} {4 5}}}
     assert {[nget $testmat 0:1 1:0] eq {{2 1} {5 4}}}
     assert {[nget $testmat 1:0 :] eq {{4 5 6} {1 2 3}}}
     assert {[nget $testmat 1:0 0] eq {4 1}}
-    assert {[nget $testmat 1:0 0*] eq {4 1}}
+    assert {[nget $testmat 1:0 0.] eq {4 1}}
     assert {[nget $testmat 1:0 0:1] eq {{4 5} {1 2}}}
     assert {[nget $testmat 1:0 1:0] eq {{5 4} {2 1}}}
-    assert {[nget $testmat 0:2:end :] eq {{1 2 3} {7 8 9}}}
+    assert {[nget $testmat 0:2:-1 :] eq {{1 2 3} {7 8 9}}}
 } -result {}
 
 # nreplace
@@ -299,8 +311,8 @@ test nset-nreplace {
     assert {[nreplace $testmat : : {{a b c} {d e f} {g h i}}]       eq {{a b c} {d e f} {g h i}}}
     assert {[nreplace $testmat : 0 a]                               eq {{a 2 3} {a 5 6} {a 8 9}}}
     assert {[nreplace $testmat : 0 {a b c}]                         eq {{a 2 3} {b 5 6} {c 8 9}}}
-    assert {[nreplace $testmat : 0* a]                              eq {{a 2 3} {a 5 6} {a 8 9}}}
-    assert {[nreplace $testmat : 0* {a b c}]                        eq {{a 2 3} {b 5 6} {c 8 9}}}
+    assert {[nreplace $testmat : 0. a]                              eq {{a 2 3} {a 5 6} {a 8 9}}}
+    assert {[nreplace $testmat : 0. {a b c}]                        eq {{a 2 3} {b 5 6} {c 8 9}}}
     assert {[nreplace $testmat : 0:1 a]                             eq {{a a 3} {a a 6} {a a 9}}}
     assert {[nreplace $testmat : 0:1 {a b c}]                       eq {{a a 3} {b b 6} {c c 9}}}
     assert {[nreplace $testmat : 0:1 {{a b}}]                       eq {{a b 3} {a b 6} {a b 9}}}
@@ -312,27 +324,27 @@ test nset-nreplace {
     assert {[nreplace $testmat 0 : a]                               eq {{a a a} {4 5 6} {7 8 9}}}
     assert {[nreplace $testmat 0 : {{a b c}}]                       eq {{a b c} {4 5 6} {7 8 9}}}
     assert {[nreplace $testmat 0 0 a]                               eq {{a 2 3} {4 5 6} {7 8 9}}}
-    assert {[nreplace $testmat 0 0* a]                              eq {{a 2 3} {4 5 6} {7 8 9}}}
+    assert {[nreplace $testmat 0 0. a]                              eq {{a 2 3} {4 5 6} {7 8 9}}}
     assert {[nreplace $testmat 0 0:1 a]                             eq {{a a 3} {4 5 6} {7 8 9}}}
     assert {[nreplace $testmat 0 0:1 {{a b}}]                       eq {{a b 3} {4 5 6} {7 8 9}}}
     assert {[nreplace $testmat 0 1:0 a]                             eq {{a a 3} {4 5 6} {7 8 9}}}
     assert {[nreplace $testmat 0 1:0 {{a b}}]                       eq {{b a 3} {4 5 6} {7 8 9}}}
-    assert {[nreplace $testmat 0* : a]                              eq {{a a a} {4 5 6} {7 8 9}}}
-    assert {[nreplace $testmat 0* : {a b c}]                        eq {{a b c} {4 5 6} {7 8 9}}}
-    assert {[nreplace $testmat 0* 0 a]                              eq {{a 2 3} {4 5 6} {7 8 9}}}
-    assert {[nreplace $testmat 0* 0* {hello world}]                 eq {{{hello world} 2 3} {4 5 6} {7 8 9}}}
-    assert {[nreplace $testmat 0* 0:1 a]                            eq {{a a 3} {4 5 6} {7 8 9}}}
-    assert {[nreplace $testmat 0* 0:1 {a b}]                        eq {{a b 3} {4 5 6} {7 8 9}}}
-    assert {[nreplace $testmat 0* 1:0 a]                            eq {{a a 3} {4 5 6} {7 8 9}}}
-    assert {[nreplace $testmat 0* 1:0 {a b}]                        eq {{b a 3} {4 5 6} {7 8 9}}}
+    assert {[nreplace $testmat 0. : a]                              eq {{a a a} {4 5 6} {7 8 9}}}
+    assert {[nreplace $testmat 0. : {a b c}]                        eq {{a b c} {4 5 6} {7 8 9}}}
+    assert {[nreplace $testmat 0. 0 a]                              eq {{a 2 3} {4 5 6} {7 8 9}}}
+    assert {[nreplace $testmat 0. 0. {hello world}]                 eq {{{hello world} 2 3} {4 5 6} {7 8 9}}}
+    assert {[nreplace $testmat 0. 0:1 a]                            eq {{a a 3} {4 5 6} {7 8 9}}}
+    assert {[nreplace $testmat 0. 0:1 {a b}]                        eq {{a b 3} {4 5 6} {7 8 9}}}
+    assert {[nreplace $testmat 0. 1:0 a]                            eq {{a a 3} {4 5 6} {7 8 9}}}
+    assert {[nreplace $testmat 0. 1:0 {a b}]                        eq {{b a 3} {4 5 6} {7 8 9}}}
     assert {[nreplace $testmat 0:1 : a]                             eq {{a a a} {a a a} {7 8 9}}}
     assert {[nreplace $testmat 0:1 : {{a b c}}]                     eq {{a b c} {a b c} {7 8 9}}}
     assert {[nreplace $testmat 0:1 : {a b}]                         eq {{a a a} {b b b} {7 8 9}}}
     assert {[nreplace $testmat 0:1 : {{a b c} {d e f}}]             eq {{a b c} {d e f} {7 8 9}}}
     assert {[nreplace $testmat 0:1 0 a]                             eq {{a 2 3} {a 5 6} {7 8 9}}}
     assert {[nreplace $testmat 0:1 0 {a b}]                         eq {{a 2 3} {b 5 6} {7 8 9}}}
-    assert {[nreplace $testmat 0:1 0* a]                            eq {{a 2 3} {a 5 6} {7 8 9}}}
-    assert {[nreplace $testmat 0:1 0* {{hello world} {foo bar}}]    eq {{{hello world} 2 3} {{foo bar} 5 6} {7 8 9}}}
+    assert {[nreplace $testmat 0:1 0. a]                            eq {{a 2 3} {a 5 6} {7 8 9}}}
+    assert {[nreplace $testmat 0:1 0. {{hello world} {foo bar}}]    eq {{{hello world} 2 3} {{foo bar} 5 6} {7 8 9}}}
     assert {[nreplace $testmat 0:1 0:1 a]                           eq {{a a 3} {a a 6} {7 8 9}}}
     assert {[nreplace $testmat 0:1 0:1 {a b}]                       eq {{a a 3} {b b 6} {7 8 9}}}
     assert {[nreplace $testmat 0:1 0:1 {{a b}}]                     eq {{a b 3} {a b 6} {7 8 9}}}
@@ -347,8 +359,8 @@ test nset-nreplace {
     assert {[nreplace $testmat 1:0 : {{a b c} {d e f}}]             eq {{d e f} {a b c} {7 8 9}}}
     assert {[nreplace $testmat 1:0 0 a]                             eq {{a 2 3} {a 5 6} {7 8 9}}}
     assert {[nreplace $testmat 1:0 0 {a b}]                         eq {{b 2 3} {a 5 6} {7 8 9}}}
-    assert {[nreplace $testmat 1:0 0* a]                            eq {{a 2 3} {a 5 6} {7 8 9}}}
-    assert {[nreplace $testmat 1:0 0* {{hello world} {foo bar}}]    eq {{{foo bar} 2 3} {{hello world} 5 6} {7 8 9}}}
+    assert {[nreplace $testmat 1:0 0. a]                            eq {{a 2 3} {a 5 6} {7 8 9}}}
+    assert {[nreplace $testmat 1:0 0. {{hello world} {foo bar}}]    eq {{{foo bar} 2 3} {{hello world} 5 6} {7 8 9}}}
     assert {[nreplace $testmat 1:0 0:1 a]                           eq {{a a 3} {a a 6} {7 8 9}}}
     assert {[nreplace $testmat 1:0 0:1 {a b}]                       eq {{b b 3} {a a 6} {7 8 9}}}
     assert {[nreplace $testmat 1:0 0:1 {{a b}}]                     eq {{a b 3} {a b 6} {7 8 9}}}
@@ -366,17 +378,17 @@ test nreplace_blank {
     assert [nreplace $testmat : ""]             eq ""
     assert [nreplace $testmat : : ""]           eq ""
     assert [nreplace $testmat 0 : ""]           eq {{4 5 6} {7 8 9}}
-    assert [nreplace $testmat 0* : ""]          eq {{4 5 6} {7 8 9}}
+    assert [nreplace $testmat 0. : ""]          eq {{4 5 6} {7 8 9}}
     assert [nreplace $testmat 0:1 : ""]         eq {{7 8 9}}
     assert [nreplace $testmat 1:0 : ""]         eq {{7 8 9}}
     assert [nreplace $testmat : 0 ""]           eq {{2 3} {5 6} {8 9}}
-    assert [nreplace $testmat : 0* ""]          eq {{2 3} {5 6} {8 9}}
+    assert [nreplace $testmat : 0. ""]          eq {{2 3} {5 6} {8 9}}
     assert [nreplace $testmat : 0:1 ""]         eq {3 6 9}
     assert [nreplace $testmat : 1:0 ""]         eq {3 6 9}
     # Replacing with blanks (not deleting)
-    assert [nreplace $testmat 0* 0* ""]         eq {{{} 2 3} {4 5 6} {7 8 9}}
+    assert [nreplace $testmat 0. 0. ""]         eq {{{} 2 3} {4 5 6} {7 8 9}}
     assert [nreplace $testmat : {{}}]           eq {{} {} {}}
-    assert [nreplace $testmat : 0:end-1 {{{}}}] eq {{{} {} 3} {{} {} 6} {{} {} 9}}
+    assert [nreplace $testmat : 0:-2 {{{}}}] eq {{{} {} 3} {{} {} 6} {{} {} 9}}
 }
 
 test nremove {
@@ -386,11 +398,11 @@ test nremove {
     assert [nremove $testmat :]         eq ""
     assert [nremove $testmat : 1]       eq ""
     assert [nremove $testmat 0]         eq {{4 5 6} {7 8 9}}
-    assert [nremove $testmat 0*]        eq {{4 5 6} {7 8 9}}
+    assert [nremove $testmat 0.]        eq {{4 5 6} {7 8 9}}
     assert [nremove $testmat 0:1]       eq {{7 8 9}}
     assert [nremove $testmat 1:0]       eq {{7 8 9}}
     assert [nremove $testmat 0 1]       eq {{2 3} {5 6} {8 9}}
-    assert [nremove $testmat 0* 1]      eq {{2 3} {5 6} {8 9}}
+    assert [nremove $testmat 0. 1]      eq {{2 3} {5 6} {8 9}}
     assert [nremove $testmat 0:1 1]     eq {3 6 9}
     assert [nremove $testmat 1:0 1]     eq {3 6 9}
 }
@@ -400,13 +412,13 @@ set x {{{1 2 3} {4 5 6}} {{7 8 9} {10 11 12}}}
 test nget3 {} {nget $x : : :} $x
 test nget3 {} {nget $x 0 : :} {{{1 2 3} {4 5 6}}}
 test nget3 {} {nget $x 0 : 0:1} {{{1 2} {4 5}}}
-test nget3 {} {nget $x 0 1* 0:1} {{4 5}}
-test nget3 {} {nget $x 0* : 2} {3 6}
+test nget3 {} {nget $x 0 1. 0:1} {{4 5}}
+test nget3 {} {nget $x 0. : 2} {3 6}
 test nreplace3 {} {nreplace $x : : : 0}             {{{0 0 0} {0 0 0}} {{0 0 0} {0 0 0}}}
 test nreplace3 {} {nreplace $x : : 0:1 0}           {{{0 0 3} {0 0 6}} {{0 0 9} {0 0 12}}}
 test nreplace3 {} {nreplace $x : : {0 2} 0}         {{{0 2 0} {0 5 0}} {{0 8 0} {0 11 0}}}
-test nreplace3 {} {nreplace $x : : 2* {{{}}}}       {{{1 2 {}} {4 5 {}}} {{7 8 {}} {10 11 {}}}}
-test nreplace3 {} {nreplace $x 0* 0:end 0:1 {a b}}  {{{a a 3} {b b 6}} {{7 8 9} {10 11 12}}}
+test nreplace3 {} {nreplace $x : : 2. {{{}}}}       {{{1 2 {}} {4 5 {}}} {{7 8 {}} {10 11 {}}}}
+test nreplace3 {} {nreplace $x 0. 0:-1 0:1 {a b}}  {{{a a 3} {b b 6}} {{7 8 9} {10 11 12}}}
 test nreplace3 {} {nreplace $x : : 0 ""}            {{{2 3} {5 6}} {{8 9} {11 12}}}
 test nreplace3 {} {nremove $x 0 2}                  {{{2 3} {5 6}} {{8 9} {11 12}}}
 
@@ -829,7 +841,7 @@ test nexpr_indexing {
 } -body {
     set x {{1 2 3} {4 5 6}}
     set y {0.1 0.2 0.3}
-    nexpr {@x(1*,:) + @y}
+    nexpr {@x(1.0,:) + @y}
 } -result {4.1 5.2 6.3}
 
 test nexpr_error {
@@ -863,11 +875,11 @@ test nset_expr {
     nset y {10.0 12.0 14.0}
     set z ""; unset z; # make sure it works without 
     nset z = {@x + @y}
-    assert [nset z end = {@. * 2}] eq {15.0 17.0 38.0}
+    assert [nset z -1 = {@. * 2}] eq {15.0 17.0 38.0}
     nset x [nfull 1 {3 3 3}]
     nset y {1 2 3}
     nset z {{hello world} {goodbye moon} {foo bar}}
-    assert [nset x end* : 0* = {@. + @y + [llength @z]}] eq {{{1 1 1} {1 1 1} {1 1 1}} {{1 1 1} {1 1 1} {1 1 1}} {{4 1 1} {5 1 1} {6 1 1}}}
+    assert [nset x -1.0 : 0. = {@. + @y + [llength @z]}] eq {{{1 1 1} {1 1 1} {1 1 1}} {{1 1 1} {1 1 1} {1 1 1}} {{4 1 1} {5 1 1} {6 1 1}}}
 } -result {}
 
 test nset_expr_error {
@@ -883,7 +895,25 @@ test nexpr_index_variable {
     # Use Tcl variables to refer to index in nexpr
 } -body {
     set i 0
-    set j {0 end}
+    set j {0 -1}
     set x {{1 2 3} {4 5 6}}
     nexpr "@x($i,$j)*2"; # does not support substitution for index args.
 } -result {{2 6}}
+
+test nop {
+    # Polish notation math
+} -body {
+    set x 1 
+    set y {2 3 4}
+    set z {{5 6} {7 8} {9 10}}
+    assert [nop - $x] eq -1
+    assert [nop - $y] eq {-2 -3 -4}
+    assert [nop - $z] eq {{-5 -6} {-7 -8} {-9 -10}}
+    assert [nop - $y $x] eq {1 2 3}
+    assert [nop - $z $y] eq {{3 4} {4 5} {5 6}}
+    assert [nop ! [nop == $z [nop * $y 3]]] eq {{1 0} {1 1} {1 1}}; # chained
+    assert [nop ! [nop == $z [nop * $y 3]]] eq [nexpr {!(@z == (@y * 3))}]; # compared
+    assert [nop + $x $y $z 100] eq {{108 109} {111 112} {114 115}}
+} -result {}
+
+

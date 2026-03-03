@@ -27,7 +27,7 @@ puts -nonewline {}
 test {Example 3} {Filtering a list} -body {
 puts {}
 set x {0.5 2.3 4.0 2.5 1.6 2.0 1.4 5.6}
-puts [nget $x [find $x > 2]]
+puts [nget $x [where $x > 2]]
 puts -nonewline {}
 } -output {
 2.3 4.0 2.5 5.6
@@ -211,7 +211,24 @@ puts -nonewline {}
 {A 1} {A 2} {A 3} {B 1} {B 2} {B 3} {C 1} {C 2} {C 3}
 }
 
-test {Example 18} {Rank of an ND-list} -body {
+test {Example 18} {Data conversions} -body {
+puts {}
+set matrix {{A B C} {{hello world} foo,bar {"hi"}}}
+puts {TXT format:}
+puts [mat2txt $matrix]
+puts {CSV format:}
+puts [mat2csv $matrix]
+puts -nonewline {}
+} -output {
+TXT format:
+A B C
+{hello world} foo,bar {"hi"}
+CSV format:
+A,B,C
+hello world,"foo,bar","""hi"""
+}
+
+test {Example 19} {Rank of an ND-list} -body {
 puts {}
 set x {1}
 set y {1 2 {hello world}}; # note that this is not a valid 2D list
@@ -229,7 +246,7 @@ puts -nonewline {}
 1
 }
 
-test {Example 19} {Getting shape and size of an ND-list} -body {
+test {Example 20} {Getting shape and size of an ND-list} -body {
 puts {}
 # Create a 3D list
 set x {{{1 2} {3 4} {5 6}} {{7 8} {9 10} {11 12}}}
@@ -248,7 +265,7 @@ puts -nonewline {}
 {2 3 2 1} 12
 }
 
-test {Example 20} {Generate ND-list filled with one value} -body {
+test {Example 21} {Generate ND-list filled with one value} -body {
 puts {}
 puts [nfull foo {3 2}]; # 3x2 matrix filled with "foo"
 puts [nfull 0 {2 2 2}]; # 2x2x2 tensor filled with zeros
@@ -258,7 +275,7 @@ puts -nonewline {}
 {{0 0} {0 0}} {{0 0} {0 0}}
 }
 
-test {Example 21} {Generate random matrix} -body {
+test {Example 22} {Generate random matrix} -body {
 puts {}
 expr {srand(0)}; # resets the random number seed (for the example)
 puts [nrand {1 2}]; # 1x2 matrix filled with random numbers
@@ -267,7 +284,7 @@ puts -nonewline {}
 {0.013469574513598146 0.3831388500440581}
 }
 
-test {Example 22} {Repeat elements of a matrix} -body {
+test {Example 23} {Repeat elements of a matrix} -body {
 puts {}
 puts [nrepeat {{1 2} {3 4}} {1 2}]
 puts -nonewline {}
@@ -275,7 +292,7 @@ puts -nonewline {}
 {1 2 1 2} {3 4 3 4}
 }
 
-test {Example 23} {Expand an ND-list to new dimensions} -body {
+test {Example 24} {Expand an ND-list to new dimensions} -body {
 puts {}
 puts [nexpand {1 2 3} {-1 2}]
 puts [nexpand {{1 2}} {2 4}]
@@ -285,7 +302,7 @@ puts -nonewline {}
 {1 2 1 2} {1 2 1 2}
 }
 
-test {Example 24} {Padding an ND-list with a value} -body {
+test {Example 25} {Padding an ND-list with a value} -body {
 puts {}
 set a {{1 2 3} {4 5 6} {7 8 9}}
 puts [npad $a 0 {2 1}]
@@ -296,7 +313,7 @@ puts -nonewline {}
 {foo foo foo foo} {foo foo foo foo} {foo 1 2 3} {foo 4 5 6} {foo 7 8 9}
 }
 
-test {Example 25} {Extending an ND-list to a new shape with a filler value} -body {
+test {Example 26} {Extending an ND-list to a new shape with a filler value} -body {
 puts {}
 set a {hello hi hey howdy}
 puts [nextend $a world {-1 2}]; # -1 preserves size at axis 0
@@ -305,7 +322,7 @@ puts -nonewline {}
 {hello world} {hi world} {hey world} {howdy world}
 }
 
-test {Example 26} {Flattening a 3D tensor} -body {
+test {Example 27} {Flattening a 3D tensor} -body {
 puts {}
 puts [nflatten {{{1 2} {3 4}} {{5 6} {7 8}}}]
 puts -nonewline {}
@@ -313,7 +330,7 @@ puts -nonewline {}
 1 2 3 4 5 6 7 8
 }
 
-test {Example 27} {Reshape a vector to a matrix with three columns} -body {
+test {Example 28} {Reshape a vector to a matrix with three columns} -body {
 puts {}
 puts [nreshape {1 2 3 4 5 6} {-1 3}]
 puts -nonewline {}
@@ -321,14 +338,14 @@ puts -nonewline {}
 {1 2 3} {4 5 6}
 }
 
-test {Example 28} {Index Notation} -body {
+test {Example 29} {Index Notation} -body {
 puts {}
 set n 10
-puts [::ndlist::ParseIndex $n :]
-puts [::ndlist::ParseIndex $n 1:8]
-puts [::ndlist::ParseIndex $n 0:2:6]
-puts [::ndlist::ParseIndex $n {0 5 end-1}]
-puts [::ndlist::ParseIndex $n end*]
+puts [::ndlist::ParseIndex : $n]
+puts [::ndlist::ParseIndex 1:8 $n]
+puts [::ndlist::ParseIndex 0:2:6 $n]
+puts [::ndlist::ParseIndex {0 5 -2} $n]
+puts [::ndlist::ParseIndex -1. $n]
 puts -nonewline {}
 } -output {
 A {}
@@ -338,14 +355,17 @@ L {0 5 8}
 S 9
 }
 
-test {Example 29} {ND-list access} -body {
+test {Example 30} {ND-list access} -body {
 puts {}
 set A {{1 2 3} {4 5 6} {7 8 9}}
 puts [nget $A 0 :]; # get row matrix
-puts [nget $A 0* :]; # flatten row matrix to a vector
+puts [nget $A 0. :]; # flatten row matrix to a vector
 puts [nget $A 0:1 0:1]; # get matrix subset
-puts [nget $A end:0 end:0]; # can have reverse ranges
-puts [nget $A {0 0 0} 1*]; # can repeat indices
+puts [nget $A -1:0 -1:0]; # can have reverse ranges
+puts [nget $A {0 0 0} 1.]; # can repeat indices
+# TIP: You can use the Tcl 'interp alias' command to create a convenient shortcut to nget
+interp alias {} @ {} nget
+puts [@ $A 0 :]; # get row matrix
 puts -nonewline {}
 } -output {
 {1 2 3}
@@ -353,9 +373,10 @@ puts -nonewline {}
 {1 2} {4 5}
 {9 8 7} {6 5 4} {3 2 1}
 2 2 2
+{1 2 3}
 }
 
-test {Example 30} {ND-list modification} -body {
+test {Example 31} {ND-list modification} -body {
 puts {}
 # Swap rows in a matrix (by reference)
 set a {{1 2 3} {4 5 6} {7 8 9}}
@@ -363,23 +384,23 @@ nset a {1 0} : [nget $a {0 1} :]
 puts $a
 # Element-wise operation on portion of vector (by value)
 set b [range 10]
-puts [nreplace $b 0:2:end = {@. + 10}]
+puts [nreplace $b 0:2:-1 = {@. + 10}]
 puts -nonewline {}
 } -output {
 {4 5 6} {1 2 3} {7 8 9}
 10 1 12 3 14 5 16 7 18 9
 }
 
-test {Example 31} {Filtering a list by removing elements} -body {
+test {Example 32} {Filtering a list by removing elements} -body {
 puts {}
 set x [range 10]
-puts [nremove $x [find $x > 4]]
+puts [nremove $x [where $x > 4]]
 puts -nonewline {}
 } -output {
 0 1 2 3 4
 }
 
-test {Example 32} {Deleting a column from a matrix} -body {
+test {Example 33} {Deleting a column from a matrix} -body {
 puts {}
 set a {{1 2 3} {4 5 6} {7 8 9}}
 puts [nremove $a 2 1]
@@ -388,7 +409,7 @@ puts -nonewline {}
 {1 2} {4 5} {7 8}
 }
 
-test {Example 33} {Inserting a column into a matrix} -body {
+test {Example 34} {Inserting a column into a matrix} -body {
 puts {}
 set matrix {{1 2} {3 4} {5 6}}
 set column {A B C}
@@ -398,7 +419,7 @@ puts -nonewline {}
 {1 A 2} {3 B 4} {5 C 6}
 }
 
-test {Example 34} {Concatenate tensors} -body {
+test {Example 35} {Concatenate tensors} -body {
 puts {}
 set x [nreshape {1 2 3 4 5 6 7 8 9} {3 3 1}]
 set y [nreshape {A B C D E F G H I} {3 3 1}]
@@ -408,7 +429,7 @@ puts -nonewline {}
 {{1 A} {2 B} {3 C}} {{4 D} {5 E} {6 F}} {{7 G} {8 H} {9 I}}
 }
 
-test {Example 35} {Changing tensor axes} -body {
+test {Example 36} {Changing tensor axes} -body {
 puts {}
 set x {{{1 2} {3 4}} {{5 6} {7 8}}}; # 3D tensor
 set y [nswapaxes $x 0 2]; # k,j,i
@@ -423,7 +444,7 @@ puts -nonewline {}
 2
 }
 
-test {Example 36} {Chained functional mapping over a matrix} -body {
+test {Example 37} {Chained functional mapping over a matrix} -body {
 puts {}
 napply puts [napply {format %.2f} [napply expr {{1 2} {3 4}} {+ 1}]]
 puts -nonewline {}
@@ -434,7 +455,7 @@ puts -nonewline {}
 5.00
 }
 
-test {Example 37} {Format columns of a matrix} -body {
+test {Example 38} {Format columns of a matrix} -body {
 puts {}
 set data {{1 2 3} {4 5 6} {7 8 9}}
 set formats {{%.1f %.2f %.3f}}
@@ -444,7 +465,18 @@ puts -nonewline {}
 {1.0 2.00 3.000} {4.0 5.00 6.000} {7.0 8.00 9.000}
 }
 
-test {Example 38} {Matrix row and column statistics} -body {
+test {Example 39} {Turn input into floating point or integer} -body {
+puts {}
+set x {{1. 2 3.1} {-4 -5.1 -6} {7.6 8 9.9}}
+puts [ndouble $x]
+puts [nentier $x]
+puts -nonewline {}
+} -output {
+{1.0 2.0 3.1} {-4.0 -5.1 -6.0} {7.6 8.0 9.9}
+{1 2 3} {-4 -5 -6} {7 8 9}
+}
+
+test {Example 40} {Matrix row and column statistics} -body {
 puts {}
 set x {{1 2} {3 4} {5 6} {7 8}}
 puts [nreduce max $x]; # max of each column
@@ -459,7 +491,7 @@ puts -nonewline {}
 3 7 11 15
 }
 
-test {Example 39} {Expand and map over matrices} -body {
+test {Example 41} {Expand and map over matrices} -body {
 puts {}
 set phrases [nmap 2 greeting {{hello goodbye}} subject {world moon} {
     list $greeting $subject
@@ -473,7 +505,7 @@ hello moon
 goodbye moon
 }
 
-test {Example 40} {Finding index tuples that match criteria} -body {
+test {Example 42} {Finding index tuples that match criteria} -body {
 puts {}
 set x {{1 2 3} {4 5 6} {7 8 9}}
 set indices {}
@@ -488,14 +520,14 @@ puts -nonewline {}
 {1 1} {1 2} {2 0} {2 1} {2 2}
 }
 
-test {Example 41} {Element-wise operations} -body {
+test {Example 43} {Element-wise operations} -body {
 puts {}
 set x {1 2 3}; # vector, length 3
 set y {{4 5 6}}; # matrix, shape {1 3}
 set z {1 2 4 7 11 16}; # vector, length 6
 puts [nexpr {@x * @y}]; # outer product of two vectors (creates matrix)
 puts [nexpr {@x + @z}]; # expands vector x to match length of z
-puts [nexpr {@z(1:end) - @z(0:end-1)}]; # distance between vector elements
+puts [nexpr {@z(1:-1) - @z(0:-2)}]; # distance between vector elements
 puts [nexpr {@. * 2.0} {4 3 8}]; # self-operation using @. notation
 puts -nonewline {}
 } -output {
@@ -505,34 +537,17 @@ puts -nonewline {}
 8.0 6.0 16.0
 }
 
-test {Example 42} {File import/export} -body {
+test {Example 44} {Prefix notation math} -body {
 puts {}
-# Export matrix to file (converts to csv)
-writeMatrix example.csv {{foo bar} {hello world}}
-# Read CSV file
-puts [readFile example.csv]
-puts [readMatrix example.csv]; # converts from csv to matrix
-file delete example.csv
+namespace path {::tcl::mathfunc ::tcl::mathop}; # exposes 'expr' functions and operators
+# Scalar math
+set x [+ 1 2]; # 3
+puts [** $x 2]
+# Element-wise math
+set x [nop + {10 20} [nreshape [range 6] {2 3}]]; # {10 11 12} {23 24 25}
+puts [napply double [nop - [nget $x 0. 0:-2]]]
 puts -nonewline {}
 } -output {
-foo,bar
-hello,world
-{foo bar} {hello world}
-}
-
-test {Example 43} {Data conversions} -body {
-puts {}
-set matrix {{A B C} {{hello world} foo,bar {"hi"}}}
-puts {TXT format:}
-puts [mat2txt $matrix]
-puts {CSV format:}
-puts [mat2csv $matrix]
-puts -nonewline {}
-} -output {
-TXT format:
-A B C
-{hello world} foo,bar {"hi"}
-CSV format:
-A,B,C
-hello world,"foo,bar","""hi"""
+9
+-10.0 -11.0
 }

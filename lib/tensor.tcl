@@ -17,6 +17,7 @@ namespace eval ::ndlist {
     namespace export ndims nshape nsize; # ND-list basics
     namespace export ndims_multiple; # Get/check ndims for compatibility
     namespace export nfull nrand; # ND-list initialization
+    namespace export ndouble nentier; # Numeric datatype validation
     namespace export nflatten nreshape; # Reshaping an ND-list
     namespace export nrepeat nexpand npad nextend; # Expanding an ND-list
     namespace export nget nset nreplace; # Access/modification
@@ -24,7 +25,7 @@ namespace eval ::ndlist {
     namespace export nswapaxes nmoveaxis npermute; # Axis reordering
     namespace export napply napply2 nreduce; # Functional mapping
     namespace export nmap i j k; # Generalized mapping/looping
-    namespace export neval nexpr; # Element-wise evaluation/math
+    namespace export neval nexpr nop; # Element-wise evaluation/math
 }
 
 # ND-LIST BASICS
@@ -170,6 +171,34 @@ proc ::ndlist::nrand {shape} {
     lmap x [lrepeat $n {}] {
         nrand $shape
     }
+}
+
+# ndouble --
+#
+# Coerce an ndlist into floating point decimal values
+#
+# Syntax:
+# ndouble $ndlist
+#
+# Arguments:
+# ndlist            ND-list to coerce into floating-point decimal
+
+proc ::ndlist::ndouble {ndlist} {
+    napply ::tcl::mathfunc::double $ndlist
+}
+
+# nentier --
+#
+# Coerce an ndlist into integer values (truncates decimals)
+#
+# Syntax:
+# nentier $ndlist
+#
+# Arguments:
+# ndlist            ND-list to coerce into integer
+
+proc ::ndlist::nentier {ndlist} {
+    napply ::tcl::mathfunc::entier $ndlist
 }
 
 # nreshape --
@@ -477,7 +506,7 @@ proc ::ndlist::nget {ndlist args} {
     }
     # Parse indices
     set dims [GetShape $ndims $ndlist]
-    set iArgs [ParseIndices $dims {*}$args]
+    set iArgs [ParseIndices $args $dims]
     # Call recursive handler
     RecGet $ndlist {*}$iArgs
 }
@@ -620,7 +649,7 @@ proc ::ndlist::nreplace {ndlist args} {
     }
     # Parse indices
     set dims [GetShape $ndims $ndlist]
-    set iArgs [ParseIndices $dims {*}$indices]; # type list type list ...
+    set iArgs [ParseIndices $indices $dims]; # type list type list ...
     set iTypes [lmap {iType iList} $iArgs {set iType}]
     
     # Check for simple lset case
@@ -743,7 +772,7 @@ proc ::ndlist::Replace {list sublist iType iList} {
 proc ::ndlist::nremove {ndlist index {axis 0}} {
     # Get removal type
     set dim [lindex [nshape $ndlist [expr {$axis + 1}]] $axis]
-    lassign [ParseIndex $dim $index] iType iList
+    lassign [ParseIndex $index $dim] iType iList
     
     # Trivial case (remove all)
     if {$iType eq "A"} {
@@ -832,15 +861,14 @@ proc ::ndlist::Remove {list iType iList} {
 # ninsert --
 #
 # Insert ND-list in other ND-lists, verifying that dimensions are compatible.
-# If referencing from start, it inserts before.
-# If referencing from end, it inserts after.
+# Inserts before the specified index.
 #
 # Syntax:
 # ninsert $ndlist $index $sublist <$axis> <$rank>
 #
 # Arguments:
 # ndlist        ND-list to modify
-# index         Index to insert at
+# index         Index to insert at ("end" to concatenate)
 # sublist       ND-list to insert
 # axis          Axis to insert along. Default 0.
 # rank          Number of dimensions (e.g. 2D). Default "auto"
@@ -850,7 +878,9 @@ proc ::ndlist::ninsert {ndlist index sublist {axis 0} {rank auto}} {
     set ndims [ndims $ndlist $rank]
     ValidateAxis $ndims $axis
     set dims [GetShape $ndims $ndlist]
-    set i [Index2Integer [expr {[lindex $dims $axis] + 1}] $index]
+    if {$index ne "end"} {
+        set index [NormalizeIndex $index [expr {[lindex $dims $axis] + 1}]]
+    }
     # Null tensor case (inserting null D-list does nothing)
     if {[llength $sublist] == 0} {
         return $ndlist
@@ -861,7 +891,7 @@ proc ::ndlist::ninsert {ndlist index sublist {axis 0} {rank auto}} {
         return -code error "incompatible dimensions"
     }
     # Perform recursive insertion
-    RecInsert $ndlist $i $sublist $axis
+    RecInsert $ndlist $index $sublist $axis
 }
 
 # RecInsert --
@@ -869,23 +899,23 @@ proc ::ndlist::ninsert {ndlist index sublist {axis 0} {rank auto}} {
 # Recursive handler for ninsert (after dimensions were checked)
 #
 # Syntax:
-# RecInsert $ndlist $i $sublist $axis
+# RecInsert $ndlist $index $sublist $axis
 #
 # Arguments:
 # ndlist        ND-list to modify
-# i             Index to insert at
+# index         Index to insert at ("end" for concatenation)
 # sublist       Sublist to insert
 # axis          Axis to insert along
 
-proc ::ndlist::RecInsert {ndlist i sublist axis} {
+proc ::ndlist::RecInsert {ndlist index sublist axis} {
     # Base case
     if {$axis == 0} {
-        return [linsert $ndlist $i {*}$sublist]
+        return [linsert $ndlist $index {*}$sublist]
     }
     # Recursion
     incr axis -1
     lmap ndrow $ndlist subrow $sublist {
-        RecInsert $ndrow $i $subrow $axis
+        RecInsert $ndrow $index $subrow $axis
     }
 }
 
@@ -1447,7 +1477,7 @@ proc ::ndlist::neval {body {self ""} {rank auto}} {
 # nexpr $expr <$self> <$rank>
 #
 # Arguments:
-# expr          Math expression, with @ref notation for object references.
+# expr          Math expression, with @ref notation for ndlist references
 # self          ND-list to refer to with "@." Default blank for none.
 # rank          Rank of mapping. Default "auto"
 
@@ -1663,16 +1693,16 @@ proc ::ndlist::GetMaxShape {ndims args} {
 # Returns index arguments - paired list of index type and index list.
 #
 # Syntax:
-# ParseIndices $dims $index ...
+# ParseIndices $indices $dims
 #
 # Arguments:
+# indices       Index inputs (e.g. :, {0 3}, 0:10, -1.0)
 # dims          Shape to index into
-# index ...     Index inputs (e.g. :, {0 3}, 0:10, end*)
 
-proc ::ndlist::ParseIndices {dims args} {
+proc ::ndlist::ParseIndices {indices dims} {
     set iArgs ""; # paired list of index type and index list (meaning varies)
-    foreach dim $dims index $args {
-        lappend iArgs {*}[ParseIndex $dim $index]
+    foreach index $indices dim $dims {
+        lappend iArgs {*}[ParseIndex $index $dim]
     }
     return $iArgs
 }
@@ -1683,11 +1713,11 @@ proc ::ndlist::ParseIndices {dims args} {
 # Returns index type and corresponding values.
 #
 # Syntax:
-# lassign [ParseIndex $n $index] iType iList
+# lassign [ParseIndex $index $n] iType iList
 #
 # Arguments:
+# index         Index input (e.g. :, {0 3}, 0:10, -1.)
 # n             Size of list
-# index         Index input (e.g. :, {0 3}, 0:10, end*)
 # 
 # Returns:
 # iType     Type of index (A, R, L, or S)
@@ -1697,34 +1727,40 @@ proc ::ndlist::ParseIndices {dims args} {
 #   L:          List of indices 
 #   S:          Single index (flattens list)
 
-proc ::ndlist::ParseIndex {n index} {
+proc ::ndlist::ParseIndex {index n} {
     # Check length of input
     if {[llength $index] != 1} {
         # List of indices (user entered)
-        return [list L [lmap index $index {Index2Integer $n $index}]]
+        return [list L [lmap index $index {NormalizeIndex $index $n}]]
+    }
+    # Single index, don't flatten
+    if {[string is integer $index]} {
+        return [list L [NormalizeIndex $index $n]]
+    }    
+    # Single index, flatten along this dimension
+    if {[string is double $index]} {
+        if {$index != entier($index)} {
+            return -code error "invalid index \"\$index\""
+        }
+        return [list S [NormalizeIndex [::tcl::mathfunc::entier $index] $n]]
+    }
+    # Single index, not range notation
+    if {![string match *:* $index]} {
+        return -code error "invalid index \"\$index\""
     }
     # All index notation
     if {$index eq {:}} {
         return [list A ""]
-    }
-    # Single index notation
-    if {[string index $index end] eq {*}} {
-        # Single index notation (flatten along this dimension)
-        return [list S [Index2Integer $n [string range $index 0 end-1]]]
-    }
-    # Single index, not range notation
-    if {![string match *:* $index]} {
-        return [list L [Index2Integer $n $index]]
     }
     # Range index notation
     set parts [split $index :]
     # Simple range case ($start:$stop)
     if {[llength $parts] == 2} {
         lassign $parts start stop
-        set start [Index2Integer $n $start]
-        set stop [Index2Integer $n $stop]
+        set start [NormalizeIndex $start $n]
+        set stop [NormalizeIndex $stop $n]
         if {$start == 0 && $stop == ($n - 1)} {
-            # 0:end case
+            # 0:-1 case
             return [list A ""]
         }
         # Normal range
@@ -1733,15 +1769,15 @@ proc ::ndlist::ParseIndex {n index} {
     # Skipped range case ($start:$step:$stop)
     if {[llength $parts] == 3} {
         lassign $parts start step stop
-        set start [Index2Integer $n $start]
-        set stop [Index2Integer $n $stop]
+        set start [NormalizeIndex $start $n]
+        set stop [NormalizeIndex $stop $n]
         if {![string is integer -strict $step]} {
             return -code error "expected integer but got \"$step\""
         }
         # Special case for forward range with step of 1
         if {$step == 1 && $start <= $stop} {
             if {$start == 0 && $stop == ($n - 1)} {
-                # 0:1:end case
+                # 0:1:-1 case
                 return [list A ""]
             }
             # Normal range
@@ -1758,49 +1794,29 @@ proc ::ndlist::ParseIndex {n index} {
             \"start:stop\" or \"start:step:stop\""
 }
 
-# Index2Integer --
+# NormalizeIndex --
 #
-# Private function, converts end+-integer index format into integer
+# Private function, converts negative indices into positive.
 # Negative indices get converted, such that -1 is end, -2 is end-1, etc.
 #
 # Syntax:
-# Index2Integer $n $index
+# NormalizeIndex $i $n
 #
 # Arguments:
+# i:            Index from -$n to $n-1
 # n:            Length of list to index
-# index:        Index notation (integer?[+-]integer? or end?[+-]integer?)
 
-proc ::ndlist::Index2Integer {n index} {
-    # Default case (skip regexp, much faster)
-    if {[string is integer -strict $index]} {
-        set i $index
-    } else {
-        # Check if index is valid format
-        set match [regexp -inline {^(end|[+-]?[0-9]+)([+-][0-9]+)?$} $index]
-        if {[llength $match] == 0} {
-            return -code error "bad index \"$index\": must be\
-                    integer?\[+-\]integer? or end?\[+-\]integer?"
-        }
-        # Convert end to n-1 if needed
-        set base [lindex $match 1]
-        if {$base eq {end}} {
-            set base [expr {$n - 1}]
-        }
-        # Handle offset
-        set offset [lindex $match 2]
-        if {$offset eq {}} {
-            set i $base
-        } else {
-            set i [expr {$base + $offset}]
-        }
+proc ::ndlist::NormalizeIndex {i n} {
+    if {![string is integer -strict $i]} {
+        "expected integer but got \"$i\""
+    }
+    # Check if in range
+    if {$i >= $n || $i < -$n} {
+        return -code error "index out of range"
     }
     # Handle negative index (from end)
     if {$i < 0} {
         set i [expr {$i % $n}]
-    }
-    # Check if in range
-    if {$i >= $n} {
-        return -code error "index out of range"
     }
     return $i
 }
@@ -1860,13 +1876,19 @@ proc ::ndlist::GetIndexDim {n iType iList} {
 # GetIndexNDims $arg ... --
 #
 # Get rank of index input. 
-# Does not validate the index input, just looks for slicing notation.
+# Does not validate the index input, just looks for slicing notation (float)
 #
 # Arguments:
 # args          Index inputs
 
 proc ::ndlist::GetIndexNDims {args} {
-    llength [lsearch -all -not $args {*\*}]
+    llength [lmap arg $args {
+        if {[string is double $arg] && ![string is integer $arg]} {
+            continue
+        } else {
+            set arg
+        }
+    }]
 }
 
 # UnravelIndex --
@@ -1888,4 +1910,61 @@ proc ::ndlist::UnravelIndex {i n args} {
     # Recursion
     set N [product $args]
     concat [expr {$i / $N}] [UnravelIndex [expr {$i % $N}] {*}$args]
+}
+
+# POLISH NOTATION ELEMENT-WISE MATH OPERATORS
+################################################################################
+
+# In Tcl, the "expr" command is notorious for making math-heavy code difficult
+# to read. TIP #174 added math operators to the namespace ::tcl::mathop, which,
+# when imported, allows for polish-notation math in Tcl (e.g. set y [+ $x 1])
+# This expands upon that concept by adding n-dimensional math operators
+# Note: a smaller subset of math ops is used
+
+# nop --
+#
+# Simple math operations on ndlists.
+#
+# Syntax:
+# nop $op $ndlist ...
+#
+# Arguments:
+# op            Valid mathop (see $::ndlist::mathops)
+# ndlist ...    Values to perform mathop with 
+#
+# Matrix examples:
+# nop / $matrix; # Performs reciprocal
+# nop - $matrix; # Negates values
+# nop ! $matrix; # Boolean negation
+# nop + 5 1 $matrix; # Adds 5 and 1 to each matrix element
+# nop ** $matrix 2; # Squares entire matrix
+
+proc ::ndlist::nop {op arg args} {
+    if {$op ni {~ ! - + * << ** / % >> & | ^ == != < <= > >=}} {
+        return -code error "unsupported operator \"$op\""
+    }
+    # Handle common 1 and 2 arg operations for performance
+    if {[llength $args] == 0} {
+        return [napply ::tcl::mathop::$op $arg]
+    } elseif {[llength $args] == 1} {
+        set ndlist1 $arg
+        set ndlist2 [lindex $args 0]
+        if {[ndims $ndlist1] == 0} {
+            return [napply [list ::tcl::mathop::$op $ndlist1] $ndlist2]
+        } elseif {[ndims $ndlist2] == 0} {
+            return [napply ::tcl::mathop::$op $ndlist1 [list $ndlist2]]
+        } else {
+            return [napply2 ::tcl::mathop::$op $ndlist1 $ndlist2]
+        }
+    }
+    # General N-dimensional case
+    set ndlists [linsert $args 0 $arg]
+    set nargs [llength $ndlists]
+    set ndims [ndims_multiple $ndlists]
+    set shape [GetMaxShape $ndims {*}$ndlists]
+    set ndlists [lmap ndlist $ndlists {nexpand $ndlist $shape}]
+    set ndlists [lmap ndlist $ndlists {nflatten $ndlist $ndims}]
+    nreshape [lmap opargs [transpose $ndlists] {
+        ::tcl::mathop::$op {*}$opargs
+    }] $shape
 }

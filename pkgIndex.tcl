@@ -1,2 +1,2 @@
-if {![package vsatisfies [package provide Tcl] 8.6]} {return}
-package ifneeded ndlist 0.12.1 [list source [file join $dir ndlist.tcl]]
+if {![package vsatisfies [package provide Tcl] 8.6 9.0]} {return}
+package ifneeded ndlist 0.14 [list source [file join $dir ndlist.tcl]]
