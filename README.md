@@ -21,7 +21,7 @@ Here are just a few of the things you can do with "ndlist":
 ```tcl
 # Difference between elements in a vector
 set x {1 2 4 7 11 16}
-puts [nexpr {@x(1:end) - @x(0:end-1)}]; # 1 2 3 4 5
+puts [nexpr {@x(1:-1) - @x(0:-2)}]; # 1 2 3 4 5
 ```
 
 ```tcl

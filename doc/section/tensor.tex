@@ -238,35 +238,35 @@ puts [nreshape {1 2 3 4 5 6} {-1 3}]
 \subsection{Index Notation}
 This package provides generalized N-dimensional list access/modification commands, using an index notation parsed by the command \cmdlink{::ndlist::ParseIndex}, which returns the index type and an index list for the type.
 \begin{syntax}
-\command{::ndlist::ParseIndex} \$n \$input
+\command{::ndlist::ParseIndex} \$i \$n
 \end{syntax}
 \begin{args}
-\$n & Number of elements in list. \\
-\$input & Index input. Options are shown below: \\
+\$i & Index input. Options are shown below: \\
 \quad : & All indices \\
-\quad \$start:\$stop & Range of indices (e.g. 0:4 or 1:end-2).\\
-\quad \$start:\$step:\$stop & Stepped range of indices (e.g. 0:2:-2 or 2:3:end). \\
-\quad \$iList & List of indices (e.g. \{0 end-1 5\} or 3). \\
-\quad \$i* & Single index with a asterisk, ``flattens'' the ndlist (e.g. 0* or end-3*). 
+\quad \$start:\$stop & Range of indices (e.g. 0:4 or 1:-3).\\
+\quad \$start:\$step:\$stop & Stepped range of indices (e.g. 0:2:-2 or 2:3:-1). \\
+\quad \$indices & List of indices (e.g. \{0 -2 5\} or 3). \\
+\quad \$index. & Floating point decimal index (e.g. 0. or -4.0). ``Flattens'' the ndlist . \\
+\$n & Number of elements in list. \\
 \end{args}
-Additionally, indices get passed through the \cmdlink{::ndlist::Index2Integer} command, which converts the inputs ``end'', ``end-integer'', ``integer$\pm$integer'' and negative wrap-around indexing (where -1 is equivalent to ``end'') into normal integer indices.
-Note that this command will return an error if the index is out of range.
+Individual index integers get passed through the \cmdlink{::ndlist::NormalizeIndex} command, which converts negative wrap-around indexing (where -1 is equivalent to the Tcl ``end'' index) into normal integer indices. The traditional ``end-integer'' and ``integer+-integer'' notation in Tcl is not supported.
+The valid range of indices for this command are from -\$n to \$n-1. Anything outside this range will return an error. 
 \begin{syntax}
-\command{::ndlist::Index2Integer} \$n \$index
+\command{::ndlist::NormalizeIndex} \$i \$n
 \end{syntax}
 \begin{args}
-\$n & Number of elements in list. \\
-\$index & Single index. 
+\$i & Index from -\$n to \$n-1 \\
+\$n & Number of elements in list.
 \end{args}
 
 \begin{example}{Index Notation}
 \begin{lstlisting}
 set n 10
-puts [::ndlist::ParseIndex $n :]
-puts [::ndlist::ParseIndex $n 1:8]
-puts [::ndlist::ParseIndex $n 0:2:6]
-puts [::ndlist::ParseIndex $n {0 5 end-1}]
-puts [::ndlist::ParseIndex $n end*]
+puts [::ndlist::ParseIndex : $n]
+puts [::ndlist::ParseIndex 1:8 $n]
+puts [::ndlist::ParseIndex 0:2:6 $n]
+puts [::ndlist::ParseIndex {0 5 -2} $n]
+puts [::ndlist::ParseIndex -1. $n]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
@@ -292,10 +292,10 @@ Note that unlike the Tcl \textit{lindex} and \textit{lrange} commands, \cmdlink{
 \begin{lstlisting}
 set A {{1 2 3} {4 5 6} {7 8 9}}
 puts [nget $A 0 :]; # get row matrix
-puts [nget $A 0* :]; # flatten row matrix to a vector
+puts [nget $A 0. :]; # flatten row matrix to a vector
 puts [nget $A 0:1 0:1]; # get matrix subset
-puts [nget $A end:0 end:0]; # can have reverse ranges
-puts [nget $A {0 0 0} 1*]; # can repeat indices
+puts [nget $A -1:0 -1:0]; # can have reverse ranges
+puts [nget $A {0 0 0} 1.]; # can repeat indices
 # TIP: You can use the Tcl 'interp alias' command to create a convenient shortcut to nget
 interp alias {} @ {} nget
 puts [@ $A 0 :]; # get row matrix
@@ -342,7 +342,7 @@ nset a {1 0} : [nget $a {0 1} :]
 puts $a
 # Element-wise operation on portion of vector (by value)
 set b [range 10]
-puts [nreplace $b 0:2:end = {@. + 10}]
+puts [nreplace $b 0:2:-1 = {@. + 10}]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}
@@ -387,11 +387,9 @@ puts [nremove $a 2 1]
 \end{example}
 \clearpage
 \subsection{Insertion and Concatenation}
-The command \cmdlink{ninsert} inserts an ND-list into another ND-list at a specified index and axis.
+The command \cmdlink{ninsert} inserts an ND-list into another ND-list before a specified index and axis.
 The ND-lists must agree in dimension at all other axes.
-If ``end'' or ``end-integer'' is used for the index, it will insert after the index. 
-Otherwise, it will insert before the index.
-The command \cmdlink{ncat} is shorthand for inserting at ``end'', and concatenates two ND-lists.
+The command \cmdlink{ncat} concatenates two ND-lists.
 \begin{syntax}
 \command{ninsert} \$ndlist1 \$index \$ndlist2 <\$axis> <\$rank>
 \end{syntax}
@@ -517,6 +515,28 @@ puts [napply2 format $formats $data]
 \end{lstlisting}
 \end{example}
 \clearpage
+\subsection{Numeric Datatypes}
+The commands \cmdlink{ndouble} and \cmdlink{nentier} apply the Tcl mathfunc commands \textit{double} and \textit{entier} to a given input, making it easy to validate numeric input.
+\begin{syntax}
+\command{ndouble} \$ndlist
+\end{syntax}
+\begin{syntax}
+\command{nentier} \$ndlist
+\end{syntax}
+\begin{example}{Turn input into floating point or integer}
+\begin{lstlisting}
+set x {{1. 2 3.1} {-4 -5.1 -6} {7.6 8 9.9}}
+puts [ndouble $x]
+puts [nentier $x]
+\end{lstlisting}
+\tcblower
+\begin{lstlisting}
+{1.0 2.0 3.1} {-4.0 -5.1 -6.0} {7.6 8.0 9.9}
+{1 2 3} {-4 -5 -6} {7 8 9}
+\end{lstlisting}
+\end{example}
+
+\clearpage
 \subsection{Reducing an ND-list}
 The command \cmdlink{nreduce} combines \cmdlink{nmoveaxis} and \cmdlink{napply} to reduce an axis of an ND-list with a function that reduces a vector to a scalar, like \cmdlink{max} or \cmdlink{sum}.
 \begin{syntax}
@@ -640,7 +660,7 @@ set y {{4 5 6}}; # matrix, shape {1 3}
 set z {1 2 4 7 11 16}; # vector, length 6
 puts [nexpr {@x * @y}]; # outer product of two vectors (creates matrix)
 puts [nexpr {@x + @z}]; # expands vector x to match length of z
-puts [nexpr {@z(1:end) - @z(0:end-1)}]; # distance between vector elements
+puts [nexpr {@z(1:-1) - @z(0:-2)}]; # distance between vector elements
 puts [nexpr {@. * 2.0} {4 3 8}]; # self-operation using @. notation
 \end{lstlisting}
 \tcblower
@@ -656,11 +676,11 @@ puts [nexpr {@. * 2.0} {4 3 8}]; # self-operation using @. notation
 \subsection{Prefix Notation Math}
 Tcl is unique in that everything is a command. So, that means that it does not natively support the typical algebraic ``infix'' notation that people are used to. 
 Instead, the Tcl \textit{expr} command provides a sub-language that parses scalar math in the familiar ``infix'' notation.
-The ndlist \cmdlink{nexpr} command was designe to extend the functionality of \textit{expr} to provide support for element-wise operations. 
+The ndlist \cmdlink{nexpr} command was designed to extend the functionality of \textit{expr} to provide support for element-wise operations. 
 However, in code that is heavy in math, having a lot of ``expr'' or ``nexpr'' calls can make code difficult to read.
-There has been a lot of discussion in the Tcl community about this problem, and the general consensus is that it was addressed in Tcl \hyperlink{https://core.tcl-lang.org/tips/doc/trunk/tip/174.md}{TIP \#174}, which added the ::tcl::mathop namespace to the core. 
+There has been a lot of discussion in the Tcl community about this problem, and the problem was partly addressed with Tcl \hyperlink{https://core.tcl-lang.org/tips/doc/trunk/tip/174.md}{TIP \#174}, which added the ::tcl::mathop namespace to the core. 
 This change to Tcl provided users with easy access to math operators as commands.
-The ndlist package expands upon this by providing equivalent element-wise operators as commands, with the exception that it only provides element-wise math operators. 
+The ndlist package expands upon this with the \cmdlink{nop} command, with the exception that it only provides element-wise math operators. 
 This is because the ndlist math operator commands do not have an option to specify the rank of the input lists, which could lead to unexpected results for some string/list operations.
 
 The available element-wise operators are \texttt{$\sim$}, \texttt{!}, \texttt{-}, \texttt{+}, \texttt{*}, \texttt{<{}<}, \texttt{**}, \texttt{/}, \texttt{\%}, \texttt{>{}>}, \texttt{\&}, \texttt{|}, \texttt{$^\wedge$}, \texttt{==}, \texttt{!=}, \texttt{<}, \texttt{<=}, \texttt{>}, and \texttt{>=}. 
@@ -668,7 +688,7 @@ The available element-wise operators are \texttt{$\sim$}, \texttt{!}, \texttt{-}
 Full documentation of these operators can be found in the Tcl \hyperlink{https://www.tcl-lang.org/man/tcl/TclCmd/mathop.htm}{::tcl::mathop namespace documentation}.
 
 \begin{syntax}
-\command{\$op.} \$ndlist ...
+\command{nop} \$op \$ndlist ...
 \end{syntax}
 \begin{args}
 \$op & Tcl numeric math operator. \\
@@ -682,8 +702,8 @@ namespace path {::tcl::mathfunc ::tcl::mathop}; # exposes 'expr' functions and o
 set x [+ 1 2]; # 3
 puts [** $x 2]
 # Element-wise math
-set x [+. {10 20} [nreshape [range 6] {2 3}]]; # {10 11 12} {23 24 25}
-puts [napply double [-. [nget $x 0* 0:end-1]]]
+set x [nop + {10 20} [nreshape [range 6] {2 3}]]; # {10 11 12} {23 24 25}
+puts [napply double [nop - [nget $x 0. 0:-2]]]
 \end{lstlisting}
 \tcblower
 \begin{lstlisting}

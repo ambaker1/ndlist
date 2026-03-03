@@ -16,11 +16,7 @@ namespace eval ::ndlist {
     source [file join $dir lib vector.tcl]
     source [file join $dir lib matrix.tcl]
     source [file join $dir lib tensor.tcl]
-    # Tcl 9.0 compatibility
-    if {[package vsatisfies [package provide Tcl] 8.6]} {
-        source [file join $dir lib fileio.tcl]
-    }
 }
 
 # Finally, provide the package
-package provide ndlist 0.13
+package provide ndlist 0.14

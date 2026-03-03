@@ -4,12 +4,10 @@ tin import assert from tin
 tin import tcltest
 # tin add flytrap 1.2 https://github.com/ambaker1/flytrap v1.2 install.tcl
 # tin import flytrap -exact 1.2
-set version 0.13
+set version 0.14
 set config ""
 dict set config VERSION $version
 dict set config TIN_VERSION $tin_version
-dict set config TCL8_VERSION 8.6
-dict set config TCL9_VERSION 9.0
 
 puts "Building from source files..."
 tin bake src . $config
@@ -25,7 +23,6 @@ puts "Running all tests..."
 source tests/vector_test.tcl
 source tests/matrix_test.tcl
 source tests/tensor_test.tcl
-source tests/fileio_test.tcl
 source tests/examples.tcl
 
 # Check number of failed tests
